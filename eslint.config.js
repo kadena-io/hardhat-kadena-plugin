@@ -12,4 +12,4 @@ const config = [
   ...tseslint.configs.recommended,
 ];
 
-module.exports = checkFiles(['src/**/*.{js,mjs,cjs,ts}'])(config);
+module.exports = checkFiles(['packages/*/src/**/*.{js,mjs,cjs,ts}'])(config);

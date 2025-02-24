@@ -7,9 +7,21 @@ settings:
 importers:
   .:
     devDependencies:
+      '@eslint/js':
+        specifier: ^9.20.0
+        version: 9.21.0
+      eslint:
+        specifier: ^9.20.0
+        version: 9.21.0
+      globals:
+        specifier: ^15.14.0
+        version: 15.15.0
       prettier:
         specifier: ^3.5.0
         version: 3.5.2
+      typescript-eslint:
+        specifier: ^8.24.0
+        version: 8.24.1(eslint@9.21.0)(typescript@5.7.3)
 
   packages/hardhat-kadena:
     dependencies:
@@ -23,9 +35,6 @@ importers:
         specifier: ^1.2.0
         version: 1.2.0(hardhat@2.22.18(ts-node@10.9.2(@types/node@22.13.4)(typescript@5.7.3))(typescript@5.7.3))
     devDependencies:
-      '@eslint/js':
-        specifier: ^9.20.0
-        version: 9.21.0
       '@nomicfoundation/hardhat-ethers':
         specifier: ^3.0.8
         version: 3.0.8(ethers@6.13.5)(hardhat@2.22.18(ts-node@10.9.2(@types/node@22.13.4)(typescript@5.7.3))(typescript@5.7.3))
@@ -41,30 +50,18 @@ importers:
       chai:
         specifier: ^4.2.0
         version: 4.5.0
-      eslint:
-        specifier: ^9.20.0
-        version: 9.21.0
       ethers:
         specifier: ^6.1.0
         version: 6.13.5
-      globals:
-        specifier: ^15.14.0
-        version: 15.15.0
       hardhat:
         specifier: ^2.22.18
         version: 2.22.18(ts-node@10.9.2(@types/node@22.13.4)(typescript@5.7.3))(typescript@5.7.3)
       mocha:
         specifier: ^11.1.0
         version: 11.1.0
-      prettier:
-        specifier: ^3.5.0
-        version: 3.5.2
       typescript:
         specifier: ^5.7.3
         version: 5.7.3
-      typescript-eslint:
-        specifier: ^8.24.0
-        version: 8.24.1(eslint@9.21.0)(typescript@5.7.3)
       web3:
         specifier: ^4.16.0
         version: 4.16.0(typescript@5.7.3)(zod@3.24.2)
