@@ -34,7 +34,7 @@ pnpm hardhat test
 To use the plugin in your Hardhat project, import it in your Hardhat configuration file (`hardhat.config.ts` or `hardhat.config.js`):
 
 ```ts
-import "hardhat_kadena";
+import 'hardhat_kadena';
 ```
 
 Then, configure the plugin in the `hardhat.config.ts` file:
@@ -95,7 +95,7 @@ If you want to override any option, you can add the network with the custom conf
 
 ```ts
 module.exports = {
-  solidity: "0.8.20",
+  solidity: '0.8.20',
   networks: {
     kadena_devnet_0: {
       chainId: 123, // Use custom chainId for chain 0

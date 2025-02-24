@@ -1,19 +1,19 @@
-import "hardhat/types";
-import type { ChainwebNetwork, Origin } from "./utils/chainweb";
-import type { DeployContractOnChains } from "./utils";
+import 'hardhat/types';
+import type { ChainwebNetwork, Origin } from './utils/chainweb';
+import type { DeployContractOnChains } from './utils';
 import {
   HardhatNetworkAccountsConfig,
   HardhatNetworkUserConfig,
-} from "hardhat/types";
-import "hardhat/types/runtime";
-import { HardhatEthersProvider } from "@nomicfoundation/hardhat-ethers/internal/hardhat-ethers-provider";
+} from 'hardhat/types';
+import 'hardhat/types/runtime';
+import { HardhatEthersProvider } from '@nomicfoundation/hardhat-ethers/internal/hardhat-ethers-provider';
 
 export interface ChainwebConfig {
   networkStem?: string;
   accounts?: HardhatNetworkAccountsConfig;
   chains?: number;
   graph?: { [key: number]: number[] };
-  logging?: "none" | "info" | "debug";
+  logging?: 'none' | 'info' | 'debug';
 }
 
 export interface ChainwebPluginApi {
@@ -29,7 +29,7 @@ export interface ChainwebPluginApi {
   deployMocks: () => ReturnType<DeployContractOnChains>;
 }
 
-declare module "hardhat/types" {
+declare module 'hardhat/types' {
   interface HardhatConfig {
     chainweb: Required<ChainwebConfig>;
   }
@@ -53,7 +53,7 @@ declare module "hardhat/types" {
     chainwebChainId: number;
   }
 }
-declare module "hardhat/types/runtime" {
+declare module 'hardhat/types/runtime' {
   interface HardhatRuntimeEnvironment {
     chainweb: ChainwebPluginApi;
   }

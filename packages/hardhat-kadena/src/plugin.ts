@@ -1,16 +1,16 @@
-import { extendEnvironment, extendConfig } from "hardhat/config";
-import { ChainwebNetwork } from "./utils/chainweb.js";
-import { ChainwebConfig, ChainwebPluginApi } from "./type.js";
-import { getKadenaNetworks } from "./utils/configure.js";
-import { createGraph } from "./utils/chainweb-graph.js";
-import { getUtils } from "./utils.js";
-import { HardhatEthersProvider } from "@nomicfoundation/hardhat-ethers/internal/hardhat-ethers-provider.js";
-import Web3 from "web3";
+import { extendEnvironment, extendConfig } from 'hardhat/config';
+import { ChainwebNetwork } from './utils/chainweb.js';
+import { ChainwebConfig, ChainwebPluginApi } from './type.js';
+import { getKadenaNetworks } from './utils/configure.js';
+import { createGraph } from './utils/chainweb-graph.js';
+import { getUtils } from './utils.js';
+import { HardhatEthersProvider } from '@nomicfoundation/hardhat-ethers/internal/hardhat-ethers-provider.js';
+import Web3 from 'web3';
 
 extendConfig((config, userConfig) => {
   if (!userConfig.chainweb) {
     throw new Error(
-      "hardhat_kadena plugins is imported but chainweb configuration is not presented in hardhat.config.js"
+      'hardhat_kadena plugins is imported but chainweb configuration is not presented in hardhat.config.js',
     );
   }
   let chains = 2;
@@ -21,18 +21,18 @@ extendConfig((config, userConfig) => {
         userConfig.chainweb.chains
     ) {
       throw new Error(
-        "Number of chains in graph does not match the graph configuration"
+        'Number of chains in graph does not match the graph configuration',
       );
     }
     chains = Object.keys(userConfig.chainweb.graph).length;
   }
 
   const chainwebConfig: Required<ChainwebConfig> = {
-    networkStem: "kadena_hardhat_",
+    networkStem: 'kadena_hardhat_',
     accounts: config.networks.hardhat.accounts,
     chains,
     graph: userConfig.chainweb.graph ?? createGraph(userConfig.chainweb.chains),
-    logging: userConfig.chainweb.logging ?? "info",
+    logging: userConfig.chainweb.logging ?? 'info',
     ...userConfig.chainweb,
   };
   config.chainweb = chainwebConfig;
@@ -46,7 +46,7 @@ extendConfig((config, userConfig) => {
       networkStem: chainwebConfig.networkStem,
       numberOfChains: chainwebConfig.chains,
       accounts: chainwebConfig.accounts,
-      loggingEnabled: chainwebConfig.logging === "debug",
+      loggingEnabled: chainwebConfig.logging === 'debug',
     }),
   };
   config.defaultNetwork =
@@ -77,12 +77,12 @@ extendEnvironment((hre) => {
     process.exit(0);
   }
 
-  process.on("exit", stopHardhatNetwork);
-  process.on("SIGINT", stopHardhatNetwork);
-  process.on("SIGTERM", stopHardhatNetwork);
-  process.on("uncaughtException", stopHardhatNetwork);
+  process.on('exit', stopHardhatNetwork);
+  process.on('SIGINT', stopHardhatNetwork);
+  process.on('SIGTERM', stopHardhatNetwork);
+  process.on('uncaughtException', stopHardhatNetwork);
 
-  console.log("Kadena plugin initialized chains", hre.config.chainweb.chains);
+  console.log('Kadena plugin initialized chains', hre.config.chainweb.chains);
   const startNetwork = startHardhatNetwork().catch(() => {
     process.exit(1);
   });
@@ -92,22 +92,22 @@ extendEnvironment((hre) => {
   const originalSwitchNetwork = hre.switchNetwork;
   hre.switchNetwork = async (networkNameOrIndex: string | number) => {
     const networkName =
-      typeof networkNameOrIndex === "number"
+      typeof networkNameOrIndex === 'number'
         ? `${hre.config.chainweb.networkStem}${networkNameOrIndex}`
         : networkNameOrIndex;
     if (networkName.startsWith(hre.config.chainweb.networkStem)) {
       const cid = parseInt(
-        networkName.slice(hre.config.chainweb.networkStem.length)
+        networkName.slice(hre.config.chainweb.networkStem.length),
       );
       const provider = chainwebNetwork.getProvider(cid);
       hre.network.name = networkName;
       hre.network.config = hre.config.networks[networkName];
       hre.network.provider = provider;
       // update underlying library's provider data
-      if ("ethers" in hre) {
+      if ('ethers' in hre) {
         hre.ethers.provider = new HardhatEthersProvider(provider, networkName);
       }
-      if ("web3" in hre) {
+      if ('web3' in hre) {
         hre.web3 = new Web3(provider);
       }
       console.log(`Switched to chain ${cid}`);
@@ -127,7 +127,7 @@ extendEnvironment((hre) => {
     requestSpvProof: utils.requestSpvProof,
     switchChain: async (cid: number | string) => {
       await startNetwork;
-      if (typeof cid === "string") {
+      if (typeof cid === 'string') {
         await hre.switchNetwork(cid);
       } else {
         await hre.switchNetwork(`${hre.config.chainweb.networkStem}${cid}`);

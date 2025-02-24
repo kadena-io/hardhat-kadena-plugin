@@ -1,12 +1,12 @@
-import { ethers } from "ethers";
-import { distance } from "./chainweb-graph.js";
-import { sleep } from "./sleep.js";
-import { wordToAddress } from "./ethers-helpers.js";
-import { logError, Logger, logInfo } from "./logger.js";
-import { ChainwebConfig } from "../type.js";
-import { KadenaNetworkConfig, NetworksConfig } from "hardhat/types";
-import { Chain } from "./chain.js";
-import { HardhatEthersProvider } from "@nomicfoundation/hardhat-ethers/internal/hardhat-ethers-provider.js";
+import { ethers } from 'ethers';
+import { distance } from './chainweb-graph.js';
+import { sleep } from './sleep.js';
+import { wordToAddress } from './ethers-helpers.js';
+import { logError, Logger, logInfo } from './logger.js';
+import { ChainwebConfig } from '../type.js';
+import { KadenaNetworkConfig, NetworksConfig } from 'hardhat/types';
+import { Chain } from './chain.js';
+import { HardhatEthersProvider } from '@nomicfoundation/hardhat-ethers/internal/hardhat-ethers-provider.js';
 
 interface INetworkOptions {
   chainweb: Required<ChainwebConfig>;
@@ -20,8 +20,8 @@ export class ChainwebNetwork {
 
   constructor(private config: INetworkOptions) {
     this.logger = {
-      info: (msg) => logInfo("reset", "-", msg),
-      error: (msg) => logError("reset", "-", msg),
+      info: (msg) => logInfo('reset', '-', msg),
+      error: (msg) => logError('reset', '-', msg),
     };
     this.chains = makeChainweb(this.logger, config);
     this.graph = config.chainweb.graph;
@@ -41,13 +41,13 @@ export class ChainwebNetwork {
 
   async start() {
     try {
-      this.logger.info("Starting chain networks");
+      this.logger.info('Starting chain networks');
       await Promise.all(
         Object.values(this.chains).map((chain) => {
           return chain.start();
-        })
+        }),
       );
-      this.logger.info("Chainweb chains initialized");
+      this.logger.info('Chainweb chains initialized');
     } catch (e) {
       this.logger.error(`Failure while starting networks: ${e}, ${e.stack}`);
       await this.stop();
@@ -55,9 +55,9 @@ export class ChainwebNetwork {
   }
 
   async stop() {
-    this.logger.info("Stopping chain networks");
+    this.logger.info('Stopping chain networks');
     await Promise.all(Object.values(this.chains).map((chain) => chain.stop()));
-    this.logger.info("Stopped chain networks");
+    this.logger.info('Stopped chain networks');
   }
 
   // Mock getProof:
@@ -72,7 +72,7 @@ export class ChainwebNetwork {
     // get origin chain
     const provider = new HardhatEthersProvider(
       this.getProvider(Number(origin.chain)),
-      `${this.config.chainweb.networkStem}${origin.chain}`
+      `${this.config.chainweb.networkStem}${origin.chain}`,
     );
 
     // Query Event information from origin chain
@@ -82,18 +82,18 @@ export class ChainwebNetwork {
     });
 
     const txLogs = blockLogs.filter(
-      (l) => BigInt(l.transactionIndex) === origin.txIdx
+      (l) => BigInt(l.transactionIndex) === origin.txIdx,
     );
     const log = txLogs[Number(origin.eventIdx)];
     if (log === undefined || log.removed) {
-      new Error("No log entry found at origin");
+      new Error('No log entry found at origin');
     }
 
     const topics = log.topics;
 
     if (topics.length != 4) {
       throw new Error(
-        `Expected exactly four topics at origin, but got ${topics.length}`
+        `Expected exactly four topics at origin, but got ${topics.length}`,
       );
     }
 
@@ -111,7 +111,7 @@ export class ChainwebNetwork {
     let trgHeight = BigInt(await trg.getBlockNumber());
     while (trgHeight < origin.height + dist) {
       console.log(
-        `waiting for SPV proof to become available on chain ${trgChain}; current height ${trgHeight}; required height ${origin.height + dist}`
+        `waiting for SPV proof to become available on chain ${trgChain}; current height ${trgHeight}; required height ${origin.height + dist}`,
       );
       await trg.mineRequest();
       sleep(100);
@@ -136,12 +136,12 @@ export class ChainwebNetwork {
       trgChainId: ethers.toNumber(topics[1]),
       trgAddress: wordToAddress(topics[2]),
       opType: ethers.toNumber(topics[3]),
-      data: coder.decode(["bytes"], log.data)[0],
+      data: coder.decode(['bytes'], log.data)[0],
       origin: xorigin,
     });
 
     const params =
-      "tuple(uint32,address,uint64,bytes,tuple(uint32,address,uint64,uint64,uint64))";
+      'tuple(uint32,address,uint64,bytes,tuple(uint32,address,uint64,uint64,uint64))';
     const payload = coder.encode([params], [xmsg]);
     const hash = ethers.keccak256(payload);
 
@@ -157,26 +157,26 @@ function makeChainweb(
   config: {
     chainweb: Required<ChainwebConfig>;
     networks: NetworksConfig;
-  }
+  },
 ) {
   const graph = config.chainweb.graph;
   const networks = config.networks;
 
   // Create Indiviual Chains
-  logger.info("creating chains");
+  logger.info('creating chains');
   const chains: Record<number, Chain> = {};
   for (const networkName in networks) {
     if (networkName.includes(config.chainweb.networkStem)) {
       const networkConfig = networks[networkName] as KadenaNetworkConfig;
       chains[networkConfig.chainwebChainId!] = new Chain(
         networkConfig,
-        config.chainweb.logging
+        config.chainweb.logging,
       );
     }
   }
 
   // Put Chains into the Chainweb Graph
-  logger.info("integrating chains into Chainweb");
+  logger.info('integrating chains into Chainweb');
   for (const c in chains) {
     chains[c].adjacents = graph[c].map((x) => {
       const a = chains[x];

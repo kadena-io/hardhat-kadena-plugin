@@ -8,7 +8,7 @@
 export function distance(
   srcChain: number,
   trgChain: number,
-  graph: Record<number, number[]>
+  graph: Record<number, number[]>,
 ) {
   if (srcChain == trgChain) {
     return 0;
@@ -28,7 +28,7 @@ export function distance(
       }
     }
   }
-  throw new Error("Chain not found in Chainweb");
+  throw new Error('Chain not found in Chainweb');
 }
 
 export function createGraph(chains: number = 2): Record<number, number[]> {
@@ -83,7 +83,7 @@ export function createGraph(chains: number = 2): Record<number, number[]> {
     }
     default:
       throw new Error(
-        "Valid chain counts are 2, 3, 10, 20; if you need a different chain count, please provide the graph explicitly"
+        'Valid chain counts are 2, 3, 10, 20; if you need a different chain count, please provide the graph explicitly',
       );
   }
 }

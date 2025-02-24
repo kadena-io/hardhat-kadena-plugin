@@ -1,6 +1,6 @@
-const globals = require("globals");
-const pluginJs =  require("@eslint/js");
-const tseslint = require("typescript-eslint");
+const globals = require('globals');
+const pluginJs = require('@eslint/js');
+const tseslint = require('typescript-eslint');
 
 const checkFiles = (files) => (config) => config.map((c) => ({ ...c, files }));
 
@@ -12,4 +12,4 @@ const config = [
   ...tseslint.configs.recommended,
 ];
 
-module.exports = checkFiles(["src/**/*.{js,mjs,cjs,ts}"])(config);
+module.exports = checkFiles(['src/**/*.{js,mjs,cjs,ts}'])(config);

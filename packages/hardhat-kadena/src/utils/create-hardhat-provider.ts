@@ -1,22 +1,22 @@
 import {
   ForkConfig,
   MempoolOrder,
-} from "hardhat/internal/hardhat-network/provider/node-types";
-import { createHardhatNetworkProvider } from "hardhat/internal/hardhat-network/provider/provider";
+} from 'hardhat/internal/hardhat-network/provider/node-types';
+import { createHardhatNetworkProvider } from 'hardhat/internal/hardhat-network/provider/provider';
 // import { applyProviderWrappers } from "hardhat/internal/core/providers/construction";
-import { normalizeHardhatNetworkAccountsConfig } from "hardhat/internal/core/providers/util";
-import { BackwardsCompatibilityProviderAdapter } from "hardhat/internal/core/providers/backwards-compatibility";
+import { normalizeHardhatNetworkAccountsConfig } from 'hardhat/internal/core/providers/util';
+import { BackwardsCompatibilityProviderAdapter } from 'hardhat/internal/core/providers/backwards-compatibility';
 import {
   Artifacts,
   EIP1193Provider,
   EthereumProvider,
   KadenaNetworkConfig,
-} from "hardhat/types";
-import path from "path";
-import { Logger } from "./logger";
+} from 'hardhat/types';
+import path from 'path';
+import { Logger } from './logger';
 
 const getForkCacheDirPath = (cache: string) => {
-  return path.join(cache, "kadena-hardhat-fork-cache");
+  return path.join(cache, 'kadena-hardhat-fork-cache');
 };
 
 /**
@@ -32,7 +32,7 @@ const getForkCacheDirPath = (cache: string) => {
 export async function createHardhatProvider(
   hardhatNetConfig: KadenaNetworkConfig,
   logger: Logger,
-  artifacts?: Artifacts
+  artifacts?: Artifacts,
 ): Promise<EthereumProvider> {
   let forkConfig: ForkConfig | undefined;
   const cachePath: string = `./chainweb/${hardhatNetConfig.chainwebChainId}`;
@@ -49,7 +49,7 @@ export async function createHardhatProvider(
   }
 
   const accounts = normalizeHardhatNetworkAccountsConfig(
-    hardhatNetConfig.accounts
+    hardhatNetConfig.accounts,
   );
 
   console.log(accounts);
@@ -92,12 +92,12 @@ export async function createHardhatProvider(
         logger.info(line);
       },
     },
-    artifacts
+    artifacts,
   );
 
   const wrappedProvider = eip1193Provider;
 
-  console.log("Creating provider");
+  console.log('Creating provider');
 
   return new BackwardsCompatibilityProviderAdapter(wrappedProvider);
 }

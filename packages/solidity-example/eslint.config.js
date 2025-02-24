@@ -1,6 +1,6 @@
-import globals from "globals";
-import pluginJs from "@eslint/js";
-import tseslint from "typescript-eslint";
+import globals from 'globals';
+import pluginJs from '@eslint/js';
+import tseslint from 'typescript-eslint';
 
 const checkFiles = (files) => (config) => config.map((c) => ({ ...c, files }));
 
@@ -12,4 +12,4 @@ const config = [
   ...tseslint.configs.recommended,
 ];
 
-export default checkFiles(["**/*.{js,mjs,cjs,ts}"])(config);
+export default checkFiles(['**/*.{js,mjs,cjs,ts}'])(config);

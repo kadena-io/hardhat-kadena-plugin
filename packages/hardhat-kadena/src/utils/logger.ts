@@ -1,7 +1,7 @@
-import { Readable } from "stream";
-import { styleText } from "util";
+import { Readable } from 'stream';
+import { styleText } from 'util';
 
-export type Color = "cyan" | "yellow" | "magenta" | "blue" | "green" | "red";
+export type Color = 'cyan' | 'yellow' | 'magenta' | 'blue' | 'green' | 'red';
 export type LogOptions = Parameters<typeof styleText>[0];
 type LogFunction = (msg: string) => void;
 export type Logger = {
@@ -10,12 +10,12 @@ export type Logger = {
 };
 
 export const COLOR_PALETTE: Color[] = [
-  "cyan",
-  "yellow",
-  "magenta",
-  "blue",
-  "green",
-  "red",
+  'cyan',
+  'yellow',
+  'magenta',
+  'blue',
+  'green',
+  'red',
 ];
 
 /* *************************************************************************** */
@@ -27,7 +27,7 @@ export const COLOR_PALETTE: Color[] = [
 export function logInfo(
   color: LogOptions,
   label: string | number,
-  msg: string
+  msg: string,
 ) {
   const prefixedLabel = `[hardhat ${label}]`;
   const styledLable = styleText
@@ -40,7 +40,7 @@ export function logInfo(
 export function logError(
   color: LogOptions,
   label: string | number,
-  msg: string
+  msg: string,
 ) {
   const prefixedLabel = `[hardhat ${label}]`;
   const styledLable = styleText
@@ -51,8 +51,8 @@ export function logError(
 }
 
 export function streamLogger(stream: Readable, logFun: (msg: string) => void) {
-  let buffer = "";
-  stream.on("data", (data) => {
+  let buffer = '';
+  stream.on('data', (data) => {
     const parts = (buffer + data).split(/\r?\n/);
     for (const line of parts.slice(0, -1)) {
       logFun(line);

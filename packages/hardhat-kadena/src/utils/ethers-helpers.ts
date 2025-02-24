@@ -1,8 +1,8 @@
-import { BytesLike } from "ethers";
-import { JsonRpcProvider, ethers } from "ethers";
+import { BytesLike } from 'ethers';
+import { JsonRpcProvider, ethers } from 'ethers';
 
 export const isValidProvider = (
-  provider: JsonRpcProvider | undefined | null
+  provider: JsonRpcProvider | undefined | null,
 ): provider is JsonRpcProvider => {
   if (!provider) {
     return false;

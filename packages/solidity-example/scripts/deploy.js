@@ -1,12 +1,12 @@
-const { Contract, ContractFactory } = require("ethers");
+const { Contract, ContractFactory } = require('ethers');
 
-const { ethers } = require("hardhat");
+const { ethers } = require('hardhat');
 
 async function main() {
-  const simpleTokenFactory = await ethers.getContractFactory("SimpleToken");
+  const simpleTokenFactory = await ethers.getContractFactory('SimpleToken');
   const simpleToken = await simpleTokenFactory.deploy(1000000);
   await simpleToken.deploymentTransaction().wait();
-  console.log("Contract deployed to address:", await simpleToken.getAddress());
+  console.log('Contract deployed to address:', await simpleToken.getAddress());
 }
 
 main()

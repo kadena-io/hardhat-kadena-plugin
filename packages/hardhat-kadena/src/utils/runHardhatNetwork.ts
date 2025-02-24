@@ -1,9 +1,9 @@
 /* *************************************************************************** */
 /* TODO */
 
-import { spawn } from "child_process";
-import { Logger, streamLogger } from "./logger";
-import { sleep } from "./sleep";
+import { spawn } from 'child_process';
+import { Logger, streamLogger } from './logger';
+import { sleep } from './sleep';
 
 // * support graphs that include non-evm chains (by just skipping over them)
 // * Consider deploying the spv precompile at an hash address that won't colide
@@ -17,7 +17,7 @@ import { sleep } from "./sleep";
 /* Run Hardhat Network */
 
 export async function runHardHatNetwork(port: number, logger: Logger) {
-  const child = spawn("npx", ["hardhat", "node", "--port", port.toString()], {
+  const child = spawn('npx', ['hardhat', 'node', '--port', port.toString()], {
     detached: false, // FIXME not sure why this does not work as it should ...
   });
 
@@ -31,7 +31,7 @@ export async function runHardHatNetwork(port: number, logger: Logger) {
   const stdoutBuffer = streamLogger(child.stdout, logger.info);
   const stderrBuffer = streamLogger(child.stderr, logger.error);
 
-  child.on("close", (exitCode) => {
+  child.on('close', (exitCode) => {
     isClosed = true;
     if (stdoutBuffer.length > 0) {
       logger.info(stdoutBuffer);
@@ -48,13 +48,13 @@ export async function runHardHatNetwork(port: number, logger: Logger) {
   });
 
   await new Promise((resolve) => {
-    child.on("spawn", resolve);
+    child.on('spawn', resolve);
   });
 
   // kill child on exit
-  process.on("exit", () => kill(0));
-  process.on("SIGINT", () => kill("SIGINT"));
-  process.on("uncaughtException", () => kill("SIGABRT"));
+  process.on('exit', () => kill(0));
+  process.on('SIGINT', () => kill('SIGINT'));
+  process.on('uncaughtException', () => kill('SIGABRT'));
 
   // FIXME wait for proper messages and return an event if this triggered
   // actually, we may just block runHardHatNetwork until it's ready...
