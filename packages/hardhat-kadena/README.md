@@ -4,7 +4,7 @@
 
 ## Installation
 
-To install the plugin, run the following command: **NOT PUBLISHED YET**
+To install the plugin, run the following command
 
 ```bash
 npm install hardhat_kadena
