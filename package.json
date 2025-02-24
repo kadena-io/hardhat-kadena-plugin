@@ -1,0 +1,24 @@
+{
+  "name": "hardhat-kadena-plugin",
+  "private": true,
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "build": "pnpm --filter hardhat-kadena run build",
+    "test": "pnpm --filter solidity-example run test",
+    "test-ts": "pnpm --filter solidity-ts-example run test",
+    "format": "prettier --write ."
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "packageManager": "pnpm@9.5.0",
+  "engines": {
+    "node": ">=18",
+    "npm": ">=8"
+  },
+  "devDependencies": {
+    "prettier": "^3.5.0"
+  }
+}

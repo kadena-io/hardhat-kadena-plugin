@@ -1,0 +1,63 @@
+{
+  "name": "hardhat-kadena",
+  "version": "1.0.0",
+  "description": "Hardhat plugin for Kadena's Chainweb network",
+  "author": "Lars Kuhtz <lars@kadena.io>",
+  "contributors": [
+    "Lars Kuhtz <lars@kadena.io>",
+    "Javad Khalilian <javad@kadena.io>"
+  ],
+  "main": "./lib/cjs/index.js",
+  "types": "./lib/cjs/index.d.ts",
+  "scripts": {
+    "build": "eslint && tsc",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/kadena-io/hardhat-kadena.git"
+  },
+  "keywords": [
+    "hardhat",
+    "kadena",
+    "chainweb",
+    "ethereum",
+    "hardhat-plugin"
+  ],
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/kadena-io/hardhat-kadena/issues"
+  },
+  "homepage": "https://github.com/kadena-io/hardhat-kadena#readme",
+  "dependencies": {
+    "@types/node": "^22.13.1",
+    "async-lock": "^1.4.1",
+    "hardhat-switch-network": "^1.2.0"
+  },
+  "peerDependencies": {
+    "@nomicfoundation/hardhat-ethers": "^3.0.8",
+    "@nomicfoundation/hardhat-toolbox": "^5.0.0",
+    "ethers": "^6.1.0",
+    "hardhat": "^2.22.18",
+    "mocha": "^11.1.0",
+    "chai": "^4.2.0",
+    "web3": "^4.16.0"
+  },
+  "devDependencies": {
+    "@nomicfoundation/hardhat-ethers": "^3.0.8",
+    "@nomicfoundation/hardhat-toolbox": "^5.0.0",
+    "ethers": "^6.1.0",
+    "hardhat": "^2.22.18",
+    "mocha": "^11.1.0",
+    "chai": "^4.2.0",
+    "web3": "^4.16.0",
+    "@eslint/js": "^9.20.0",
+    "@types/async-lock": "^1.4.2",
+    "@types/mocha": "^10.0.10",
+    "eslint": "^9.20.0",
+    "globals": "^15.14.0",
+    "prettier": "^3.5.0",
+    "typescript": "^5.7.3",
+    "typescript-eslint": "^8.24.0"
+  }
+}
