@@ -14,14 +14,8 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 18
-          cache: 'pnpm'
-
-      - name: Install pnpm
-        run: npm install -g pnpm
+      - name: Runner setup
+        uses: ./.github/actions/runner-setup
 
       - name: Install dependencies
         run: pnpm install
