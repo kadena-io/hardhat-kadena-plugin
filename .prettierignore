@@ -4,3 +4,4 @@ lib
 cache
 artifacts
 typechain-types
+pnpm-lock.yaml
