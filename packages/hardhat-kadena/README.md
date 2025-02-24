@@ -52,13 +52,15 @@ module.exports = {
 
 The plugin uses the following configuration options:
 
-| Property      | Type                                      | Description                                                                                                                                               |
-| ------------- | ----------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `networkStem` | `string` (optional)                       | Specifies the network stem for Chainweb (default: `kadena_devnet_`).                                                                                      |
-| `accounts`    | `HardhatNetworkAccountsConfig` (optional) | Defines the accounts configuration for the network (default: Hardhat network accounts).                                                                   |
-| `chains`      | `number` (optional)                       | Specifies the number of chains in the Chainweb network (default: `2`).                                                                                    |
-| `graph`       | `{ [key: number]: number[] }` (optional)  | Defines the graph structure of the Chainweb network where keys represent chain IDs and values are arrays of connected chain IDs (default: Pearson graph). |
-| `logging`     | `"none" \| "info" \| "debug"` (optional)  | Sets the logging level for debugging purposes (default: `"info"`).                                                                                        |
+| Property           | Type                                      | Description                                                                                                                                               |
+| ------------------ | ----------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `networkStem`      | `string` (optional)                       | Specifies the network stem for Chainweb (default: `kadena_devnet_`).                                                                                      |
+| `networkType`      | `"hardhat" \| "external"` (optional)      | User in-process hadhat nodes or connect to external chainweb node (default: `"hardhat"`)                                                                  |
+| `accounts`         | `HardhatNetworkAccountsConfig` (optional) | Defines the accounts configuration for the network (default: Hardhat network accounts).                                                                   |
+| `chains`           | `number` (optional)                       | Specifies the number of chains in the Chainweb network (default: `2`).                                                                                    |
+| `graph`            | `{ [key: number]: number[] }` (optional)  | Defines the graph structure of the Chainweb network where keys represent chain IDs and values are arrays of connected chain IDs (default: Pearson graph). |
+| `logging`          | `"none" \| "info" \| "debug"` (optional)  | Sets the logging level for debugging purposes (default: `"info"`).                                                                                        |
+| `spvProofEndPoint` | `string` (optional)                       | The endpoint for requesting spv when network type is "external" (default: `"http://localhost:1848/chainweb/0.0/evm-development"`).                        |
 
 ## Graph
 
@@ -81,7 +83,9 @@ module.exports = {
 };
 ```
 
-## Networks
+## In Process Hardhat Network
+
+### Networks
 
 The plugin uses the Chainweb configuration and extends the Hardhat config by adding networks to it. All networks inherit the built-in Hardhat network config by default, except:
 
@@ -108,13 +112,43 @@ module.exports = {
 };
 ```
 
+## External Chainweb
+
+When you what to connect your hardhat project to an external network or chainweb devnet you need to set the networkType to `external` then you should pass the networks into the networks option
+
+### Example of external networks
+
+```ts
+module.exports = {
+  solidity: '0.8.20',
+  networks: {
+    kadena_chain0: {
+      url: 'http://localhost:8545',
+      chainId: 1789,
+      accounts: devnetAccounts.accounts.map((account) => account.privateKey),
+      chainwebChainId: 0,
+    },
+    kadena_chain1: {
+      url: 'http://localhost:8555',
+      chainId: 1790,
+      accounts: devnetAccounts.accounts.map((account) => account.privateKey),
+      chainwebChainId: 1,
+    },
+  },
+  chainweb: {
+    networkType: 'external',
+    networkStem: 'kadena_chain',
+  },
+};
+```
+
 ## Plugin API
 
 The plugin adds a `chainweb` property to the Hardhat Runtime Environment (HRE):
 
 ```ts
 export interface ChainwebPluginApi {
-  getProvider: (cid: number) => HardhatEthersProvider;
+  getProvider: (cid: number) => Promise<EthereumProvider>;
   requestSpvProof: (targetChain: number, origin: Origin) => Promise<string>;
   switchChain: (cid: number) => Promise<void>;
   getChainIds: () => number[];
@@ -129,7 +163,7 @@ export interface ChainwebPluginApi {
 
 | Function                 | Parameters                            | Return Type                          | Description                                          |
 | ------------------------ | ------------------------------------- | ------------------------------------ | ---------------------------------------------------- |
-| `getProvider`            | `cid: number`                         | `HardhatEthersProvider`              | Retrieves the provider for a specified chain.        |
+| `getProvider`            | `cid: number`                         | `EthereumProvider`                   | Retrieves the provider for a specified chain.        |
 | `requestSpvProof`        | `targetChain: number, origin: Origin` | `Promise<string>`                    | Requests an SPV proof for a cross-chain transaction. |
 | `switchChain`            | `cid: number`                         | `Promise<void>`                      | Switches the active chain.                           |
 | `getChainIds`            | None                                  | `number[]`                           | Returns an array of available chain IDs.             |

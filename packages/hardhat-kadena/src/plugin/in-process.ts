@@ -1,17 +1,25 @@
-import { extendEnvironment, extendConfig } from 'hardhat/config';
-import { ChainwebNetwork } from './utils/chainweb.js';
-import { ChainwebConfig, ChainwebPluginApi } from './type.js';
-import { getKadenaNetworks } from './utils/configure.js';
-import { createGraph } from './utils/chainweb-graph.js';
-import { getUtils } from './utils.js';
-import { HardhatEthersProvider } from '@nomicfoundation/hardhat-ethers/internal/hardhat-ethers-provider.js';
+import {
+  HardhatConfig,
+  HardhatRuntimeEnvironment,
+  HardhatUserConfig,
+} from 'hardhat/types';
+import { ChainwebNetwork } from '../utils/chainweb';
+import { getUtils } from '../utils';
+import { HardhatEthersProvider } from '@nomicfoundation/hardhat-ethers/internal/hardhat-ethers-provider';
 import Web3 from 'web3';
+import { ChainwebHardhatUserConfig, ChainwebPluginApi } from '../type';
+import { createGraph } from '../utils/chainweb-graph';
+import { getKadenaNetworks } from '../utils/configure';
 
-extendConfig((config, userConfig) => {
-  if (!userConfig.chainweb) {
-    throw new Error(
-      'hardhat_kadena plugins is imported but chainweb configuration is not presented in hardhat.config.js',
-    );
+export const setChainwebInProcessConfig = (
+  config: HardhatConfig,
+  userConfig: Readonly<HardhatUserConfig>,
+) => {
+  if (
+    userConfig.chainweb.networkType &&
+    userConfig.chainweb.networkType !== 'hardhat'
+  ) {
+    throw new Error(`${userConfig.chainweb.networkType} is not supported`);
   }
   let chains = 2;
   if (userConfig.chainweb.graph) {
@@ -26,15 +34,22 @@ extendConfig((config, userConfig) => {
     }
     chains = Object.keys(userConfig.chainweb.graph).length;
   }
-
-  const chainwebConfig: Required<ChainwebConfig> = {
+  const chainsCount = chains ?? 2;
+  const chainwebConfig: Required<
+    ChainwebHardhatUserConfig & { chainIds: number[] }
+  > = {
     networkStem: 'kadena_hardhat_',
     accounts: config.networks.hardhat.accounts,
-    chains,
+    chains: chainsCount,
+    chainIds: chainsCount
+      ? Array.from({ length: chains }).map((_, i) => i)
+      : [],
     graph: userConfig.chainweb.graph ?? createGraph(userConfig.chainweb.chains),
     logging: userConfig.chainweb.logging ?? 'info',
+    networkType: 'hardhat' as const,
     ...userConfig.chainweb,
   };
+
   config.chainweb = chainwebConfig;
 
   // add networks to hardhat
@@ -49,16 +64,15 @@ extendConfig((config, userConfig) => {
       loggingEnabled: chainwebConfig.logging === 'debug',
     }),
   };
-  config.defaultNetwork =
-    userConfig.defaultNetwork ?? `${chainwebConfig.networkStem}0`;
-});
+  return;
+};
 
-// extendEnvironment((hre) => {
-//   console.log(hre.config.networks.hardhat.accounts);
-//   process.exit(0);
-// });
-
-extendEnvironment((hre) => {
+export function inProcessPlugin(hre: HardhatRuntimeEnvironment) {
+  if (hre.config.chainweb.networkType !== 'hardhat') {
+    throw new Error(
+      'This in process Plugin only works with hardhat networkType',
+    );
+  }
   const chainwebNetwork = new ChainwebNetwork({
     chainweb: hre.config.chainweb,
     networks: hre.config.networks,
@@ -119,10 +133,9 @@ extendEnvironment((hre) => {
   const api: ChainwebPluginApi = {
     network: chainwebNetwork,
     deployContractOnChains: utils.deployContractOnChains,
-    getProvider: (cid: number) => {
+    getProvider: async (cid: number) => {
       const provider = chainwebNetwork.getProvider(cid);
-      const networkName = `${hre.config.chainweb.networkStem}${cid}`;
-      return new HardhatEthersProvider(provider, networkName);
+      return provider;
     },
     requestSpvProof: utils.requestSpvProof,
     switchChain: async (cid: number | string) => {
@@ -133,8 +146,7 @@ extendEnvironment((hre) => {
         await hre.switchNetwork(`${hre.config.chainweb.networkStem}${cid}`);
       }
     },
-    getChainIds: () =>
-      new Array(hre.config.chainweb.chains).fill(0).map((_, i) => i),
+    getChainIds: () => hre.config.chainweb.chainIds,
     callChainIdContract: utils.callChainIdContract,
     createTamperedProof: utils.createTamperedProof,
     computeOriginHash: utils.computeOriginHash,
@@ -142,4 +154,4 @@ extendEnvironment((hre) => {
   };
 
   hre.chainweb = api;
-});
+}

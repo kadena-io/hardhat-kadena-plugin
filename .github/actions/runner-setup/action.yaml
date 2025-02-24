@@ -1,4 +1,5 @@
 name: 'Runner setup'
+description: 'Setup the runner for the project'
 runs:
   using: 'composite'
   steps:

@@ -24,7 +24,7 @@ export const getUtils = (hre: HardhatRuntimeEnvironment) => {
   }
 
   function usesHardhatNetwork() {
-    return true;
+    return hre.config.chainweb.networkType === 'hardhat';
   }
 
   // export function withChainweb() {
@@ -128,14 +128,22 @@ export const getUtils = (hre: HardhatRuntimeEnvironment) => {
 
   // Call our chainweb SPV api with the necesasry proof parameters
   async function getProof(trgChain: number, origin: Origin) {
+    if (hre.config.chainweb.networkType !== 'external') {
+      throw new Error(
+        'This function is only available for external chainweb networks',
+      );
+    }
     return fetch(
-      `http://localhost:1848/chainweb/0.0/evm-development/chain/${trgChain}/spv/chain/${origin.chain}/height/${origin.height}/transaction/${origin.txIdx}/event/${origin.eventIdx}`,
+      `${hre.config.chainweb.spvProofEndpoint}/chain/${trgChain}/spv/chain/${origin.chain}/height/${origin.height}/transaction/${origin.txIdx}/event/${origin.eventIdx}`,
     );
   }
 
   // Request cross-chain transfer SPV proof
   async function requestSpvProof(targetChain: number, origin: Origin) {
     if (usesHardhatNetwork()) {
+      if (!hre.chainweb.network) {
+        throw new Error('chainweb type is hardhat but network not initialized');
+      }
       const hexProof = await hre.chainweb.network.getSpvProof(
         targetChain,
         origin,

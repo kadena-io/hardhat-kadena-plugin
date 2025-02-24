@@ -3,13 +3,13 @@ import { distance } from './chainweb-graph.js';
 import { sleep } from './sleep.js';
 import { wordToAddress } from './ethers-helpers.js';
 import { logError, Logger, logInfo } from './logger.js';
-import { ChainwebConfig } from '../type.js';
+import { ChainwebHardhatUserConfig } from '../type.js';
 import { KadenaNetworkConfig, NetworksConfig } from 'hardhat/types';
 import { Chain } from './chain.js';
 import { HardhatEthersProvider } from '@nomicfoundation/hardhat-ethers/internal/hardhat-ethers-provider.js';
 
 interface INetworkOptions {
-  chainweb: Required<ChainwebConfig>;
+  chainweb: Required<ChainwebHardhatUserConfig>;
   networks: NetworksConfig;
 }
 
@@ -155,7 +155,7 @@ export class ChainwebNetwork {
 function makeChainweb(
   logger: Logger,
   config: {
-    chainweb: Required<ChainwebConfig>;
+    chainweb: Required<ChainwebHardhatUserConfig>;
     networks: NetworksConfig;
   },
 ) {

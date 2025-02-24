@@ -64,16 +64,36 @@ module.exports = {
         };
       }),
     },
-    // For running an external hardhat node using `npx hardhat node`
-    localhost: {
-      url: 'http://localhost:8545',
-      chainId: 1789,
-    },
+    // uncomment the following to connect to external chainweb nodes
+    // kadena_chain0: {
+    //   url: 'http://localhost:8545',
+    //   chainId: 1789,
+    //   accounts: devnetAccounts.accounts.map((account) => account.privateKey),
+    //   chainwebChainId: 0,
+    // },
+    // kadena_chain1: {
+    //   url: 'http://localhost:8555',
+    //   chainId: 1790,
+    //   accounts: devnetAccounts.accounts.map((account) => account.privateKey),
+    //   chainwebChainId: 1,
+    // },
   },
   chainweb: {
+    networkStem: 'hardhat_chain',
+    networkType: 'hardhat',
     chains: 2,
-    logging: 'info',
   },
+  // uncomment the following to enable external chainweb network
+  // chainweb: {
+  //   networkStem: 'kadena_chain',
+  //   networkType: 'external',
+  //   accounts: devnetAccounts.accounts.map((account) => {
+  //     return {
+  //       privateKey: account.privateKey,
+  //       balance: '1000000000000000000000000',
+  //     };
+  //   }),
+  // },
   sourcify: {
     enabled: false,
   },

@@ -2,23 +2,39 @@ import 'hardhat/types';
 import type { ChainwebNetwork, Origin } from './utils/chainweb';
 import type { DeployContractOnChains } from './utils';
 import {
+  EthereumProvider,
   HardhatNetworkAccountsConfig,
   HardhatNetworkUserConfig,
 } from 'hardhat/types';
 import 'hardhat/types/runtime';
-import { HardhatEthersProvider } from '@nomicfoundation/hardhat-ethers/internal/hardhat-ethers-provider';
 
-export interface ChainwebConfig {
+export interface ChainwebExrenalUserConfig {
+  networkStem?: string;
+  networkType: 'external';
+  accounts: HardhatNetworkAccountsConfig;
+  spvProofEndpoint?: string;
+  chains?: number;
+}
+export interface ChainwebHardhatUserConfig {
   networkStem?: string;
   accounts?: HardhatNetworkAccountsConfig;
   chains?: number;
   graph?: { [key: number]: number[] };
   logging?: 'none' | 'info' | 'debug';
+  networkType?: 'hardhat';
 }
 
+export type ChainwebUserConfig =
+  | ChainwebHardhatUserConfig
+  | ChainwebExrenalUserConfig;
+
+export type ChainwenConfig = Required<ChainwebUserConfig> & {
+  chainIds: number[];
+};
+
 export interface ChainwebPluginApi {
-  network: ChainwebNetwork;
-  getProvider: (cid: number) => HardhatEthersProvider;
+  network?: ChainwebNetwork;
+  getProvider: (cid: number) => Promise<EthereumProvider>;
   requestSpvProof: (targetChain: number, origin: Origin) => Promise<string>;
   switchChain: (cid: number) => Promise<void>;
   getChainIds: () => number[];
@@ -31,11 +47,11 @@ export interface ChainwebPluginApi {
 
 declare module 'hardhat/types' {
   interface HardhatConfig {
-    chainweb: Required<ChainwebConfig>;
+    chainweb: ChainwenConfig;
   }
 
   interface HardhatUserConfig {
-    chainweb: ChainwebConfig;
+    chainweb: ChainwebUserConfig;
   }
   interface HardhatNetworkConfig {
     chainwebChainId?: number;
