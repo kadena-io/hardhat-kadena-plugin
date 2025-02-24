@@ -1,0 +1,36 @@
+name: CI Checks
+
+on:
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  checks:
+    name: Run Lint, Format Check, and Build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+          cache: 'pnpm'
+
+      - name: Install pnpm
+        run: npm install -g pnpm
+
+      - name: Install dependencies
+        run: pnpm install
+
+      - name: Run lint
+        run: pnpm lint
+
+      - name: Run format check
+        run: pnpm format:check
+
+      - name: Build the project
+        run: pnpm build
