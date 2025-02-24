@@ -2,7 +2,7 @@
   "name": "hardhat-kadena",
   "version": "1.0.0",
   "description": "Hardhat plugin for Kadena's Chainweb network",
-  "author": "Lars Kuhtz <lars@kadena.io>",
+  "author": "Javad Khalilian <javad@kadena.io>",
   "contributors": [
     "Lars Kuhtz <lars@kadena.io>",
     "Javad Khalilian <javad@kadena.io>"
@@ -15,7 +15,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/kadena-io/hardhat-kadena.git"
+    "url": "git+https://github.com/kadena-io/hardhat-kadena-plugin.git"
   },
   "keywords": [
     "hardhat",
@@ -26,9 +26,9 @@
   ],
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/kadena-io/hardhat-kadena/issues"
+    "url": "https://github.com/kadena-io/hardhat-kadena-plugin/issues"
   },
-  "homepage": "https://github.com/kadena-io/hardhat-kadena#readme",
+  "homepage": "https://github.com/kadena-io/hardhat-kadena-plugin/tree/main/packages/hardhat-kadena#readme",
   "dependencies": {
     "@types/node": "^22.13.1",
     "async-lock": "^1.4.1",
