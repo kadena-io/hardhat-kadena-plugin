@@ -1,6 +1,6 @@
 import { HardhatUserConfig } from 'hardhat/config';
 import '@nomicfoundation/hardhat-toolbox';
-import 'hardhat-kadena';
+import '@kadena/hardhat-chainweb';
 
 const config: HardhatUserConfig = {
   solidity: '0.8.28',

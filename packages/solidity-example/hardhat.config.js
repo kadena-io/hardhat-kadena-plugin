@@ -2,14 +2,9 @@ require('@nomicfoundation/hardhat-toolbox');
 require('hardhat-switch-network');
 require('@nomicfoundation/hardhat-verify');
 require('@tovarishfin/hardhat-yul');
-require('hardhat-kadena');
-const path = require('path');
-const fs = require('fs');
+require('@kadena/hardhat-chainweb');
 
-// Read and parse the accounts file
-const devnetAccountsPath = path.join(__dirname, 'devnet-accounts.json');
-const devnetAccountsFile = fs.readFileSync(devnetAccountsPath, 'utf8');
-const devnetAccounts = JSON.parse(devnetAccountsFile);
+const devnetAccounts = require('./devnet-accounts.json');
 
 // Validate account configuration
 const requiredAccounts = 20;
@@ -60,7 +55,7 @@ module.exports = {
       accounts: devnetAccounts.accounts.map((account) => {
         return {
           privateKey: account.privateKey,
-          balance: '1000000000000000000000000',
+          balance: '99999999',
         };
       }),
     },
@@ -73,6 +68,12 @@ module.exports = {
   chainweb: {
     chains: 2,
     logging: 'info',
+    accounts: devnetAccounts.accounts.map((account) => {
+      return {
+        privateKey: account.privateKey,
+        balance: '1000000000000000000000000',
+      };
+    }),
   },
   sourcify: {
     enabled: false,

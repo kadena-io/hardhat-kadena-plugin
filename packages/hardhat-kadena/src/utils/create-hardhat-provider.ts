@@ -52,8 +52,6 @@ export async function createHardhatProvider(
     hardhatNetConfig.accounts,
   );
 
-  console.log(accounts);
-
   const eip1193Provider: EIP1193Provider = await createHardhatNetworkProvider(
     {
       chainId: hardhatNetConfig.chainId,

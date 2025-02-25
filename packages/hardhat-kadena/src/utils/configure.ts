@@ -31,7 +31,7 @@ export const getKadenaNetworks = ({
     (acc, chainId, index) => {
       const networkConfig: KadenaNetworkConfig = {
         ...hardhatNetwork,
-        chainId: 676000 + chainId,
+        chainId: 626000 + chainId,
         chainwebChainId: chainId,
         accounts: accounts ?? hardhatNetwork.accounts,
         loggingEnabled,

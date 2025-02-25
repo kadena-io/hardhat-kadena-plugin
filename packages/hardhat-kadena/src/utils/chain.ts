@@ -169,10 +169,7 @@ export class Chain {
     // create provider
     try {
       this._provider = await createHardhatProvider(this.config, this.logger);
-      console.log(
-        'TEST_PROVIDER',
-        await this._provider.send('eth_accounts', []),
-      );
+      await this._provider.send('eth_accounts', [])
     } catch (e) {
       console.error(e);
     }
