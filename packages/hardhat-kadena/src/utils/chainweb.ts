@@ -68,7 +68,10 @@ export class ChainwebNetwork {
   //
   // http://localhost:1848/chainweb/0.0/evm-development/chain/${trgChain}/spv/chain/${origin.chain}/height/${origin.height}/transaction/${origin.txIdx}/event/${origin.eventIdx}
   //
-  async getSpvProof(trgChain: number, origin: Origin) {
+  async getSpvProof(
+    trgChain: number,
+    origin: Omit<Origin, 'originContractAddress'>,
+  ) {
     // get origin chain
     const provider = new HardhatEthersProvider(
       this.getProvider(Number(origin.chain)),

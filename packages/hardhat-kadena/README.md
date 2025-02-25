@@ -165,6 +165,29 @@ await chainweb.switchChain(0); // configure hardhat to use chain 0
 
 This plugin overrides `switchNetwork` from `hardhat-switch-network` to load the correct Chainweb provider while also supporting switching by chain index. For example, `switchNetwork(1)` switches to chain 1 of Chainweb.
 
+## RPC Server
+
+You can run Chainweb as a single node using the hardhat node command. This will spin up the chains based on the Chainweb configuration and expose both http and ws ports with URLs following this pattern. You can also pass standard Hardhat configuration options like hostname and port to change the default values. Note that fork is not supported yet.
+
+### Chain URLs
+
+http://127.0.0.1:8545/chain/chainIndex
+
+### Example for multiple chains:
+
+http://127.0.0.1:8545/chain/0
+http://127.0.0.1:8545/chain/1
+
+## SPV Proof Requests
+
+The server also accepts requests for SPV proofs with the following URL pattern:
+
+http://127.0.0.1:8545/chain/${trgChain}/spv/chain/${origin.chain}/height/${origin.height}/transaction/${origin.txIdx}/event/${origin.eventIdx}
+
+### Example SPV proof request:
+
+http://127.0.0.1:8545/chain/1/spv/chain/0/height/1234/transaction/16666/event/1123123123
+
 ## Features
 
 - Create a Chainweb network with configurable chain count and graph structure.
@@ -172,13 +195,12 @@ This plugin overrides `switchNetwork` from `hardhat-switch-network` to load the 
 - Request SPV proofs for cross-chain transactions.
 - Configure logging levels for better debugging.
 - Uses the Hardhat in-process network internally and creates multiple instances of it.
+- Expose RPC server via http and websocket
 
 ## Future Works
 
 - Support external Chainweb configuration.
 - Support chainweb docker compose
-- Support multiple Chianweb
-- Expose PRC Server for `hardhat --node`
 
 ## License
 

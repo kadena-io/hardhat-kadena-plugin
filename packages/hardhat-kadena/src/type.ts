@@ -2,11 +2,11 @@ import 'hardhat/types';
 import type { ChainwebNetwork, Origin } from './utils/chainweb';
 import type { DeployContractOnChains } from './utils';
 import {
+  EthereumProvider,
   HardhatNetworkAccountsConfig,
   HardhatNetworkUserConfig,
 } from 'hardhat/types';
 import 'hardhat/types/runtime';
-import { HardhatEthersProvider } from '@nomicfoundation/hardhat-ethers/internal/hardhat-ethers-provider';
 
 export interface ChainwebConfig {
   networkStem?: string;
@@ -18,8 +18,11 @@ export interface ChainwebConfig {
 
 export interface ChainwebPluginApi {
   network: ChainwebNetwork;
-  getProvider: (cid: number) => HardhatEthersProvider;
-  requestSpvProof: (targetChain: number, origin: Origin) => Promise<string>;
+  getProvider: (cid: number) => EthereumProvider;
+  requestSpvProof: (
+    targetChain: number,
+    origin: Omit<Origin, 'originContractAddress'>,
+  ) => Promise<string>;
   switchChain: (cid: number) => Promise<void>;
   getChainIds: () => number[];
   callChainIdContract: () => Promise<number>;

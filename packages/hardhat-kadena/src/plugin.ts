@@ -1,4 +1,4 @@
-import { extendEnvironment, extendConfig } from 'hardhat/config';
+import { extendEnvironment, extendConfig, task } from 'hardhat/config';
 import { ChainwebNetwork } from './utils/chainweb.js';
 import { ChainwebConfig, ChainwebPluginApi } from './type.js';
 import { getKadenaNetworks } from './utils/configure.js';
@@ -6,6 +6,7 @@ import { createGraph } from './utils/chainweb-graph.js';
 import { getUtils } from './utils.js';
 import { HardhatEthersProvider } from '@nomicfoundation/hardhat-ethers/internal/hardhat-ethers-provider.js';
 import Web3 from 'web3';
+import { runRPCNode } from './server/runRPCNode.js';
 
 extendConfig((config, userConfig) => {
   if (!userConfig.chainweb) {
@@ -121,8 +122,7 @@ extendEnvironment((hre) => {
     deployContractOnChains: utils.deployContractOnChains,
     getProvider: (cid: number) => {
       const provider = chainwebNetwork.getProvider(cid);
-      const networkName = `${hre.config.chainweb.networkStem}${cid}`;
-      return new HardhatEthersProvider(provider, networkName);
+      return provider;
     },
     requestSpvProof: utils.requestSpvProof,
     switchChain: async (cid: number | string) => {
@@ -143,3 +143,5 @@ extendEnvironment((hre) => {
 
   hre.chainweb = api;
 });
+
+task('node', 'Start chainweb node').setAction(runRPCNode);

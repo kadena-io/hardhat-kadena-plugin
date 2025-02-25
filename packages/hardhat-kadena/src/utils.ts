@@ -127,14 +127,20 @@ export const getUtils = (hre: HardhatRuntimeEnvironment) => {
   /* Off-Chain: SPV Proof Creation */
 
   // Call our chainweb SPV api with the necesasry proof parameters
-  async function getProof(trgChain: number, origin: Origin) {
+  async function getProof(
+    trgChain: number,
+    origin: Omit<Origin, 'originContractAddress'>,
+  ) {
     return fetch(
       `http://localhost:1848/chainweb/0.0/evm-development/chain/${trgChain}/spv/chain/${origin.chain}/height/${origin.height}/transaction/${origin.txIdx}/event/${origin.eventIdx}`,
     );
   }
 
   // Request cross-chain transfer SPV proof
-  async function requestSpvProof(targetChain: number, origin: Origin) {
+  async function requestSpvProof(
+    targetChain: number,
+    origin: Omit<Origin, 'originContractAddress'>,
+  ) {
     if (usesHardhatNetwork()) {
       const hexProof = await hre.chainweb.network.getSpvProof(
         targetChain,
