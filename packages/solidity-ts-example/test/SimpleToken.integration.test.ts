@@ -12,7 +12,7 @@ import {
   // deployContracts,
   // requestSpvProof,
 } from './utils/utils';
-import { DeployedContractsOnChains } from 'hardhat-kadena';
+import { DeployedContractsOnChains } from '@kadena/hardhat-chainweb';
 
 const { requestSpvProof, deployContractOnChains } = chainweb;
 
@@ -29,14 +29,14 @@ describe('SimpleToken Integration Tests', async function () {
     const deployed = await deployContractOnChains('SimpleToken');
 
     // Store contract instances for direct calls
-    token0 = deployed.tokens[0].contract;
-    token1 = deployed.tokens[1].contract;
+    token0 = deployed.deployments[0].contract;
+    token1 = deployed.deployments[1].contract;
 
-    deployed.tokens[0].contract;
+    deployed.deployments[0].contract;
 
     // Keep deployment info accessible when needed
-    token0Info = deployed.tokens[0];
-    token1Info = deployed.tokens[1];
+    token0Info = deployed.deployments[0];
+    token1Info = deployed.deployments[1];
 
     // The owner/deployer transfers tokens to other accounts so that they can transfer tokens cross-chain. This is a setup step.
     await token0.transfer(signers.alice.address, ethers.parseEther('1000000')); // Alice has 1M tokens on chain 0

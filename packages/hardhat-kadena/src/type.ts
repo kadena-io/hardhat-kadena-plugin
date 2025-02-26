@@ -1,5 +1,5 @@
 import 'hardhat/types';
-import type { ChainwebNetwork, Origin } from './utils/chainweb';
+import type { Origin } from './utils/chainweb';
 import type { DeployContractOnChains } from './utils';
 import {
   EthereumProvider,
@@ -11,13 +11,12 @@ import 'hardhat/types/runtime';
 export interface ChainwebConfig {
   networkStem?: string;
   accounts?: HardhatNetworkAccountsConfig;
-  chains?: number;
+  chains: number;
   graph?: { [key: number]: number[] };
   logging?: 'none' | 'info' | 'debug';
 }
 
 export interface ChainwebPluginApi {
-  network: ChainwebNetwork;
   getProvider: (cid: number) => EthereumProvider;
   requestSpvProof: (
     targetChain: number,
@@ -29,7 +28,10 @@ export interface ChainwebPluginApi {
   deployContractOnChains: DeployContractOnChains;
   createTamperedProof: (targetChain: number, origin: Origin) => Promise<string>;
   computeOriginHash: (origin: Origin) => string;
-  deployMocks: () => ReturnType<DeployContractOnChains>;
+  preCompiles: {
+    chainwebChainId: string;
+    spvVerify: string;
+  };
 }
 
 declare module 'hardhat/types' {

@@ -1,7 +1,6 @@
 require('@nomicfoundation/hardhat-toolbox');
 require('hardhat-switch-network');
 require('@nomicfoundation/hardhat-verify');
-require('@tovarishfin/hardhat-yul');
 require('@kadena/hardhat-chainweb');
 
 const devnetAccounts = require('./devnet-accounts.json');

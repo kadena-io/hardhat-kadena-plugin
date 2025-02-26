@@ -1,4 +1,4 @@
-import { DeployedContractsOnChains, Origin } from 'hardhat-kadena';
+import { DeployedContractsOnChains, Origin } from '@kadena/hardhat-chainweb';
 import { DeployedContract, HardhatEthersSigner, Signers } from './utils/utils';
 
 import { expect } from 'chai';
@@ -11,6 +11,7 @@ import {
   CrossChainOperation,
   redeemCrossChain,
   getSigners,
+  deployMocks,
 } from './utils/utils';
 
 const {
@@ -18,7 +19,6 @@ const {
   computeOriginHash,
   requestSpvProof,
   createTamperedProof,
-  deployMocks,
   switchChain,
 } = chainweb;
 
@@ -40,12 +40,12 @@ describe('SimpleToken Unit Tests', async function () {
     const deployed = await deployContractOnChains('SimpleToken');
 
     // Store contract instances for direct calls
-    token0 = deployed.tokens[0].contract;
-    token1 = deployed.tokens[1].contract;
+    token0 = deployed.deployments[0].contract;
+    token1 = deployed.deployments[1].contract;
 
     // Keep deployment info accessible when needed
-    token0Info = deployed.tokens[0];
-    token1Info = deployed.tokens[1];
+    token0Info = deployed.deployments[0];
+    token1Info = deployed.deployments[1];
     await switchNetwork(token0Info.network.name);
   });
 
@@ -433,12 +433,12 @@ describe('SimpleToken Unit Tests', async function () {
 
       beforeEach(async function () {
         const mocks = await deployMocks();
-        mockToken0 = mocks.tokens[0].contract;
-        mockToken1 = mocks.tokens[1].contract;
+        mockToken0 = mocks.deployments[0].contract;
+        mockToken1 = mocks.deployments[1].contract;
 
         // Keep deployment info accessible when needed
-        mockToken0Info = mocks.tokens[0];
-        mockToken1Info = mocks.tokens[1];
+        mockToken0Info = mocks.deployments[0];
+        mockToken1Info = mocks.deployments[1];
 
         await authorizeContracts(mockToken0, mockToken0Info, [
           mockToken0Info,

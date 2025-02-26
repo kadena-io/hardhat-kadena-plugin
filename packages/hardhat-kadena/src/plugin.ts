@@ -7,6 +7,7 @@ import { getUtils } from './utils.js';
 import { HardhatEthersProvider } from '@nomicfoundation/hardhat-ethers/internal/hardhat-ethers-provider.js';
 import Web3 from 'web3';
 import { runRPCNode } from './server/runRPCNode.js';
+import { CHAIN_ID_ADDRESS, VERIFY_ADDRESS } from './utils/network-contracts.js';
 
 extendConfig((config, userConfig) => {
   if (!userConfig.chainweb) {
@@ -14,7 +15,9 @@ extendConfig((config, userConfig) => {
       'hardhat_kadena plugins is imported but chainweb configuration is not presented in hardhat.config.js',
     );
   }
-  let chains = 2;
+  if (!userConfig.chainweb.chains) {
+    throw new Error('Number of chains is not presented in hardhat.config.js');
+  }
   if (userConfig.chainweb.graph) {
     if (
       userConfig.chainweb.chains &&
@@ -25,13 +28,11 @@ extendConfig((config, userConfig) => {
         'Number of chains in graph does not match the graph configuration',
       );
     }
-    chains = Object.keys(userConfig.chainweb.graph).length;
   }
 
   const chainwebConfig: Required<ChainwebConfig> = {
     networkStem: 'kadena_hardhat_',
     accounts: config.networks.hardhat.accounts,
-    chains,
     graph: userConfig.chainweb.graph ?? createGraph(userConfig.chainweb.chains),
     logging: userConfig.chainweb.logging ?? 'info',
     ...userConfig.chainweb,
@@ -88,7 +89,7 @@ extendEnvironment((hre) => {
     process.exit(1);
   });
 
-  const utils = getUtils(hre);
+  const utils = getUtils(hre, chainwebNetwork);
 
   const originalSwitchNetwork = hre.switchNetwork;
   hre.switchNetwork = async (networkNameOrIndex: string | number) => {
@@ -118,7 +119,6 @@ extendEnvironment((hre) => {
   };
 
   const api: ChainwebPluginApi = {
-    network: chainwebNetwork,
     deployContractOnChains: utils.deployContractOnChains,
     getProvider: (cid: number) => {
       const provider = chainwebNetwork.getProvider(cid);
@@ -138,7 +138,10 @@ extendEnvironment((hre) => {
     callChainIdContract: utils.callChainIdContract,
     createTamperedProof: utils.createTamperedProof,
     computeOriginHash: utils.computeOriginHash,
-    deployMocks: utils.deployMocks,
+    preCompiles: {
+      chainwebChainId: CHAIN_ID_ADDRESS,
+      spvVerify: VERIFY_ADDRESS,
+    },
   };
 
   hre.chainweb = api;
