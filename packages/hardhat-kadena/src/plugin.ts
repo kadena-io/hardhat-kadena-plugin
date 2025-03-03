@@ -154,6 +154,7 @@ extendEnvironment((hre) => {
   const api: ChainwebPluginApi = {
     deployContractOnChains: utils.deployContractOnChains,
     getProvider: async (cid: number) => {
+      await startNetwork;
       const provider = chainwebNetwork.getProvider(cid);
       return provider;
     },
