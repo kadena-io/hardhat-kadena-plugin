@@ -16,7 +16,7 @@ export interface Origin {
 
 export const getUtils = (
   hre: HardhatRuntimeEnvironment,
-  chainwebNetwork: ChainwebNetwork,
+  chainwebNetwork?: ChainwebNetwork,
 ) => {
   const { ethers, network } = hre;
   const NETWORK_STEM = hre.config.chainweb.networkStem || 'kadena_hardhat_';
@@ -134,9 +134,14 @@ export const getUtils = (
     trgChain: number,
     origin: Omit<Origin, 'originContractAddress'>,
   ) {
-    return fetch(
-      `http://localhost:1848/chainweb/0.0/evm-development/chain/${trgChain}/spv/chain/${origin.chain}/height/${origin.height}/transaction/${origin.txIdx}/event/${origin.eventIdx}`,
-    );
+    if (!hre.config.chainweb.externalHostUrl) {
+      throw new Error(
+        'You need to set chainweb.externalAddress in hardhat.config.js for external chainweb access',
+      );
+    }
+    const baseUrl = hre.config.chainweb.externalHostUrl;
+    const url = `${baseUrl}/chain/${trgChain}/spv/chain/${origin.chain}/height/${origin.height}/transaction/${origin.txIdx}/event/${origin.eventIdx}`;
+    return fetch(url);
   }
 
   // Request cross-chain transfer SPV proof
@@ -144,7 +149,7 @@ export const getUtils = (
     targetChain: number,
     origin: Omit<Origin, 'originContractAddress'>,
   ) {
-    if (usesHardhatNetwork()) {
+    if (chainwebNetwork && usesHardhatNetwork()) {
       const hexProof = await chainwebNetwork.getSpvProof(targetChain, origin);
       console.log(`Hex proof: ${hexProof}`);
       return hexProof;

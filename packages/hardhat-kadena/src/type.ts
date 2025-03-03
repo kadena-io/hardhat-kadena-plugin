@@ -14,6 +14,8 @@ export interface ChainwebConfig {
   chains: number;
   graph?: { [key: number]: number[] };
   logging?: 'none' | 'info' | 'debug';
+  type?: 'in-process' | 'external';
+  externalHostUrl?: string;
 }
 
 export interface ChainwebPluginApi {
