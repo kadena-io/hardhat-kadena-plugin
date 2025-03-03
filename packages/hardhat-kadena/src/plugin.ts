@@ -63,11 +63,6 @@ extendConfig((config, userConfig) => {
   }
 });
 
-// extendEnvironment((hre) => {
-//   console.log(hre.config.networks.hardhat.accounts);
-//   process.exit(0);
-// });
-
 extendEnvironment((hre) => {
   if (hre.config.chainweb.type === 'external') {
     const utils = getUtils(hre);

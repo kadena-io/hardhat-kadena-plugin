@@ -46,10 +46,12 @@ declare module 'hardhat/types' {
   }
   interface HardhatNetworkConfig {
     chainwebChainId?: number;
+    type?: 'chainweb:in-process';
   }
 
   interface HttpNetworkConfig {
     chainwebChainId?: number;
+    type?: 'chainweb:external';
   }
 
   interface KadenaNetworkConfig extends HardhatNetworkConfig {

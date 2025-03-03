@@ -19,29 +19,16 @@ export const getUtils = (
   chainwebNetwork?: ChainwebNetwork,
 ) => {
   const { ethers, network } = hre;
-  const NETWORK_STEM = hre.config.chainweb.networkStem || 'kadena_hardhat_';
 
   function getNetworks() {
     return Object.keys(hre.config.networks).filter((net) =>
-      net.includes(NETWORK_STEM),
+      net.includes(hre.config.chainweb.networkStem),
     );
   }
 
-  function usesHardhatNetwork() {
-    return true;
+  function usesInProcessNetwork() {
+    return hre.network.config.type === 'chainweb:in-process';
   }
-
-  // export function withChainweb() {
-  //   if (usesHardhatNetwork()) {
-  //     before(async function () {
-  //       await hre.chainweb.startHardhatNetwork();
-  //     });
-
-  //     after(async function () {
-  //       await hre.chainweb.stopHardhatNetwork();
-  //     });
-  //   }
-  // }
 
   function getChainIdContract() {
     return new ethers.Contract(CHAIN_ID_ADDRESS, CHAIN_ID_ABI, ethers.provider);
@@ -149,7 +136,7 @@ export const getUtils = (
     targetChain: number,
     origin: Omit<Origin, 'originContractAddress'>,
   ) {
-    if (chainwebNetwork && usesHardhatNetwork()) {
+    if (chainwebNetwork && usesInProcessNetwork()) {
       const hexProof = await chainwebNetwork.getSpvProof(targetChain, origin);
       console.log(`Hex proof: ${hexProof}`);
       return hexProof;

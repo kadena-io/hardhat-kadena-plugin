@@ -34,6 +34,7 @@ export const getKadenaNetworks = ({
         chainId: 626000 + chainId,
         chainwebChainId: chainId,
         accounts: accounts ?? hardhatNetwork.accounts,
+        type: 'chainweb:in-process',
         loggingEnabled,
         ...availableNetworks[`${networkStem}${index}`],
       } as KadenaNetworkConfig;
