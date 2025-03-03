@@ -1,6 +1,6 @@
 {
   "name": "@kadena/hardhat-chainweb",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "Hardhat plugin for Kadena's Chainweb network",
   "author": "Javad Khalilian <javad@kadena.io>",
   "contributors": [
@@ -34,6 +34,7 @@
     "@types/node": "^22.13.1",
     "async-lock": "^1.4.1",
     "hardhat-switch-network": "^1.2.0",
+    "path-to-regexp": "^8.2.0",
     "undici": "^5.14.0",
     "ws": "^7.4.6"
   },

@@ -1,5 +1,5 @@
 import 'hardhat/types';
-import type { ChainwebNetwork, Origin } from './utils/chainweb';
+import type { Origin } from './utils/chainweb';
 import type { DeployContractOnChains } from './utils';
 import {
   EthereumProvider,
@@ -11,14 +11,15 @@ import 'hardhat/types/runtime';
 export interface ChainwebConfig {
   networkStem?: string;
   accounts?: HardhatNetworkAccountsConfig;
-  chains?: number;
+  chains: number;
   graph?: { [key: number]: number[] };
   logging?: 'none' | 'info' | 'debug';
+  type?: 'in-process' | 'external';
+  externalHostUrl?: string;
 }
 
 export interface ChainwebPluginApi {
-  network: ChainwebNetwork;
-  getProvider: (cid: number) => EthereumProvider;
+  getProvider: (cid: number) => Promise<EthereumProvider>;
   requestSpvProof: (
     targetChain: number,
     origin: Omit<Origin, 'originContractAddress'>,
@@ -29,7 +30,10 @@ export interface ChainwebPluginApi {
   deployContractOnChains: DeployContractOnChains;
   createTamperedProof: (targetChain: number, origin: Origin) => Promise<string>;
   computeOriginHash: (origin: Origin) => string;
-  deployMocks: () => ReturnType<DeployContractOnChains>;
+  preCompiles: {
+    chainwebChainId: string;
+    spvVerify: string;
+  };
 }
 
 declare module 'hardhat/types' {
@@ -42,10 +46,12 @@ declare module 'hardhat/types' {
   }
   interface HardhatNetworkConfig {
     chainwebChainId?: number;
+    type?: 'chainweb:in-process';
   }
 
   interface HttpNetworkConfig {
     chainwebChainId?: number;
+    type?: 'chainweb:external';
   }
 
   interface KadenaNetworkConfig extends HardhatNetworkConfig {

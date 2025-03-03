@@ -1,10 +1,10 @@
 import { ethers } from 'hardhat';
-import { DeployedContractsOnChains } from 'hardhat-kadena';
+import { DeployedContractsOnChains } from '@kadena/hardhat-chainweb';
 import { HardhatEthersHelpers } from 'hardhat/types';
 
 const { switchNetwork, chainweb } = require('hardhat');
 
-const { requestSpvProof, switchChain } = chainweb;
+const { requestSpvProof, switchChain, deployContractOnChains } = chainweb;
 
 // hash of CrossChainInitialized(uint32,address,uint64,bytes)
 const EVENT_SIG_HASH =
@@ -24,6 +24,11 @@ export async function authorizeContracts(
     const tx = await token.setCrossChainAddress(tok.chain, tok.address);
     await tx.wait();
   }
+}
+
+export function deployMocks() {
+  console.log(`Found Kadena devnet networks while deploying mocks`);
+  return deployContractOnChains('WrongOperationTypeToken');
 }
 
 /* *************************************************************************** */

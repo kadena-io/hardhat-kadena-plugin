@@ -1,4 +1,4 @@
-# Hardhat Kadena Plugin
+# Hardhat Kadena chainweb Plugin
 
 `@kadena/hardhat-chainweb` is a Hardhat plugin that allows developers to create a Chainweb network, switch between chains, and request SPV proofs.
 
@@ -56,7 +56,7 @@ The plugin uses the following configuration options:
 | ------------- | ----------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `networkStem` | `string` (optional)                       | Specifies the network stem for Chainweb (default: `kadena_devnet_`).                                                                                      |
 | `accounts`    | `HardhatNetworkAccountsConfig` (optional) | Defines the accounts configuration for the network (default: Hardhat network accounts).                                                                   |
-| `chains`      | `number` (optional)                       | Specifies the number of chains in the Chainweb network (default: `2`).                                                                                    |
+| `chains`      | `number`                                  | Specifies the number of chains in the Chainweb network.                                                                                                   |
 | `graph`       | `{ [key: number]: number[] }` (optional)  | Defines the graph structure of the Chainweb network where keys represent chain IDs and values are arrays of connected chain IDs (default: Pearson graph). |
 | `logging`     | `"none" \| "info" \| "debug"` (optional)  | Sets the logging level for debugging purposes (default: `"info"`).                                                                                        |
 
@@ -119,26 +119,36 @@ export interface ChainwebPluginApi {
   switchChain: (cid: number) => Promise<void>;
   getChainIds: () => number[];
   callChainIdContract: () => Promise<number>;
-  deployContractOnChains: DeployContractOnChains;
+  deployContractOnChains: (name: contract) => Promise<{
+    deployments: {
+      // ContractFactory from ethers
+      contract: ReturnType<ContractFactory['deploy']>;
+      address: string;
+      chain: number;
+      network: {
+        name: string;
+      };
+    };
+  }>;
   createTamperedProof: (targetChain: number, origin: Origin) => Promise<string>;
   computeOriginHash: (origin: Origin) => string;
-  deployMocks: () => ReturnType<DeployContractOnChains>;
-  network: ChainwebNetwork;
+  preCompiles: {
+    chainwebChainId: string;
+    spvVerify: string;
+  };
 }
 ```
 
-| Function                 | Parameters                            | Return Type                          | Description                                          |
-| ------------------------ | ------------------------------------- | ------------------------------------ | ---------------------------------------------------- |
-| `getProvider`            | `cid: number`                         | `HardhatEthersProvider`              | Retrieves the provider for a specified chain.        |
-| `requestSpvProof`        | `targetChain: number, origin: Origin` | `Promise<string>`                    | Requests an SPV proof for a cross-chain transaction. |
-| `switchChain`            | `cid: number`                         | `Promise<void>`                      | Switches the active chain.                           |
-| `getChainIds`            | None                                  | `number[]`                           | Returns an array of available chain IDs.             |
-| `callChainIdContract`    | None                                  | `Promise<number>`                    | Calls a contract to get the chain ID.                |
-| `deployContractOnChains` | Varies                                | `DeployContractOnChains`             | Deploys a contract on multiple chains.               |
-| `createTamperedProof`    | `targetChain: number, origin: Origin` | `Promise<string>`                    | Creates a tampered SPV proof for testing purposes.   |
-| `computeOriginHash`      | `origin: Origin`                      | `string`                             | Computes the hash of a transaction origin.           |
-| `deployMocks`            | None                                  | `ReturnType<DeployContractOnChains>` | Deploys mock contracts for testing.                  |
-| `network`                | None                                  | `ChainwebNetwork`                    | Provides access to the Chainweb network object.      |
+| Function                 | Parameters                            | Return Type                                           | Description                                          |
+| ------------------------ | ------------------------------------- | ----------------------------------------------------- | ---------------------------------------------------- |
+| `getProvider`            | `cid: number`                         | `HardhatEthersProvider`                               | Retrieves the provider for a specified chain.        |
+| `requestSpvProof`        | `targetChain: number, origin: Origin` | `Promise<string>`                                     | Requests an SPV proof for a cross-chain transaction. |
+| `switchChain`            | `cid: number`                         | `Promise<void>`                                       | Switches the active chain.                           |
+| `getChainIds`            | None                                  | `number[]`                                            | Returns an array of available chain IDs.             |
+| `callChainIdContract`    | None                                  | `Promise<number>`                                     | Calls a contract to get the chain ID.                |
+| `deployContractOnChains` | `name: string`                        | check `deployContractOnChains` of `ChainwebPluginApi` | Deploys a contract on multiple chains.               |
+| `createTamperedProof`    | `targetChain: number, origin: Origin` | `Promise<string>`                                     | Creates a tampered SPV proof for testing purposes.   |
+| `computeOriginHash`      | `origin: Origin`                      | `string`                                              | Computes the hash of a transaction origin.           |
 
 For the spv proof you need to pass the origin with the following interface
 
@@ -161,6 +171,62 @@ await chainweb.deployContractOnChains("SimpleToken") // deploy contract on all c
 await chainweb.switchChain(0); // configure hardhat to use chain 0
 ```
 
+## Pre-compiles
+
+The nodes come with two `pre-compiles` that the addresses are exposed via `preCompiles` property.
+
+### CHAIN_ID_PRECOMPILE
+
+the pre compile that returns the chain index.
+
+address: `address(uint160(uint256(keccak256('/Chainweb/Chain/Id/'))))`
+
+#### Example of getting chainwebChainId
+
+```Solidity
+address public constant CHAIN_ID_PRECOMPILE =
+  address(uint160(uint256(keccak256('/Chainweb/Chain/Id/'))));
+
+function getChainwebChainId() public view returns (uint32 cid) {
+  (bool success, bytes memory c) = CHAIN_ID_PRECOMPILE.staticcall('');
+  require(success, ChainwebChainIdRetrievalFailed());
+  require(c.length == 4, InvalidChainwebChainId());
+  cid = uint32(bytes4(c));
+}
+```
+
+### VALIDATE_PROOF_PRECOMPILE
+
+the pre compile that verifys a spv proof;
+
+address: `address(uint160(uint256(keccak256('/Chainweb/KIP-34/VERIFY/SVP/'))))`
+
+#### Example of getting spvProof
+
+```Solidity
+
+address public constant VALIDATE_PROOF_PRECOMPILE =
+    address(uint160(uint256(keccak256('/Chainweb/KIP-34/VERIFY/SVP/'))));
+...
+
+function verifySPV(
+  bytes memory proof
+)
+  public
+  view
+  returns (CrossChainMessage memory crossChainMessage, bytes32 originHash)
+{
+  (bool success, bytes memory data) = VALIDATE_PROOF_PRECOMPILE.staticcall(
+    proof
+  );
+  require(success, SPVVerificationFailed());
+  crossChainMessage = abi.decode(data, (CrossChainMessage));
+  originHash = keccak256(abi.encode(crossChainMessage.origin));
+  require(!completed[originHash], AlreadyCompleted(originHash));
+};
+
+```
+
 ### Overloading `hardhat-switch-network`
 
 This plugin overrides `switchNetwork` from `hardhat-switch-network` to load the correct Chainweb provider while also supporting switching by chain index. For example, `switchNetwork(1)` switches to chain 1 of Chainweb.
@@ -176,6 +242,7 @@ http://127.0.0.1:8545/chain/chainIndex
 ### Example for multiple chains:
 
 http://127.0.0.1:8545/chain/0
+
 http://127.0.0.1:8545/chain/1
 
 ## SPV Proof Requests

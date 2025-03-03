@@ -1,4 +1,4 @@
-const { chainweb } = require('hardhat');
+import { chainweb } from 'hardhat';
 
 async function main() {
   const deployed = await chainweb.deployContractOnChains('SimpleToken');

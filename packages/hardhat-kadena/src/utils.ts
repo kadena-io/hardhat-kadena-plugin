@@ -4,6 +4,7 @@ import { CHAIN_ID_ABI, CHAIN_ID_ADDRESS } from './utils/network-contracts.js';
 import { HardhatRuntimeEnvironment, KadenaNetworkConfig } from 'hardhat/types';
 import { BaseContract } from 'ethers';
 import { ContractTransactionResponse } from 'ethers';
+import { ChainwebNetwork } from './utils/chainweb.js';
 
 export interface Origin {
   chain: bigint;
@@ -13,31 +14,21 @@ export interface Origin {
   eventIdx: bigint;
 }
 
-export const getUtils = (hre: HardhatRuntimeEnvironment) => {
+export const getUtils = (
+  hre: HardhatRuntimeEnvironment,
+  chainwebNetwork?: ChainwebNetwork,
+) => {
   const { ethers, network } = hre;
-  const NETWORK_STEM = hre.config.chainweb.networkStem || 'kadena_hardhat_';
 
   function getNetworks() {
     return Object.keys(hre.config.networks).filter((net) =>
-      net.includes(NETWORK_STEM),
+      net.includes(hre.config.chainweb.networkStem),
     );
   }
 
-  function usesHardhatNetwork() {
-    return true;
+  function usesInProcessNetwork() {
+    return hre.network.config.type === 'chainweb:in-process';
   }
-
-  // export function withChainweb() {
-  //   if (usesHardhatNetwork()) {
-  //     before(async function () {
-  //       await hre.chainweb.startHardhatNetwork();
-  //     });
-
-  //     after(async function () {
-  //       await hre.chainweb.stopHardhatNetwork();
-  //     });
-  //   }
-  // }
 
   function getChainIdContract() {
     return new ethers.Contract(CHAIN_ID_ADDRESS, CHAIN_ID_ABI, ethers.provider);
@@ -58,8 +49,7 @@ export const getUtils = (hre: HardhatRuntimeEnvironment) => {
       `Found ${chains.length} Kadena devnet networks: ${chains.join(', ')}`,
     );
 
-    // const deployments = {};
-    const tokens = []; // Array for individual token access
+    const deployments = []; // Array for individual token access
 
     for (const chainId of chains) {
       try {
@@ -92,15 +82,15 @@ export const getUtils = (hre: HardhatRuntimeEnvironment) => {
           },
         };
 
-        tokens.push(deploymentInfo);
+        deployments.push(deploymentInfo);
       } catch (error) {
         console.error(`Failed to deploy to network ${chainId}:`, error);
       }
     }
 
-    // Return both formats
     return {
-      tokens, // Access like: deployments.tokens[0]
+      deployments,
+      tokens: deployments,
     };
   }
 
@@ -131,9 +121,14 @@ export const getUtils = (hre: HardhatRuntimeEnvironment) => {
     trgChain: number,
     origin: Omit<Origin, 'originContractAddress'>,
   ) {
-    return fetch(
-      `http://localhost:1848/chainweb/0.0/evm-development/chain/${trgChain}/spv/chain/${origin.chain}/height/${origin.height}/transaction/${origin.txIdx}/event/${origin.eventIdx}`,
-    );
+    if (!hre.config.chainweb.externalHostUrl) {
+      throw new Error(
+        'You need to set chainweb.externalAddress in hardhat.config.js for external chainweb access',
+      );
+    }
+    const baseUrl = hre.config.chainweb.externalHostUrl;
+    const url = `${baseUrl}/chain/${trgChain}/spv/chain/${origin.chain}/height/${origin.height}/transaction/${origin.txIdx}/event/${origin.eventIdx}`;
+    return fetch(url);
   }
 
   // Request cross-chain transfer SPV proof
@@ -141,17 +136,15 @@ export const getUtils = (hre: HardhatRuntimeEnvironment) => {
     targetChain: number,
     origin: Omit<Origin, 'originContractAddress'>,
   ) {
-    if (usesHardhatNetwork()) {
-      const hexProof = await hre.chainweb.network.getSpvProof(
-        targetChain,
-        origin,
-      );
+    if (chainwebNetwork && usesInProcessNetwork()) {
+      const hexProof = await chainwebNetwork.getSpvProof(targetChain, origin);
       console.log(`Hex proof: ${hexProof}`);
       return hexProof;
     } else {
       const spvCall = await getProof(targetChain, origin);
-      const proof = await spvCall.json();
-      const proofStr = JSON.stringify(proof);
+      const proof = await spvCall.text();
+      if (proof.startsWith('0x')) return proof;
+      const proofStr = proof;
       const hexProof = '0x' + Buffer.from(proofStr, 'utf8').toString('hex');
       return hexProof;
     }
@@ -173,10 +166,6 @@ export const getUtils = (hre: HardhatRuntimeEnvironment) => {
     getChainIdContract,
     callChainIdContract,
     deployContractOnChains,
-    deployMocks: () => {
-      console.log(`Found Kadena devnet networks while deploying mocks`);
-      return deployContractOnChains('WrongOperationTypeToken');
-    },
     computeOriginHash,
     requestSpvProof,
     createTamperedProof,
@@ -195,5 +184,9 @@ export type DeployedContractsOnChains = {
 };
 
 export type DeployContractOnChains = (name: string) => Promise<{
+  deployments: DeployedContractsOnChains[];
+  /**
+   * @deprecated Use `deployments` instead
+   */
   tokens: DeployedContractsOnChains[];
 }>;

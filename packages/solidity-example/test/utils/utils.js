@@ -1,6 +1,6 @@
-const { switchNetwork, chainweb } = require('hardhat');
+const { switchNetwork, chainweb, network } = require('hardhat');
 
-const { requestSpvProof, switchChain } = chainweb;
+const { requestSpvProof, switchChain, deployContractOnChains } = chainweb;
 
 // hash of CrossChainInitialized(uint32,address,uint64,bytes)
 const EVENT_SIG_HASH =
@@ -16,6 +16,11 @@ async function authorizeContracts(token, tokenInfo, authorizedTokenInfos) {
     const tx = await token.setCrossChainAddress(tok.chain, tok.address);
     await tx.wait();
   }
+}
+
+function deployMocks() {
+  console.log(`Found Kadena devnet networks while deploying mocks`);
+  return deployContractOnChains('WrongOperationTypeToken');
 }
 
 /* *************************************************************************** */
@@ -125,4 +130,5 @@ module.exports = {
   redeemCrossChain,
   CrossChainOperation,
   getSigners,
+  deployMocks,
 };
