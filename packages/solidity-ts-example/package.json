@@ -1,7 +1,8 @@
 {
   "name": "solidity-ts-example",
   "scripts": {
-    "test": "hardhat test"
+    "test": "hardhat test",
+    "node": "hardhat node"
   },
   "dependencies": {
     "@openzeppelin/contracts": "^5.2.0",

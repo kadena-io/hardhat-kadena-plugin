@@ -7,6 +7,8 @@
   "scripts": {
     "build": "pnpm --filter @kadena/hardhat-chainweb run build",
     "test": "pnpm --filter solidity-example run test",
+    "test-external": "pnpm --filter solidity-example run test-external",
+    "node": "pnpm --filter solidity-example run node",
     "test-ts": "pnpm --filter solidity-ts-example run test",
     "format:write": "prettier --write --cache .",
     "format:check": "prettier --check .",

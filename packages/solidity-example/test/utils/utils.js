@@ -8,9 +8,7 @@ const EVENT_SIG_HASH =
 
 // Authorize contracts for cross-chain transfers to and from the token
 async function authorizeContracts(token, tokenInfo, authorizedTokenInfos) {
-  console.log('tokenInfo', tokenInfo);
   await switchNetwork(tokenInfo.network.name);
-  console.log('SWITCHED NETWORKS', network);
   for (const tok of authorizedTokenInfos) {
     console.log(
       `Authorizing ${tok.chain}:${tok.address} for ${tokenInfo.chain}:${tokenInfo.address}`,

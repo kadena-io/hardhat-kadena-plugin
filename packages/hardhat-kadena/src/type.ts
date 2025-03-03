@@ -19,7 +19,7 @@ export interface ChainwebConfig {
 }
 
 export interface ChainwebPluginApi {
-  getProvider: (cid: number) => EthereumProvider;
+  getProvider: (cid: number) => Promise<EthereumProvider>;
   requestSpvProof: (
     targetChain: number,
     origin: Omit<Origin, 'originContractAddress'>,

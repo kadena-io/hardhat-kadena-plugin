@@ -1,3 +1,4 @@
+import { createProvider } from 'hardhat/internal/core/providers/construction';
 import { extendEnvironment, extendConfig, task } from 'hardhat/config';
 import { ChainwebNetwork } from './utils/chainweb.js';
 import { ChainwebConfig, ChainwebPluginApi } from './type.js';
@@ -73,8 +74,8 @@ extendEnvironment((hre) => {
     const api: ChainwebPluginApi = {
       deployContractOnChains: utils.deployContractOnChains,
       getProvider: (cid: number) => {
-        const provider = chainwebNetwork.getProvider(cid);
-        return provider;
+        const name = `${hre.config.chainweb.networkStem}${cid}`;
+        return createProvider(hre.config, name, hre.artifacts);
       },
       requestSpvProof: utils.requestSpvProof,
       switchChain: async (cid: number | string) => {
@@ -157,7 +158,7 @@ extendEnvironment((hre) => {
 
   const api: ChainwebPluginApi = {
     deployContractOnChains: utils.deployContractOnChains,
-    getProvider: (cid: number) => {
+    getProvider: async (cid: number) => {
       const provider = chainwebNetwork.getProvider(cid);
       return provider;
     },

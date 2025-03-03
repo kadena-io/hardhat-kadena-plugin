@@ -155,8 +155,9 @@ export const getUtils = (
       return hexProof;
     } else {
       const spvCall = await getProof(targetChain, origin);
-      const proof = await spvCall.json();
-      const proofStr = JSON.stringify(proof);
+      const proof = await spvCall.text();
+      if (proof.startsWith('0x')) return proof;
+      const proofStr = proof;
       const hexProof = '0x' + Buffer.from(proofStr, 'utf8').toString('hex');
       return hexProof;
     }
