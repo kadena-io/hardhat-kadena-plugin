@@ -52,13 +52,15 @@ module.exports = {
 
 The plugin uses the following configuration options:
 
-| Property      | Type                                      | Description                                                                                                                                               |
-| ------------- | ----------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `networkStem` | `string` (optional)                       | Specifies the network stem for Chainweb (default: `kadena_devnet_`).                                                                                      |
-| `accounts`    | `HardhatNetworkAccountsConfig` (optional) | Defines the accounts configuration for the network (default: Hardhat network accounts).                                                                   |
-| `chains`      | `number`                                  | Specifies the number of chains in the Chainweb network.                                                                                                   |
-| `graph`       | `{ [key: number]: number[] }` (optional)  | Defines the graph structure of the Chainweb network where keys represent chain IDs and values are arrays of connected chain IDs (default: Pearson graph). |
-| `logging`     | `"none" \| "info" \| "debug"` (optional)  | Sets the logging level for debugging purposes (default: `"info"`).                                                                                        |
+| Property          | Type                                      | Description                                                                                                                                                            |
+| ----------------- | ----------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `networkStem`     | `string` (optional)                       | Specifies the network stem for Chainweb (default: `kadena_devnet_`).                                                                                                   |
+| `accounts`        | `HardhatNetworkAccountsConfig` (optional) | Defines the accounts configuration for the network (default: Hardhat network accounts).                                                                                |
+| `chains`          | `number`                                  | Specifies the number of chains in the Chainweb network.                                                                                                                |
+| `graph`           | `{ [key: number]: number[] }` (optional)  | Defines the graph structure of the Chainweb network where keys represent chain IDs and values are arrays of connected chain IDs (default: Pearson graph).              |
+| `type`            | `'in-process' \| 'external'` (optional)   | Defines Chainweb type: “in-process” uses the Hardhat network, and “external” uses an external network (which you need to add to the networks—default: `'in-process'`). |
+| `externalHostUrl` | `string` (optional)                       | Defines the base url for external networks (default: `http://localhost:8545`)                                                                                          |
+| `logging`         | `'none' \| 'info' \| 'debug'` (optional)  | Sets the logging level for debugging purposes (default: `"info"`).                                                                                                     |
 
 ## Graph
 
@@ -104,6 +106,39 @@ module.exports = {
   },
   chainweb: {
     chains: 2,
+  },
+};
+```
+
+### Example of External Networks
+
+Using the plugin to interact with external networks.
+**Note**: The external network should implement the SPV proof endpoint with the following pattern.
+
+```url
+:externalHostUrl/:targetChain/spv/chain/:sourceChain/height/:height/transaction/:txIdx/event/:eventIdx
+```
+
+```ts
+module.exports = {
+  solidity: '0.8.28',
+  networks: {
+    chainweb_ext0: {
+      url: 'http://localhost:8545/chain/0',
+      chainwebChainId: 0,
+      chainId: 626000,
+    },
+    chainweb_ext1: {
+      url: 'http://localhost:8545/chain/1',
+      chainwebChainId: 1,
+      chainId: 626001,
+    },
+  },
+  chainweb: {
+    chains: 2,
+    type: 'external',
+    networkStem: 'chainweb_ext',
+    externalHostUrl: 'http://localhost:8545',
   },
 };
 ```
@@ -249,7 +284,7 @@ http://127.0.0.1:8545/chain/1
 
 The server also accepts requests for SPV proofs with the following URL pattern:
 
-http://127.0.0.1:8545/chain/${trgChain}/spv/chain/${origin.chain}/height/${origin.height}/transaction/${origin.txIdx}/event/${origin.eventIdx}
+http://127.0.0.1:8545/chain/:targetChain/spv/chain/:sourceChain/height/:height/transaction/:txIdx/event/:eventIdx
 
 ### Example SPV proof request:
 
