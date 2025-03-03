@@ -13,7 +13,8 @@
     "format:write": "prettier --write --cache .",
     "format:check": "prettier --check .",
     "lint": "eslint .",
-    "lint:fix": "eslint --fix ."
+    "lint:fix": "eslint --fix .",
+    "release": "pnpm publish --filter @kadena/hardhat-chainweb  --access public"
   },
   "keywords": [],
   "author": "",
