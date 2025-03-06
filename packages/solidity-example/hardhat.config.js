@@ -10,12 +10,5 @@ module.exports = {
     hardhat: {
       chains: 2,
     },
-    internal: {
-      chains: 3,
-      type: 'in-process',
-    },
-    localhost: {
-      chains: 2,
-    },
   },
 };

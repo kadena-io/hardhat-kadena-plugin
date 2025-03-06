@@ -1,6 +1,6 @@
 import { Contract } from 'ethers';
 import './type.js';
-import { CHAIN_ID_ABI, CHAIN_ID_ADDRESS } from './utils/network-contracts.js';
+import { CHAIN_ID_ABI } from './utils/network-contracts.js';
 import { HardhatRuntimeEnvironment, KadenaNetworkConfig } from 'hardhat/types';
 import { BaseContract } from 'ethers';
 import { ContractTransactionResponse } from 'ethers';
@@ -31,12 +31,18 @@ export const getUtils = (
   }
 
   function getChainIdContract() {
-    return new ethers.Contract(CHAIN_ID_ADDRESS, CHAIN_ID_ABI, ethers.provider);
+    const chainweb = hre.config.chainweb[hre.config.defaultChainweb];
+    return new ethers.Contract(
+      chainweb.precompiles.chainwebChainId,
+      CHAIN_ID_ABI,
+      ethers.provider,
+    );
   }
 
   async function callChainIdContract() {
+    const chainweb = hre.config.chainweb[hre.config.defaultChainweb];
     const hex = await ethers.provider.send('eth_call', [
-      { to: CHAIN_ID_ADDRESS },
+      { to: chainweb.precompiles.chainwebChainId },
       'latest',
       {},
     ]);

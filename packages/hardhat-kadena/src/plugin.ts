@@ -3,7 +3,9 @@ import { extendEnvironment, extendConfig, task } from 'hardhat/config';
 import { ChainwebNetwork } from './utils/chainweb.js';
 import {
   ChainwebExternalConfig,
+  ChainwebExternalUserConfig,
   ChainwebInProcessConfig,
+  ChainwebInProcessUserConfig,
   ChainwebPluginApi,
 } from './type.js';
 import {
@@ -32,85 +34,118 @@ extendConfig((config, userConfig) => {
 
   config.defaultChainweb = userConfig.defaultChainweb ?? 'hardhat';
 
-  Object.entries(userConfig.chainweb).forEach(([name, chainwebUserConfig]) => {
-    if (chainwebUserConfig === undefined) return;
-    if (!chainwebUserConfig.chains) {
-      throw new Error('Number of chains is not presented in hardhat.config.js');
-    }
-    let type = chainwebUserConfig.type ?? 'in-process';
-    if (name === 'hardhat') {
-      type = 'in-process';
-    }
-    if (name === 'localhost') {
-      type = 'external';
-    }
+  const hardhatConfig = userConfig.chainweb.hardhat || {
+    chains: 2,
+    type: 'in-process',
+  };
 
-    if (
-      type === 'in-process' &&
-      (chainwebUserConfig as ChainwebInProcessConfig).graph
-    ) {
-      const graph = (chainwebUserConfig as ChainwebInProcessConfig).graph ?? {};
-      if (
-        chainwebUserConfig.chains &&
-        Object.keys(graph).length != chainwebUserConfig.chains
-      ) {
+  const userConfigWithLocalhost = {
+    ...userConfig.chainweb,
+    hardhatConfig,
+    localhost: {
+      chains: hardhatConfig.chains,
+      chainIdOffset: hardhatConfig.chainIdOffset ?? 626000,
+      type: 'external',
+      externalHostUrl: 'http://localhost:8545',
+    },
+  };
+
+  Object.entries(userConfigWithLocalhost).forEach(
+    ([name, chainwebUserConfig]) => {
+      if (chainwebUserConfig === undefined) return;
+      if (!chainwebUserConfig.chains) {
         throw new Error(
-          'Number of chains in graph does not match the graph configuration',
+          'Number of chains is not presented in hardhat.config.js',
         );
       }
-    }
+      let type = chainwebUserConfig.type ?? 'in-process';
+      if (name === 'hardhat') {
+        type = 'in-process';
+      }
+      if (name === 'localhost') {
+        type = 'external';
+      }
 
-    if (type === 'in-process') {
-      // add networks to hardhat
-      const chainwebInProcessUserConfig =
-        chainwebUserConfig as ChainwebInProcessConfig;
+      if (
+        type === 'in-process' &&
+        (chainwebUserConfig as ChainwebInProcessConfig).graph
+      ) {
+        const graph =
+          (chainwebUserConfig as ChainwebInProcessConfig).graph ?? {};
+        if (
+          chainwebUserConfig.chains &&
+          Object.keys(graph).length != chainwebUserConfig.chains
+        ) {
+          throw new Error(
+            'Number of chains in graph does not match the graph configuration',
+          );
+        }
+      }
 
-      const chainwebConfig: Required<ChainwebInProcessConfig> = {
-        graph:
-          chainwebInProcessUserConfig.graph ??
-          createGraph(chainwebInProcessUserConfig.chains),
-        logging: 'info',
-        type: 'in-process',
-        chainIdOffset: 626000,
-        accounts: config.networks.hardhat.accounts,
-        ...chainwebInProcessUserConfig,
-      };
+      if (type === 'in-process') {
+        // add networks to hardhat
+        const chainwebInProcessUserConfig =
+          chainwebUserConfig as ChainwebInProcessUserConfig;
 
-      config.networks = {
-        ...config.networks,
-        ...getKadenaNetworks({
-          availableNetworks: userConfig.networks,
-          hardhatNetwork: config.networks.hardhat,
-          networkStem: getNetworkStem(name),
-          numberOfChains: chainwebConfig.chains,
-          accounts: chainwebConfig.accounts,
-          loggingEnabled: chainwebConfig.logging === 'debug',
-        }),
-      };
-      config.chainweb[name] = chainwebConfig;
-    } else {
-      const externalUserConfig = chainwebUserConfig as ChainwebExternalConfig;
-      const chainwebConfig: Required<ChainwebExternalConfig> = {
-        type: 'external',
-        chainIdOffset: 626000,
-        externalHostUrl: 'http://localhost:8545',
-        accounts: 'remote',
-        ...externalUserConfig,
-      };
-      // add networks to hardhat
-      config.networks = {
-        ...config.networks,
-        ...getKadenaExternalNetworks({
-          availableNetworks: userConfig.networks,
-          networkStem: getNetworkStem(name),
-          numberOfChains: chainwebConfig.chains,
-          accounts: chainwebConfig.accounts,
-          baseUrl: chainwebConfig.externalHostUrl,
-        }),
-      };
-      config.chainweb[name] = chainwebConfig;
-    }
-  });
+        const chainwebConfig: ChainwebInProcessConfig = {
+          graph:
+            chainwebInProcessUserConfig.graph ??
+            createGraph(chainwebInProcessUserConfig.chains),
+          logging: 'info',
+          type: 'in-process',
+          chainIdOffset: 626000,
+          accounts: config.networks.hardhat.accounts,
+          precompiles: {
+            chainwebChainId: CHAIN_ID_ADDRESS,
+            spvVerify: VERIFY_ADDRESS,
+          },
+          ...chainwebInProcessUserConfig,
+        };
+
+        config.networks = {
+          ...config.networks,
+          ...getKadenaNetworks({
+            availableNetworks: userConfig.networks,
+            hardhatNetwork: config.networks.hardhat,
+            networkStem: getNetworkStem(name),
+            numberOfChains: chainwebConfig.chains,
+            accounts: chainwebConfig.accounts,
+            loggingEnabled: chainwebConfig.logging === 'debug',
+          }),
+        };
+        config.chainweb[name] = chainwebConfig;
+      } else {
+        const externalUserConfig =
+          chainwebUserConfig as ChainwebExternalUserConfig;
+        const chainwebConfig: ChainwebExternalConfig = {
+          type: 'external',
+          chainIdOffset: 626000,
+          externalHostUrl: 'http://localhost:8545',
+          accounts: 'remote',
+          ...externalUserConfig,
+          precompiles: {
+            chainwebChainId:
+              externalUserConfig.precompiles?.chainwebChainId ??
+              CHAIN_ID_ADDRESS,
+            spvVerify:
+              externalUserConfig.precompiles?.spvVerify ?? VERIFY_ADDRESS,
+          },
+        };
+        // add networks to hardhat
+        config.networks = {
+          ...config.networks,
+          ...getKadenaExternalNetworks({
+            availableNetworks: userConfig.networks,
+            networkStem: getNetworkStem(name),
+            numberOfChains: chainwebConfig.chains,
+            accounts: chainwebConfig.accounts,
+            baseUrl: chainwebConfig.externalHostUrl,
+          }),
+        };
+        config.chainweb[name] = chainwebConfig;
+      }
+    },
+  );
 });
 
 const createExternalProvider = (
@@ -138,10 +173,6 @@ const createExternalProvider = (
     callChainIdContract: utils.callChainIdContract,
     createTamperedProof: utils.createTamperedProof,
     computeOriginHash: utils.computeOriginHash,
-    preCompiles: {
-      chainwebChainId: CHAIN_ID_ADDRESS,
-      spvVerify: VERIFY_ADDRESS,
-    },
   };
 };
 
@@ -247,10 +278,6 @@ const createInternalProvider = (
     callChainIdContract: utils.callChainIdContract,
     createTamperedProof: utils.createTamperedProof,
     computeOriginHash: utils.computeOriginHash,
-    preCompiles: {
-      chainwebChainId: CHAIN_ID_ADDRESS,
-      spvVerify: VERIFY_ADDRESS,
-    },
   };
 };
 
@@ -297,10 +324,6 @@ extendEnvironment((hre) => {
     deployContractOnChains: safeCall(() => api!.deployContractOnChains),
     createTamperedProof: safeCall(() => api!.createTamperedProof),
     computeOriginHash: safeCall(() => api!.computeOriginHash),
-    preCompiles: {
-      chainwebChainId: CHAIN_ID_ADDRESS,
-      spvVerify: VERIFY_ADDRESS,
-    },
   };
   if (envChainweb) {
     hre.chainweb.initialize();
@@ -325,7 +348,8 @@ task(
     if (hasNetwork) {
       return runSuper(taskArgs);
     }
-    hre.config.defaultChainweb = taskArgs.chainweb ?? 'hardhat';
+    hre.config.defaultChainweb =
+      taskArgs.chainweb ?? hre.config.defaultChainweb ?? 'hardhat';
 
     const config = hre.config.chainweb[hre.config.defaultChainweb];
     if (!config) {
@@ -351,7 +375,8 @@ task('test', 'Run mocha tests; Modified to support chainweb')
       console.error('Chainweb _initialize is not a function');
       return;
     }
-    hre.config.defaultChainweb = taskArgs.chainweb ?? 'hardhat';
+    hre.config.defaultChainweb =
+      taskArgs.chainweb ?? hre.config.defaultChainweb ?? 'hardhat';
     hre.chainweb.initialize();
     return runSuper(taskArgs);
   });
@@ -362,6 +387,13 @@ task(
 )
   .addOptionalParam(...chainwebSwitch)
   .setAction(async (taskArgs, hre, runSuper) => {
-    process.env['ACTIVE_CHAINWEB_NAME'] = taskArgs.chainweb ?? 'hardhat';
+    process.env['ACTIVE_CHAINWEB_NAME'] = hre.config.defaultChainweb =
+      taskArgs.chainweb ?? hre.config.defaultChainweb ?? 'hardhat';
     return runSuper(taskArgs);
   });
+
+task('print-config', 'print the final configuration').setAction(
+  async (_taskArgs, hre) => {
+    console.dir(hre.config, { depth: null, colors: true });
+  },
+);

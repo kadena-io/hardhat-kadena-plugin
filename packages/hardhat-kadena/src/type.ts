@@ -10,7 +10,7 @@ import {
 import 'hardhat/types/runtime';
 
 //HttpNetworkAccountsConfig
-export interface ChainwebInProcessConfig {
+export interface ChainwebInProcessUserConfig {
   accounts?: HardhatNetworkAccountsConfig;
   chains: number;
   graph?: { [key: number]: number[] };
@@ -19,13 +19,37 @@ export interface ChainwebInProcessConfig {
   chainIdOffset?: number;
 }
 
-export interface ChainwebExternalConfig {
+export interface ChainwebInProcessConfig
+  extends Required<ChainwebInProcessUserConfig> {
+  precompiles: {
+    chainwebChainId: string;
+    spvVerify: string;
+  };
+}
+
+export interface ChainwebExternalUserConfig {
   accounts?: HttpNetworkAccountsConfig;
   chains: number;
   type?: 'external';
   externalHostUrl?: string;
   chainIdOffset?: number;
+  precompiles?: {
+    chainwebChainId?: string;
+    spvVerify?: string;
+  };
 }
+
+export interface ChainwebExternalConfig
+  extends Required<ChainwebExternalUserConfig> {
+  precompiles: {
+    chainwebChainId: string;
+    spvVerify: string;
+  };
+}
+
+export type ChainwebUserConfig =
+  | ChainwebInProcessUserConfig
+  | ChainwebExternalUserConfig;
 
 export type ChainwebConfig = ChainwebInProcessConfig | ChainwebExternalConfig;
 
@@ -42,27 +66,22 @@ export interface ChainwebPluginApi {
   deployContractOnChains: DeployContractOnChains;
   createTamperedProof: (targetChain: number, origin: Origin) => Promise<string>;
   computeOriginHash: (origin: Origin) => string;
-  preCompiles: {
-    chainwebChainId: string;
-    spvVerify: string;
-  };
 }
 
 declare module 'hardhat/types' {
   interface HardhatConfig {
     chainweb: {
-      hardhat: Required<ChainwebInProcessConfig>;
-      localhost: Required<ChainwebExternalConfig>;
-      [chainwenName: string]: Required<ChainwebConfig>;
+      hardhat: ChainwebInProcessConfig;
+      localhost: ChainwebExternalConfig;
+      [chainwenName: string]: ChainwebConfig;
     };
     defaultChainweb: string;
   }
 
   interface HardhatUserConfig {
     chainweb: {
-      hardhat?: ChainwebInProcessConfig;
-      localhost?: ChainwebExternalConfig;
-      [chainwenName: string]: ChainwebConfig | undefined;
+      hardhat?: ChainwebInProcessUserConfig;
+      [chainwenName: string]: ChainwebUserConfig | undefined;
     };
     defaultChainweb?: string;
   }
