@@ -10,9 +10,9 @@
     "test-external": "pnpm --filter solidity-example run test-external",
     "node": "pnpm --filter solidity-example run node",
     "test-ts": "pnpm --filter solidity-ts-example run test",
-    "format:write": "prettier --write --cache .",
+    "format:fix": "prettier --write --cache .",
     "format:check": "prettier --check .",
-    "lint": "eslint .",
+    "lint:check": "eslint .",
     "lint:fix": "eslint --fix .",
     "release": "pnpm publish --filter @kadena/hardhat-chainweb  --access public"
   },

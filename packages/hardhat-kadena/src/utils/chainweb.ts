@@ -3,14 +3,16 @@ import { distance } from './chainweb-graph.js';
 import { sleep } from './sleep.js';
 import { wordToAddress } from './ethers-helpers.js';
 import { logError, Logger, logInfo } from './logger.js';
-import { ChainwebConfig } from '../type.js';
+import { ChainwebInProcessConfig } from '../type.js';
 import { KadenaNetworkConfig, NetworksConfig } from 'hardhat/types';
 import { Chain } from './chain.js';
 import { HardhatEthersProvider } from '@nomicfoundation/hardhat-ethers/internal/hardhat-ethers-provider.js';
+import { getNetworkStem } from '../utils.js';
 
 interface INetworkOptions {
-  chainweb: Required<ChainwebConfig>;
+  chainweb: Required<ChainwebInProcessConfig>;
   networks: NetworksConfig;
+  chainwebName: string;
 }
 
 export class ChainwebNetwork {
@@ -23,7 +25,7 @@ export class ChainwebNetwork {
       info: (msg) => logInfo('reset', '-', msg),
       error: (msg) => logError('reset', '-', msg),
     };
-    this.chains = makeChainweb(this.logger, config);
+    this.chains = makeChainweb(this.logger, this.config);
     this.graph = config.chainweb.graph;
   }
 
@@ -75,7 +77,7 @@ export class ChainwebNetwork {
     // get origin chain
     const provider = new HardhatEthersProvider(
       this.getProvider(Number(origin.chain)),
-      `${this.config.chainweb.networkStem}${origin.chain}`,
+      `${getNetworkStem(this.config.chainwebName)}${origin.chain}`,
     );
 
     // Query Event information from origin chain
@@ -158,8 +160,9 @@ export class ChainwebNetwork {
 function makeChainweb(
   logger: Logger,
   config: {
-    chainweb: Required<ChainwebConfig>;
+    chainweb: Required<ChainwebInProcessConfig>;
     networks: NetworksConfig;
+    chainwebName: string;
   },
 ) {
   const graph = config.chainweb.graph;
@@ -169,7 +172,7 @@ function makeChainweb(
   logger.info('creating chains');
   const chains: Record<number, Chain> = {};
   for (const networkName in networks) {
-    if (networkName.includes(config.chainweb.networkStem)) {
+    if (networkName.includes(getNetworkStem(config.chainwebName))) {
       const networkConfig = networks[networkName] as KadenaNetworkConfig;
       chains[networkConfig.chainwebChainId!] = new Chain(
         networkConfig,

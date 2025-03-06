@@ -46,9 +46,4 @@ router.route(
   },
 );
 
-// Generic route
-router.route('*', async (_params, { failure }) => {
-  return failure(`ROUTE NOT FOUND`, 404);
-});
-
 export const pluginRouter = router;

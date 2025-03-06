@@ -6,6 +6,9 @@ import { BaseContract } from 'ethers';
 import { ContractTransactionResponse } from 'ethers';
 import { ChainwebNetwork } from './utils/chainweb.js';
 
+export const getNetworkStem = (chainwebName: string) =>
+  `chainweb_${chainwebName}`;
+
 export interface Origin {
   chain: bigint;
   originContractAddress: string;
@@ -18,16 +21,13 @@ export const getUtils = (
   hre: HardhatRuntimeEnvironment,
   chainwebNetwork?: ChainwebNetwork,
 ) => {
+  const networkStem = getNetworkStem(hre.config.defaultChainweb);
   const { ethers, network } = hre;
 
   function getNetworks() {
     return Object.keys(hre.config.networks).filter((net) =>
-      net.includes(hre.config.chainweb.networkStem),
+      net.includes(networkStem),
     );
-  }
-
-  function usesInProcessNetwork() {
-    return hre.network.config.type === 'chainweb:in-process';
   }
 
   function getChainIdContract() {
@@ -78,7 +78,7 @@ export const getUtils = (
           chain: cid,
           network: {
             chainId,
-            name: `${hre.config.chainweb.networkStem}${chainId}`,
+            name: `${networkStem}${chainId}`,
           },
         };
 
@@ -121,13 +121,16 @@ export const getUtils = (
     trgChain: number,
     origin: Omit<Origin, 'originContractAddress'>,
   ) {
-    if (!hre.config.chainweb.externalHostUrl) {
+    const chainweb = hre.config.chainweb[hre.config.defaultChainweb];
+    if (chainweb.type === 'in-process') {
+      throw new Error('call requestSpvProof for in-process chainweb');
+    }
+    if (!chainweb.externalHostUrl) {
       throw new Error(
-        'You need to set chainweb.externalAddress in hardhat.config.js for external chainweb access',
+        'You need to set chainweb.externalHostUrl in hardhat.config.js for external chainweb access',
       );
     }
-    const baseUrl = hre.config.chainweb.externalHostUrl;
-    const url = `${baseUrl}/chain/${trgChain}/spv/chain/${origin.chain}/height/${origin.height}/transaction/${origin.txIdx}/event/${origin.eventIdx}`;
+    const url = `${chainweb.externalHostUrl}/chain/${trgChain}/spv/chain/${origin.chain}/height/${origin.height}/transaction/${origin.txIdx}/event/${origin.eventIdx}`;
     return fetch(url);
   }
 
@@ -136,7 +139,8 @@ export const getUtils = (
     targetChain: number,
     origin: Omit<Origin, 'originContractAddress'>,
   ) {
-    if (chainwebNetwork && usesInProcessNetwork()) {
+    const chainweb = hre.config.chainweb[hre.config.defaultChainweb];
+    if (chainweb.type === 'in-process' && chainwebNetwork) {
       const hexProof = await chainwebNetwork.getSpvProof(targetChain, origin);
       console.log(`Hex proof: ${hexProof}`);
       return hexProof;

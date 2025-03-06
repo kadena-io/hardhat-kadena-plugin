@@ -20,8 +20,8 @@ jobs:
       - name: Install dependencies
         run: pnpm install
 
-      - name: Run lint
-        run: pnpm lint
+      - name: Run lint check
+        run: pnpm lint:check
 
       - name: Run format check
         run: pnpm format:check

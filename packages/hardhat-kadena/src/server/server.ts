@@ -11,6 +11,7 @@ import {
 
 import { JsonRpcHandler } from 'hardhat/internal/hardhat-network/jsonrpc/handler';
 import { pluginRouter } from './pluginRouter';
+import picocolors from 'picocolors';
 
 const log = (msg: string) => {
   console.log(msg);
@@ -99,8 +100,23 @@ export class ChainwebJsonRpcServer implements IJsonRpcServer {
   }
 
   public listen = (): Promise<{ address: string; port: number }> => {
-    return new Promise((resolve) => {
-      log(`Starting JSON-RPC server on port ${this._config.port}`);
+    return new Promise((resolve, reject) => {
+      const errorHandler = (err: Error) => {
+        if ('code' in err) {
+          console.log(
+            picocolors.bgRedBright(` ${err.code} `),
+            picocolors.redBright(err.message),
+          );
+          process.exit(1);
+        } else {
+          console.log(picocolors.redBright(err.message));
+        }
+        reject(err);
+      };
+
+      this._httpServer.on('error', errorHandler);
+      this._wsServer.on('error', errorHandler);
+
       this._httpServer.listen(this._config.port, this._config.hostname, () => {
         // We get the address and port directly from the server in order to handle random port allocation with `0`.
         const address = this._httpServer.address() as AddressInfo; // TCP sockets return AddressInfo

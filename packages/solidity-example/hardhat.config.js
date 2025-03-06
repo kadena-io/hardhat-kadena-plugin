@@ -7,6 +7,15 @@ require('@kadena/hardhat-chainweb');
 module.exports = {
   solidity: '0.8.28',
   chainweb: {
-    chains: 2,
+    hardhat: {
+      chains: 2,
+    },
+    internal: {
+      chains: 3,
+      type: 'in-process',
+    },
+    localhost: {
+      chains: 2,
+    },
   },
 };
