@@ -120,7 +120,7 @@ each chainweb uses the following configuration options:
 | `type`            | `'in-process' \| 'external'` (optional)   | Defines Chainweb type: “in-process” uses the Hardhat network, and “external” uses an external network (which you need to add to the networks—default: `'in-process'`). |
 | `externalHostUrl` | `string` (optional)                       | Defines the base url for external networks (default: `http://localhost:8545`)                                                                                          |
 | `logging`         | `'none' \| 'info' \| 'debug'` (optional)  | Sets the logging level for debugging purposes (default: `"info"`).                                                                                                     |
-| `chainIfOffset`   | `number` (optional)                       | chain id offset to be set (default: `626000`).                                                                                                                         |
+| `chainIdOffset`   | `number` (optional)                       | chain id offset to be set (default: `626000`).                                                                                                                         |
 
 ## Graph
 
