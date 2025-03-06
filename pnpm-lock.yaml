@@ -38,9 +38,15 @@ importers:
       hardhat-switch-network:
         specifier: ^1.2.0
         version: 1.2.0(hardhat@2.22.18(ts-node@10.9.2(@types/node@22.13.4)(typescript@5.7.3))(typescript@5.7.3))
+      minimist:
+        specifier: ^1.2.8
+        version: 1.2.8
       path-to-regexp:
         specifier: ^8.2.0
         version: 8.2.0
+      picocolors:
+        specifier: ^1.1.1
+        version: 1.1.1
       undici:
         specifier: ^5.14.0
         version: 5.28.5
@@ -57,6 +63,9 @@ importers:
       '@types/async-lock':
         specifier: ^1.4.2
         version: 1.4.2
+      '@types/minimist':
+        specifier: ^1.2.5
+        version: 1.2.5
       '@types/mocha':
         specifier: ^10.0.10
         version: 10.0.10
@@ -636,6 +645,9 @@ packages:
 
   '@types/minimatch@5.1.2':
     resolution: {integrity: sha512-K0VQKziLUWkVKiRVrx4a40iPaxTUefQmjtkQofBkYRcoaaL/8rhwDWww9qWbrgicNOgnpIsMxyNIUM4+n6dUIA==}
+
+  '@types/minimist@1.2.5':
+    resolution: {integrity: sha512-hov8bUuiLiyFPGyFPE1lwWhmzYbirOXQNNo40+y3zow8aFVTeyn3VWL0VFFfdNddA8S4Vf0Tc062rzyNr7Paag==}
 
   '@types/mocha@10.0.10':
     resolution: {integrity: sha512-xPyYSz1cMPnJQhl0CLMH68j3gprKZaTjG3s5Vi+fDgx+uhG9NOXwbVt52eFS8ECyXhyKcjDLCBEqBExKuiZb7Q==}
@@ -3473,6 +3485,8 @@ snapshots:
   '@types/lru-cache@5.1.1': {}
 
   '@types/minimatch@5.1.2': {}
+
+  '@types/minimist@1.2.5': {}
 
   '@types/mocha@10.0.10': {}
 

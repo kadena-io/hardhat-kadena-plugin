@@ -5,20 +5,32 @@ import {
   EthereumProvider,
   HardhatNetworkAccountsConfig,
   HardhatNetworkUserConfig,
+  HttpNetworkAccountsConfig,
 } from 'hardhat/types';
 import 'hardhat/types/runtime';
 
-export interface ChainwebConfig {
-  networkStem?: string;
+//HttpNetworkAccountsConfig
+export interface ChainwebInProcessConfig {
   accounts?: HardhatNetworkAccountsConfig;
   chains: number;
   graph?: { [key: number]: number[] };
   logging?: 'none' | 'info' | 'debug';
-  type?: 'in-process' | 'external';
-  externalHostUrl?: string;
+  type?: 'in-process';
+  chainIdOffset?: number;
 }
 
+export interface ChainwebExternalConfig {
+  accounts?: HttpNetworkAccountsConfig;
+  chains: number;
+  type?: 'external';
+  externalHostUrl?: string;
+  chainIdOffset?: number;
+}
+
+export type ChainwebConfig = ChainwebInProcessConfig | ChainwebExternalConfig;
+
 export interface ChainwebPluginApi {
+  initialize: () => void;
   getProvider: (cid: number) => Promise<EthereumProvider>;
   requestSpvProof: (
     targetChain: number,
@@ -38,11 +50,21 @@ export interface ChainwebPluginApi {
 
 declare module 'hardhat/types' {
   interface HardhatConfig {
-    chainweb: Required<ChainwebConfig>;
+    chainweb: {
+      hardhat: Required<ChainwebInProcessConfig>;
+      localhost: Required<ChainwebExternalConfig>;
+      [chainwenName: string]: Required<ChainwebConfig>;
+    };
+    defaultChainweb: string;
   }
 
   interface HardhatUserConfig {
-    chainweb: ChainwebConfig;
+    chainweb: {
+      hardhat?: ChainwebInProcessConfig;
+      localhost?: ChainwebExternalConfig;
+      [chainwenName: string]: ChainwebConfig | undefined;
+    };
+    defaultChainweb?: string;
   }
   interface HardhatNetworkConfig {
     chainwebChainId?: number;
@@ -60,6 +82,7 @@ declare module 'hardhat/types' {
 
   interface KadenaHardhatNetworkUserConfig extends HardhatNetworkUserConfig {
     chainwebChainId: number;
+    type?: 'chainweb:in-process';
   }
 }
 declare module 'hardhat/types/runtime' {

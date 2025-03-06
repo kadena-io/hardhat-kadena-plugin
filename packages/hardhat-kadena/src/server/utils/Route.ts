@@ -119,9 +119,6 @@ export class Router<CTX, PROXY_ARG> {
       }
     }
 
-    next.failure(
-      `No route found for ${url}, define a generic route with "*"`,
-      404,
-    );
+    next.failure(`NOT FOUND: ${url}`, 404);
   }
 }

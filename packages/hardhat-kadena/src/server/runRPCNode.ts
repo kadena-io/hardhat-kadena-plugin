@@ -8,6 +8,7 @@ import { ChainwebJsonRpcServer } from './server.js';
 import fs from 'fs';
 import { watchCompilerOutput } from 'hardhat/builtin-tasks/utils/watch';
 import { normalizeHardhatNetworkAccountsConfig } from 'hardhat/internal/core/providers/util.js';
+import picocolors from 'picocolors';
 
 import {
   bytesToHex as bufferToHex,
@@ -16,6 +17,7 @@ import {
   toChecksumAddress,
 } from '@nomicfoundation/ethereumjs-util';
 import { mapChainIdToRoute } from './utils';
+import { getNetworkStem } from '../utils.js';
 
 export async function runRPCNode(
   taskArgs: any,
@@ -34,7 +36,9 @@ export async function runRPCNode(
     }
   }
 
-  if (hre.config.chainweb) {
+  const chainweb = hre.config.chainweb[hre.config.defaultChainweb];
+
+  if (chainweb) {
     // TODO: run my network
     const providers: [chainId: number, provider: EIP1193Provider][] =
       await Promise.all(
@@ -50,7 +54,7 @@ export async function runRPCNode(
       providers,
     });
 
-    server.listen();
+    await server.listen();
 
     const watchers = providers.map(([, provider]) => {
       return watchCompilerOutput(provider, hre.config.paths).catch((error) => {
@@ -65,18 +69,26 @@ export async function runRPCNode(
       });
     });
 
-    console.log(`Started HTTP and WebSocket JSON-RPC server at`);
+    console.log(
+      `Started HTTP and WebSocket ${picocolors.greenBright(`JSON-RPC`)} server at ${picocolors.greenBright(port)}\n`,
+    );
 
     providers.forEach(([cid]) => {
       console.log(
-        `chain ${cid}: http://${hostname}:${port}${mapChainIdToRoute(cid)}`,
+        picocolors.greenBright(`chain ${cid}: `),
+        picocolors.underline(
+          picocolors.greenBright(
+            `http://${hostname}:${port}${mapChainIdToRoute(cid)}`,
+          ),
+        ),
       );
     });
 
     providers.map(async ([cid]) => {
-      const networkName = `${hre.config.chainweb.networkStem}${cid}`;
+      const networkName = `${getNetworkStem(hre.config.defaultChainweb)}${cid}`;
       const networkConfig = hre.config.networks[networkName];
-      console.log(`Chain ${cid}`);
+      console.log(`\nChain #${cid} Accounts`);
+      console.log('=================');
       logHardhatNetworkAccounts(networkConfig as HardhatNetworkConfig);
     });
 
@@ -85,8 +97,15 @@ export async function runRPCNode(
   }
 }
 function logHardhatNetworkAccounts(networkConfig: HardhatNetworkConfig) {
-  console.log('Accounts');
-  console.log('========');
+  const warning = [
+    '',
+    'WARNING: These accounts, and their private keys, are publicly known',
+    'Any funds sent to them on Mainnet or any other live network WILL BE LOST.',
+    '',
+  ]
+    .map((t) => picocolors.bold(t))
+    .join('\n');
+  console.log(warning);
 
   const accounts = normalizeHardhatNetworkAccountsConfig(
     networkConfig.accounts,
@@ -102,13 +121,10 @@ function logHardhatNetworkAccounts(networkConfig: HardhatNetworkConfig) {
       BigInt(10) ** BigInt(18)
     ).toString(10);
 
-    let entry = `Account #${index}: ${address} (${balance} ETH)`;
-
     const privateKey = bufferToHex(toBytes(account.privateKey));
-    entry += `
-  Private Key: ${privateKey}`;
-
+    const entry = `Account #${index}: ${address} (${balance} ETH)\nPrivate Key: ${privateKey}`;
     console.log(entry);
     console.log();
   }
+  console.log(warning);
 }

@@ -6,7 +6,9 @@ import '@kadena/hardhat-chainweb';
 const config: HardhatUserConfig = {
   solidity: '0.8.28',
   chainweb: {
-    chains: 2,
+    hardhat: {
+      chains: 2,
+    },
   },
 };
 

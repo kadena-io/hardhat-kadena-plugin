@@ -1,3 +1,4 @@
+import picocolors from 'picocolors';
 import { Readable } from 'stream';
 import { styleText } from 'util';
 
@@ -18,6 +19,15 @@ export const COLOR_PALETTE: Color[] = [
   'red',
 ];
 
+const colorText =
+  styleText ||
+  function styleText(color: Color, text: string) {
+    if (!picocolors[color]) {
+      return text;
+    }
+    return picocolors[color](text);
+  };
+
 /* *************************************************************************** */
 /* Logging */
 
@@ -30,9 +40,7 @@ export function logInfo(
   msg: string,
 ) {
   const prefixedLabel = `[hardhat ${label}]`;
-  const styledLable = styleText
-    ? styleText(color, prefixedLabel)
-    : prefixedLabel;
+  const styledLable = colorText(color, prefixedLabel);
 
   console.log(styledLable, msg);
 }
@@ -43,9 +51,7 @@ export function logError(
   msg: string,
 ) {
   const prefixedLabel = `[hardhat ${label}]`;
-  const styledLable = styleText
-    ? styleText(color, prefixedLabel)
-    : prefixedLabel;
+  const styledLable = colorText(color, prefixedLabel);
 
   console.error(styledLable, msg);
 }
