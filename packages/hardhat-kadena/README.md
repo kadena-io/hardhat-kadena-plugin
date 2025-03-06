@@ -1,6 +1,6 @@
 # Hardhat Kadena chainweb Plugin
 
-`@kadena/hardhat-chainweb` is a Hardhat plugin that allows developers to create a Kadena Chainweb evm network, switch between chains, and request SPV proofs.
+`@kadena/hardhat-chainweb` is a Hardhat plugin that allows developers to create a Kadena Chainweb EVM network, switch between chains, and request SPV proofs.
 
 ## What is Chainweb?
 
@@ -8,15 +8,15 @@ Chainweb is a blockchain architecture designed by Kadena, which features a paral
 
 ## Installation
 
-To install the plugin, run the following command
+To install the plugin, run the following command:
 
 ```bash
 npm install @kadena/hardhat-chainweb
 ```
 
-## Build from source
+## Build from Source
 
-You can also build the plugin from source. To do this, first, clone the repository and follow these steps:
+You can also build the plugin from source. To do this, first clone the repository and follow these steps:
 
 **Note**: You need to have `pnpm` installed.
 
@@ -82,11 +82,11 @@ type config = {
 
 - **custom name**: a part from hardhat and localhost you can add any other configuration based on your requirement.
 
-## set default chainweb
+## Setting the `defaultChainweb`
 
 You can set the default chainweb by adding `defaultChainweb` to the hardhat config file. (default value is `hardhat`)
 
-### Example of setting defaultChainweb
+### Example of Setting defaultChainweb
 
 ```ts
 module.exports = {
