@@ -307,10 +307,7 @@ extendEnvironment((hre) => {
   }
 });
 
-const chainwebSwitch = [
-  'chainweb',
-  'The name of the chainweb to use; this only works with the `in-process` type',
-] as const;
+const chainwebSwitch = ['chainweb', 'The name of the chainweb to use'] as const;
 
 task(
   'node',
