@@ -34,14 +34,21 @@ extendConfig((config, userConfig) => {
 
   config.defaultChainweb = userConfig.defaultChainweb ?? 'hardhat';
 
-  const hardhatConfig = userConfig.chainweb.hardhat || {
+  const hardhatConfig = {
     chains: 2,
+    ...userConfig.chainweb.hardhat,
     type: 'in-process',
   };
 
+  if (userConfig.chainweb['localhost']) {
+    console.warn(
+      'The user configuration contains a localhost chainweb configuration. This will be ignored; this configuration is automatically added by the plugin.',
+    );
+  }
+
   const userConfigWithLocalhost = {
     ...userConfig.chainweb,
-    hardhatConfig,
+    hardhat: hardhatConfig,
     localhost: {
       chains: hardhatConfig.chains,
       chainIdOffset: hardhatConfig.chainIdOffset ?? 626000,
@@ -66,26 +73,22 @@ extendConfig((config, userConfig) => {
         type = 'external';
       }
 
-      if (
-        type === 'in-process' &&
-        (chainwebUserConfig as ChainwebInProcessConfig).graph
-      ) {
-        const graph =
-          (chainwebUserConfig as ChainwebInProcessConfig).graph ?? {};
-        if (
-          chainwebUserConfig.chains &&
-          Object.keys(graph).length != chainwebUserConfig.chains
-        ) {
-          throw new Error(
-            'Number of chains in graph does not match the graph configuration',
-          );
-        }
-      }
-
       if (type === 'in-process') {
-        // add networks to hardhat
         const chainwebInProcessUserConfig =
           chainwebUserConfig as ChainwebInProcessUserConfig;
+
+        if (chainwebInProcessUserConfig.graph) {
+          const graph = chainwebInProcessUserConfig.graph ?? {};
+          if (
+            chainwebInProcessUserConfig.chains &&
+            Object.keys(graph).length != chainwebInProcessUserConfig.chains
+          ) {
+            throw new Error(
+              'Number of chains in graph does not match the graph configuration',
+            );
+          }
+        }
+        // add networks to hardhat
 
         const chainwebConfig: ChainwebInProcessConfig = {
           graph:
