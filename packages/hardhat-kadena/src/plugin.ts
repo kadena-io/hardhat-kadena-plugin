@@ -19,6 +19,7 @@ import Web3 from 'web3';
 import { runRPCNode } from './server/runRPCNode.js';
 import { CHAIN_ID_ADDRESS, VERIFY_ADDRESS } from './utils/network-contracts.js';
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
+import picocolors from 'picocolors';
 
 extendConfig((config, userConfig) => {
   if (!userConfig.chainweb) {
@@ -220,7 +221,6 @@ const createInternalProvider = (
     process.on('SIGINT', stopHardhatNetwork);
     process.on('SIGTERM', stopHardhatNetwork);
     process.on('uncaughtException', stopHardhatNetwork);
-    console.log('Kadena plugin initialized chains', chainweb.chains);
 
     return startHardhatNetwork()
       .then(() => {
@@ -310,9 +310,20 @@ extendEnvironment((hre) => {
 
   hre.chainweb = {
     initialize: async () => {
-      console.log('Initializing chainweb plugin');
       if (api) return;
       const chainweb = hre.config.chainweb[hre.config.defaultChainweb];
+      if (!chainweb) {
+        throw new Error('Chainweb configuration not found');
+      }
+
+      console.log(
+        'Chainweb:',
+        picocolors.bgGreenBright(` ${hre.config.defaultChainweb} `),
+        'Chains:',
+        picocolors.bgGreenBright(` ${chainweb.chains} `),
+        '\n',
+      );
+
       if (chainweb.type === 'external') {
         api = createExternalProvider(hre, hre.config.defaultChainweb);
       } else {
@@ -356,7 +367,7 @@ task(
 
     const config = hre.config.chainweb[hre.config.defaultChainweb];
     if (!config) {
-      console.error(
+      console.log(
         `Chainweb configuration ${hre.config.defaultChainweb} not found`,
       );
       return;

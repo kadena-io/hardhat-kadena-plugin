@@ -90,11 +90,11 @@ module.exports = {
     hardhat:{
       chains: 3, // Number of chains in the Chainweb network
     },
-    localhost:{
+    my-custom-chainweb:{
       chains: 20
     }
   },
-  defaultChainweb: "localhost"
+  defaultChainweb: "my-custom-chainweb"
 };
 ```
 
@@ -103,6 +103,8 @@ You can override defaultChainweb by using `--chainweb` switch, which is availabl
 - node : `npx hardhat node --chainweb my-custom-chainweb`
 - test : `npx hardhat test --chainweb localhost`
 - run : `npx hardhat run ./scripts/my-script.js --chainweb hardhat`
+
+## Chainweb Configuration options
 
 each chainweb uses the following configuration options:
 
@@ -125,11 +127,18 @@ If you don’t provide a graph, the plugin automatically generates one for the c
 
 ### Example Configuration
 
+`myCustomGraph` configuration uses graph property to define the custom graph. the user can run the tests with `--chainweb myCustomGraph` switch
+
+**Note:** the chainweb type is `in-process` that means we still use the in-process nodes but with different graph than the built-in one
+
 ```ts
 module.exports = {
   solidity: "0.8.20",
   chainweb: {
     hardhat:{
+      chains: 4,
+    }
+    myCustomGraph:{
       chains: 4,
       graph: {
         0: [1,2,3]
@@ -137,6 +146,7 @@ module.exports = {
         2: [0,1,3]
         3: [0,1,2]
       }
+      type: "in-process"
     }
   },
 };

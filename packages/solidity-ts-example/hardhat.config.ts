@@ -9,7 +9,11 @@ const config: HardhatUserConfig = {
     hardhat: {
       chains: 2,
     },
+    mychainweb: {
+      chains: 3,
+    },
   },
+  defaultChainweb: 'mychainweb',
 };
 
 export default config;

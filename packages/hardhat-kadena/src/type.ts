@@ -73,7 +73,7 @@ declare module 'hardhat/types' {
     chainweb: {
       hardhat: ChainwebInProcessConfig;
       localhost: ChainwebExternalConfig;
-      [chainwenName: string]: ChainwebConfig;
+      [chainwebName: string]: ChainwebConfig;
     };
     defaultChainweb: string;
   }
@@ -81,7 +81,7 @@ declare module 'hardhat/types' {
   interface HardhatUserConfig {
     chainweb: {
       hardhat?: ChainwebInProcessUserConfig;
-      [chainwenName: string]: ChainwebUserConfig | undefined;
+      [chainwebName: string]: ChainwebUserConfig | undefined;
     };
     defaultChainweb?: string;
   }
