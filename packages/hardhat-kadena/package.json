@@ -11,7 +11,8 @@
   "types": "./lib/cjs/index.d.ts",
   "scripts": {
     "build": "eslint && tsc",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "postinstall": "eslint && tsc"
   },
   "repository": {
     "type": "git",

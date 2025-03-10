@@ -348,7 +348,7 @@ const chainwebSwitch = ['chainweb', 'The name of the chainweb to use'] as const;
 
 task(
   'node',
-  'Starts a JSON-RPC server on top of Hardhat Network - or a Chainweb Network',
+  `Starts a JSON-RPC server on top of Default Chainweb; use ${picocolors.bgBlackBright(' --network ')} if you want to run a single network rather than a chainweb`,
 )
   .addOptionalParam(...chainwebSwitch)
   .setAction(async (taskArgs, hre, runSuper) => {
@@ -382,7 +382,7 @@ task(
     return runRPCNode(taskArgs, hre);
   });
 
-task('test', 'Run mocha tests; Modified to support chainweb')
+task('test', `Run mocha tests; Supports Chainweb`)
   .addOptionalParam(...chainwebSwitch)
   .setAction(async (taskArgs, hre, runSuper) => {
     if (!hre.chainweb.initialize) {
@@ -397,7 +397,7 @@ task('test', 'Run mocha tests; Modified to support chainweb')
 
 task(
   'run',
-  'Runs a user-defined script after compiling the project; Modified to support chainweb',
+  `Runs a user-defined script after compiling the project; Supports Chainweb`,
 )
   .addOptionalParam(...chainwebSwitch)
   .setAction(async (taskArgs, hre, runSuper) => {

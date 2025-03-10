@@ -141,6 +141,9 @@ importers:
       hardhat:
         specifier: ^2.22.18
         version: 2.22.18(ts-node@10.9.2(@types/node@22.13.4)(typescript@5.7.3))(typescript@5.7.3)
+      typechain:
+        specifier: ^8.3.2
+        version: 8.3.2(typescript@5.7.3)
 
 packages:
 

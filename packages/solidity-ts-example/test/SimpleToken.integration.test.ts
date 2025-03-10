@@ -13,13 +13,14 @@ import {
   // requestSpvProof,
 } from './utils/utils';
 import { DeployedContractsOnChains } from '@kadena/hardhat-chainweb';
+import { SimpleToken } from '../typechain-types';
 
 const { requestSpvProof, deployContractOnChains } = chainweb;
 
 describe('SimpleToken Integration Tests', async function () {
   let signers: Signers;
-  let token0: DeployedContract; // this should be more specific to the contract; TODO: investigate type generation from contract
-  let token1: DeployedContract;
+  let token0: SimpleToken; // this should be more specific to the contract; TODO: investigate type generation from contract
+  let token1: SimpleToken;
   let token0Info: DeployedContractsOnChains;
   let token1Info: DeployedContractsOnChains;
 
@@ -29,8 +30,8 @@ describe('SimpleToken Integration Tests', async function () {
     const deployed = await deployContractOnChains('SimpleToken');
 
     // Store contract instances for direct calls
-    token0 = deployed.deployments[0].contract;
-    token1 = deployed.deployments[1].contract;
+    token0 = deployed.deployments[0].contract as unknown as SimpleToken;
+    token1 = deployed.deployments[1].contract as unknown as SimpleToken;
 
     deployed.deployments[0].contract;
 
@@ -223,9 +224,10 @@ describe('SimpleToken Integration Tests', async function () {
       const proof = await requestSpvProof(token1Info.chain, origin);
 
       // Third party redeems
-      const redeemTx = (
-        (await token1.connect(redeemer)) as any
-      ).redeemCrossChain(receiver, amount, proof);
+      const redeemTx = await token1
+        .connect(redeemer)
+        .redeemCrossChain(receiver, amount, proof);
+
       await redeemTx.wait();
 
       const senderBalanceAfter = await token0.balanceOf(sender.address);
@@ -296,11 +298,9 @@ describe('SimpleToken Integration Tests', async function () {
       );
 
       await expect(
-        (token1.connect(receiver) as any).redeemCrossChain(
-          receiver.address,
-          amount,
-          fakeProof,
-        ),
+        token1
+          .connect(receiver)
+          .redeemCrossChain(receiver.address, amount, fakeProof),
       ).to.be.revertedWithCustomError(token1, 'SPVVerificationFailed');
     });
   }); // End of Error Test Cases

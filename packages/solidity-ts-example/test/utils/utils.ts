@@ -2,7 +2,7 @@ import { ethers } from 'hardhat';
 import { DeployedContractsOnChains } from '@kadena/hardhat-chainweb';
 import { HardhatEthersHelpers } from 'hardhat/types';
 
-const { switchNetwork, chainweb } = require('hardhat');
+import { switchNetwork, chainweb } from 'hardhat';
 
 const { requestSpvProof, switchChain, deployContractOnChains } = chainweb;
 
