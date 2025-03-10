@@ -100,9 +100,25 @@ module.exports = {
 
 You can override defaultChainweb by using `--chainweb` switch, which is available on the following commands
 
-- node : `npx hardhat node --chainweb my-custom-chainweb`
-- test : `npx hardhat test --chainweb localhost`
-- run : `npx hardhat run ./scripts/my-script.js --chainweb hardhat`
+- node : `npx hardhat node --chainweb CHAINWEB_NAME`
+- run : `npx hardhat run ./scripts/my-script.js --chainweb CHAINWEB_NAME`
+- test : `npx hardhat test --chainweb CHAINWEB_NAME`
+
+### Example of running a node and executing a script against it
+
+Use this command to run the node:
+
+```bash
+npx hardhat node --chainweb hardhat
+```
+
+`--chainweb hardhat` is not required if you didn’t set defaultChainweb.
+
+```bash
+npx hardhat run scripts/myScript.js --chainweb localhost
+```
+
+It’s important to use `--chainweb localhost`, otherwise, it runs the script against an in-process chainweb.
 
 ## Chainweb Configuration options
 
