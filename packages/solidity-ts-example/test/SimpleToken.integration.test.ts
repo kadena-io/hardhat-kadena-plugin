@@ -94,37 +94,37 @@ describe('SimpleToken Integration Tests', async function () {
       expect(receiverBalanceBefore + amount).to.equal(receiverBalanceAfter);
     });
 
-   it('Should transfer tokens to different address from chain 1 to chain 0', async function () {
-         // Switch to chain 1 and get signer bob on chain 1. This is a hardhat thing - a signer has a network context.
-         // Not needed in other test cases because the contract is by default called by the first signer on the chain where the contract is deployed.
-         await chainweb.switchChain(1);
-         const [, , chain1Bob] = await ethers.getSigners(); // Get Bob's signer on chain 1
-         const sender = chain1Bob; // Use chain 1's Bob as sender
-         const receiver = signers.alice; // Use chain 0's  Alice as receiver
-         const amount = ethers.parseEther('10');
-   
-         // Verify Bob has tokens on chain 1
-         const bobBalance = await token1.balanceOf(sender.address);
-         expect(bobBalance).to.be.gte(amount);
-   
-         const senderBalanceBefore = await token1.balanceOf(sender.address);
-         const receiverBalanceBefore = await token0.balanceOf(receiver.address);
-   
-         await crossChainTransfer(
-           token1,
-           token1Info,
-           token0,
-           token0Info,
-           sender,
-           receiver,
-           amount,
-         );
-   
-         const senderBalanceAfter = await token1.balanceOf(sender.address);
-         const receiverBalanceAfter = await token0.balanceOf(receiver.address);
-         expect(senderBalanceBefore - amount).to.equal(senderBalanceAfter);
-         expect(receiverBalanceBefore + amount).to.equal(receiverBalanceAfter);
-       });
+    it('Should transfer tokens to different address from chain 1 to chain 0', async function () {
+      // Switch to chain 1 and get signer bob on chain 1. This is a hardhat thing - a signer has a network context.
+      // Not needed in other test cases because the contract is by default called by the first signer on the chain where the contract is deployed.
+      await chainweb.switchChain(1);
+      const [, , chain1Bob] = await ethers.getSigners(); // Get Bob's signer on chain 1
+      const sender = chain1Bob; // Use chain 1's Bob as sender
+      const receiver = signers.alice; // Use chain 0's  Alice as receiver
+      const amount = ethers.parseEther('10');
+
+      // Verify Bob has tokens on chain 1
+      const bobBalance = await token1.balanceOf(sender.address);
+      expect(bobBalance).to.be.gte(amount);
+
+      const senderBalanceBefore = await token1.balanceOf(sender.address);
+      const receiverBalanceBefore = await token0.balanceOf(receiver.address);
+
+      await crossChainTransfer(
+        token1,
+        token1Info,
+        token0,
+        token0Info,
+        sender,
+        receiver,
+        amount,
+      );
+
+      const senderBalanceAfter = await token1.balanceOf(sender.address);
+      const receiverBalanceAfter = await token0.balanceOf(receiver.address);
+      expect(senderBalanceBefore - amount).to.equal(senderBalanceAfter);
+      expect(receiverBalanceBefore + amount).to.equal(receiverBalanceAfter);
+    });
 
     it("Should transfer sender's full balance", async function () {
       const sender = signers.alice;
@@ -209,46 +209,46 @@ describe('SimpleToken Integration Tests', async function () {
       );
     });
 
-     it('Should allow third party to redeem on behalf of receiver', async function () {
-          // Switch to chain 1 and get signer carol on chain 1. This is a hardhat thing - a signer has a network context.
-          // Not needed in other test cases because the contract is by default called by the first signer on the chain where the contract is deployed.
-          await chainweb.switchChain(1);
-          const [, , , chain1Carol] = await ethers.getSigners();
-          const sender = signers.alice;
-          const receiver = signers.bob;
-          const redeemer = chain1Carol;
-          const amount = ethers.parseEther('100');
-    
-          const senderBalanceBefore = await token0.balanceOf(sender.address);
-          const receiverBalanceBefore = await token1.balanceOf(receiver.address);
-          const redeemerBalanceBefore = await token1.balanceOf(redeemer.address);
-    
-          // Start transfer
-          const origin = await initCrossChain(
-            token0,
-            token0Info,
-            token1Info,
-            sender,
-            receiver,
-            amount,
-          );
-          const proof = await requestSpvProof(token1Info.chain, origin);
-    
-          // Redeem transfer
-          const tx = await token1
-            .connect(redeemer)
-            .redeemCrossChain(receiver, amount, proof);
-          await tx.wait();
-    
-          const senderBalanceAfter = await token0.balanceOf(sender.address);
-          const receiverBalanceAfter = await token1.balanceOf(receiver.address);
-          const recdeemerBalanceAfter = await token1.balanceOf(redeemer.address);
-    
-          expect(senderBalanceAfter).to.equals(senderBalanceBefore - amount);
-          expect(receiverBalanceAfter).to.equal(receiverBalanceBefore + amount);
-          expect(recdeemerBalanceAfter).to.equal(redeemerBalanceBefore);
-        });
-      });
+    it('Should allow third party to redeem on behalf of receiver', async function () {
+      // Switch to chain 1 and get signer carol on chain 1. This is a hardhat thing - a signer has a network context.
+      // Not needed in other test cases because the contract is by default called by the first signer on the chain where the contract is deployed.
+      await chainweb.switchChain(1);
+      const [, , , chain1Carol] = await ethers.getSigners();
+      const sender = signers.alice;
+      const receiver = signers.bob;
+      const redeemer = chain1Carol;
+      const amount = ethers.parseEther('100');
+
+      const senderBalanceBefore = await token0.balanceOf(sender.address);
+      const receiverBalanceBefore = await token1.balanceOf(receiver.address);
+      const redeemerBalanceBefore = await token1.balanceOf(redeemer.address);
+
+      // Start transfer
+      const origin = await initCrossChain(
+        token0,
+        token0Info,
+        token1Info,
+        sender,
+        receiver,
+        amount,
+      );
+      const proof = await requestSpvProof(token1Info.chain, origin);
+
+      // Redeem transfer
+      const tx = await token1
+        .connect(redeemer)
+        .redeemCrossChain(receiver, amount, proof);
+      await tx.wait();
+
+      const senderBalanceAfter = await token0.balanceOf(sender.address);
+      const receiverBalanceAfter = await token1.balanceOf(receiver.address);
+      const recdeemerBalanceAfter = await token1.balanceOf(redeemer.address);
+
+      expect(senderBalanceAfter).to.equals(senderBalanceBefore - amount);
+      expect(receiverBalanceAfter).to.equal(receiverBalanceBefore + amount);
+      expect(recdeemerBalanceAfter).to.equal(redeemerBalanceBefore);
+    });
+  });
 
   context('Error Test Cases', async function () {
     it('Should fail when attempting multiple transfers that exceed balance', async function () {
