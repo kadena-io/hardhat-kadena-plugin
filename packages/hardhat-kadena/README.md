@@ -102,7 +102,7 @@ interface ChainwebUserConfig {
 | `externalHostUrl` | `string` (optional)                                           | Defines the base url for external networks (default: `http://localhost:8545`)                                                                                          |
 | `logging`         | `'none' \| 'info' \| 'debug'` (optional)                      | Sets the logging level for debugging purposes (default: `"info"`).                                                                                                     |
 | `chainIdOffset`   | `number` (optional)                                           | chain id offset to be set (default: `626000`).                                                                                                                         |
-| `precombiles`     | `{ chainwebChainId?: string, spvVerify?: string }` (optional) | if you are using external networks the precompile addresses might be different from the default ones so you can set them via this config                               |
+| `precompiles`     | `{ chainwebChainId?: string, spvVerify?: string }` (optional) | if you are using external networks the precompile addresses might be different from the default ones so you can set them via this config                               |
 
 ### Network Types
 
