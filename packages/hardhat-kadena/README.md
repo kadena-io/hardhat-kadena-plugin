@@ -116,6 +116,7 @@ module.exports = {
   chainweb: {
     hardhat: {
       chains: 3,
+      type: 'in-process', // this is the default value and can be skipped
     },
   },
 };
