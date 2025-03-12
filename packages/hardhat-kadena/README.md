@@ -14,8 +14,8 @@ Chainweb is a blockchain architecture designed by Kadena, which features a paral
 - 🛠 Compatible with standard Hardhat workflows
 - 🔌 Support for both in-process and external networks
 - 📡 RPC server with HTTP and WebSocket support
-- 🔄 Multiple chainweb configuration support
-- 🐳 Docker compose support (coming soon)
+- 🔘 Multiple chainweb configuration support
+- 🔀 Support forks (coming soon)
 
 ## Installation
 
@@ -153,15 +153,15 @@ You can set the default chainweb by adding `defaultChainweb` to the hardhat conf
 ```ts
 module.exports = {
   chainweb: {
-    hardhat:{
+    hardhat: {
       chains: 3, // Number of chains in the Chainweb network
     },
     // this is using 20 in-process chains
-    my-custom-chainweb:{
-      chains: 20
-    }
+    myChainweb: {
+      chains: 20,
+    },
   },
-  defaultChainweb: "my-custom-chainweb"
+  defaultChainweb: 'myChainweb',
 };
 ```
 
@@ -404,6 +404,186 @@ npx hardhat print-config
 - [JavaScript example project](https://github.com/kadena-io/hardhat-kadena-plugin/tree/main/packages/solidity-example)
 
 - [TypeScript example project](https://github.com/kadena-io/hardhat-kadena-plugin/tree/main/packages/solidity-ts-example)
+
+## FAQ
+
+### **Why Adding Custom Chainwebs**
+
+You likely add external chainwebs for targeting different networks. like one for tesnet, mainnet or devnet and etc
+
+```typescript
+module.exports = {
+  solidity: '0.8.28',
+  chainweb: {
+    // testing external dev-net
+    devnet: {
+      type: 'external',
+      chains: 20,
+      externalHostUrl: 'http://localhost:1234',
+    },
+    // this network is not available yet
+    testnet: {
+      type: 'external',
+      chains: 20,
+      externalHostUrl: 'http://testnet.kadena.io',
+      // if the network uses different precompiles address
+      precompiles: {
+        chainwebChainId: '0x0000000000000000000000000000000000000100',
+        spvVerify: '0x0000000000000000000000000000000000000101',
+      },
+    },
+  },
+};
+```
+
+You can use several "in-process" chainweb config for testing your smart contract behavior against different chain numbers or graphs or any other configuration
+
+```typescript
+module.exports = {
+  solidity: '0.8.28',
+  chainweb: {
+    // use 2 chains for regular development so tests run fast
+    hardhat: {
+      chains: 2,
+    },
+    // use 5 chains with a custom graph that is close to testnet
+    semiTestnet: {
+      chains: 20,
+    },
+    // use 3 chains with a custom graph
+    nonStandardGraph: {
+      chains: 3,
+      graph: {
+        0: [1],
+        1: [2],
+        2: [0],
+      },
+    },
+  },
+};
+```
+
+#### Research Graph behaviors
+
+Graph has direct impact on the security and performance of the chainweb is also might change the SPV proof creation and verification time, so you can use this option for more advanced scenarios.
+
+```typescript
+module.exports = {
+  chainweb: {
+    // this config uses 4 in-process chains.
+    custom_graph: {
+      chains: 4,
+      // using a custom graph to see the network behavior
+      graph: {
+        0: [1],
+        1: [0, 2, 3],
+        2: [0],
+        3: [1, 2, 0],
+      },
+    },
+  },
+};
+```
+
+### **How to use advance hardhat configs**
+
+All in-process networks inherit the default hardhat network configuration so if for example you want to set `allowUnlimitedContractSize` you just need to add it to the config
+
+```typescript
+module.exports = {
+  solidity: '0.8.28',
+  networks: {
+    // then both hardhat and semiTestnet chainweb uses this config since both are internal
+    hardhat: {
+      allowUnlimitedContractSize: true,
+      fork: {
+        url:''
+      }
+    }
+  }
+  chainweb: {
+    hardhat: {
+      chains: 2,
+    },
+    semiTestnet: {
+      chains: 20,
+    },
+  },
+};
+```
+
+### **What is the difference between `in-process` and `external` Chainweb types?**
+
+- **`in-process`**: Runs Chainweb as part of Hardhat's local network, ideal for development and testing.
+- **`external`**: Connects to an existing Chainweb network (e.g., testnet or mainnet) using an external RPC.
+
+### **How do I switch between different Chainwebs?**
+
+Use the `--chainweb` flag in your Hardhat commands:
+
+```bash
+npx hardhat test --chainweb devnet
+```
+
+Or manually set the `defaultChainweb` in your config.
+
+### **How do I deploy a contract to all chains in my Chainweb setup?**
+
+Use the `deployContractOnChains` function:
+
+```ts
+await chainweb.deployContractOnChains('SimpleToken');
+```
+
+This will deploy the contract to all available chains.
+
+### **How can I request an SPV proof for a cross-chain transaction?**
+
+Use the `requestSpvProof` function:
+
+```ts
+const proof = await chainweb.requestSpvProof(targetChain, origin);
+```
+
+### **Can I customize the Chainweb chain connection graph?**
+
+Yes, you can define a custom graph in your configuration:
+
+```ts
+chainweb: {
+  customGraph: {
+    chains: 4,
+    graph: {
+      0: [1, 2],
+      1: [0, 3],
+      2: [0, 3],
+      3: [1, 2],
+    },
+  },
+}
+```
+
+### **What happens if I don’t specify a `graph` configuration?**
+
+The plugin will automatically generate an optimal Pearson graph for standard configurations (2, 3, 10, or 20 chains).
+
+### **How do I override Hardhat network settings for specific chain?**
+
+You can define custom network configurations in `networks`:
+
+```ts
+networks: {
+  // use different chain id anf gas price for chain 0 of hardhat chainweb
+  chainweb_hardhat0: {
+    chainId: 123,
+    gasPrice: 0.1,
+  },
+}
+```
+
+### **Does this plugin support forking an existing network?**
+
+Only via configuration. `--fork` switch will be supported later
 
 ## License
 
