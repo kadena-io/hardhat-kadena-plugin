@@ -13,6 +13,7 @@ import {
   getSigners,
   deployMocks,
 } from './utils/utils';
+import { SimpleToken, WrongOperationTypeToken } from '../typechain-types';
 
 const {
   deployContractOnChains,
@@ -24,8 +25,8 @@ const {
 
 describe('SimpleToken Unit Tests', async function () {
   let signers: Signers;
-  let token0: DeployedContract;
-  let token1: DeployedContract;
+  let token0: SimpleToken;
+  let token1: SimpleToken;
   let origin: Origin;
   let sender: HardhatEthersSigner;
   let receiver: HardhatEthersSigner;
@@ -40,8 +41,8 @@ describe('SimpleToken Unit Tests', async function () {
     const deployed = await deployContractOnChains('SimpleToken');
 
     // Store contract instances for direct calls
-    token0 = deployed.deployments[0].contract;
-    token1 = deployed.deployments[1].contract;
+    token0 = deployed.deployments[0].contract as unknown as SimpleToken;
+    token1 = deployed.deployments[1].contract as unknown as SimpleToken;
 
     // Keep deployment info accessible when needed
     token0Info = deployed.deployments[0];
@@ -127,10 +128,9 @@ describe('SimpleToken Unit Tests', async function () {
       it('Should fail to set cross chain addresses for non-owner', async function () {
         // Attempt to set cross-chain addresses for token0 from a non-owner
         await expect(
-          (token0.connect(signers.alice) as any).setCrossChainAddress(
-            token1Info.chain,
-            await token1.getAddress(),
-          ),
+          token0
+            .connect(signers.alice)
+            .setCrossChainAddress(token1Info.chain, await token1.getAddress()),
         )
           .to.be.revertedWithCustomError(token0, 'OwnableUnauthorizedAccount')
           .withArgs(signers.alice.address);
@@ -307,11 +307,9 @@ describe('SimpleToken Unit Tests', async function () {
         const amount = ethers.parseEther('100');
 
         await expect(
-          (token0.connect(sender) as any).transferCrossChain(
-            receiver.address,
-            amount,
-            token1Info.chain,
-          ),
+          token0
+            .connect(sender)
+            .transferCrossChain(receiver.address, amount, token1Info.chain),
         )
           .to.be.revertedWithCustomError(token0, 'ERC20InsufficientBalance')
           .withArgs(sender.address, 0n, amount);
@@ -426,15 +424,17 @@ describe('SimpleToken Unit Tests', async function () {
     }); // End of Success Test Cases
 
     context('Error Test Cases', async function () {
-      let mockToken0: DeployedContract;
-      let mockToken1: DeployedContract;
+      let mockToken0: WrongOperationTypeToken;
+      let mockToken1: WrongOperationTypeToken;
       let mockToken0Info: DeployedContractsOnChains;
       let mockToken1Info: DeployedContractsOnChains;
 
       beforeEach(async function () {
         const mocks = await deployMocks();
-        mockToken0 = mocks.deployments[0].contract;
-        mockToken1 = mocks.deployments[1].contract;
+        mockToken0 = mocks.deployments[0]
+          .contract as unknown as WrongOperationTypeToken;
+        mockToken1 = mocks.deployments[1]
+          .contract as unknown as WrongOperationTypeToken;
 
         // Keep deployment info accessible when needed
         mockToken0Info = mocks.deployments[0];
@@ -479,7 +479,7 @@ describe('SimpleToken Unit Tests', async function () {
         await deploymentTx.wait();
 
         // Call setCrossChainAddress on token2
-        await expect((token2 as any).redeemCrossChain(receiver, amount, proof))
+        await expect(token2.redeemCrossChain(receiver, amount, proof))
           .to.be.revertedWithCustomError(token1, 'IncorrectTargetContract')
           .withArgs(await token1.getAddress(), await token2.getAddress());
       });
@@ -563,6 +563,10 @@ describe('SimpleToken Unit Tests', async function () {
           mockToken1Info.chain,
         );
         const receipt = await transferTx.wait();
+
+        if (!receipt) {
+          throw new Error('Transfer transaction failed, no receipt');
+        }
 
         // Find CrossChainInitialized event index
         const eventIndex = receipt.logs.findIndex(

@@ -13,13 +13,14 @@ import {
   // requestSpvProof,
 } from './utils/utils';
 import { DeployedContractsOnChains } from '@kadena/hardhat-chainweb';
+import { SimpleToken } from '../typechain-types';
 
 const { requestSpvProof, deployContractOnChains } = chainweb;
 
 describe('SimpleToken Integration Tests', async function () {
   let signers: Signers;
-  let token0: DeployedContract; // this should be more specific to the contract; TODO: investigate type generation from contract
-  let token1: DeployedContract;
+  let token0: SimpleToken; // this should be more specific to the contract; TODO: investigate type generation from contract
+  let token1: SimpleToken;
   let token0Info: DeployedContractsOnChains;
   let token1Info: DeployedContractsOnChains;
 
@@ -29,8 +30,8 @@ describe('SimpleToken Integration Tests', async function () {
     const deployed = await deployContractOnChains('SimpleToken');
 
     // Store contract instances for direct calls
-    token0 = deployed.deployments[0].contract;
-    token1 = deployed.deployments[1].contract;
+    token0 = deployed.deployments[0].contract as unknown as SimpleToken;
+    token1 = deployed.deployments[1].contract as unknown as SimpleToken;
 
     deployed.deployments[0].contract;
 
@@ -93,15 +94,22 @@ describe('SimpleToken Integration Tests', async function () {
       expect(receiverBalanceBefore + amount).to.equal(receiverBalanceAfter);
     });
 
-    // This test case is skipped because it does not work. The CrossChainInitialized is sometimes not emitted on chain 1. In that case the event index is -1
-    //  When it is emitted, the proof request failes with a 500
-    it.skip('Should transfer tokens to different address from chain 1 to chain 0', async function () {
-      const sender = signers.alice;
-      const receiver = signers.bob;
+    it('Should transfer tokens to different address from chain 1 to chain 0', async function () {
+      // Switch to chain 1 and get signer bob on chain 1. This is a hardhat thing - a signer has a network context.
+      // Not needed in other test cases because the contract is by default called by the first signer on the chain where the contract is deployed.
+      await chainweb.switchChain(1);
+      const [, , chain1Bob] = await ethers.getSigners(); // Get Bob's signer on chain 1
+      const sender = chain1Bob; // Use chain 1's Bob as sender
+      const receiver = signers.alice; // Use chain 0's  Alice as receiver
       const amount = ethers.parseEther('10');
+
+      // Verify Bob has tokens on chain 1
+      const bobBalance = await token1.balanceOf(sender.address);
+      expect(bobBalance).to.be.gte(amount);
 
       const senderBalanceBefore = await token1.balanceOf(sender.address);
       const receiverBalanceBefore = await token0.balanceOf(receiver.address);
+
       await crossChainTransfer(
         token1,
         token1Info,
@@ -111,6 +119,7 @@ describe('SimpleToken Integration Tests', async function () {
         receiver,
         amount,
       );
+
       const senderBalanceAfter = await token1.balanceOf(sender.address);
       const receiverBalanceAfter = await token0.balanceOf(receiver.address);
       expect(senderBalanceBefore - amount).to.equal(senderBalanceAfter);
@@ -200,18 +209,21 @@ describe('SimpleToken Integration Tests', async function () {
       );
     });
 
-    // This test case is skipped because it should be succeeding  but the receiver amount is not as expected after the redeem
-    it.skip('Should allow third party to redeem on behalf of receiver', async function () {
+    it('Should allow third party to redeem on behalf of receiver', async function () {
+      // Switch to chain 1 and get signer carol on chain 1. This is a hardhat thing - a signer has a network context.
+      // Not needed in other test cases because the contract is by default called by the first signer on the chain where the contract is deployed.
+      await chainweb.switchChain(1);
+      const [, , , chain1Carol] = await ethers.getSigners();
       const sender = signers.alice;
       const receiver = signers.bob;
-      const redeemer = signers.carol;
+      const redeemer = chain1Carol;
       const amount = ethers.parseEther('100');
 
       const senderBalanceBefore = await token0.balanceOf(sender.address);
       const receiverBalanceBefore = await token1.balanceOf(receiver.address);
       const redeemerBalanceBefore = await token1.balanceOf(redeemer.address);
 
-      // Transfer
+      // Start transfer
       const origin = await initCrossChain(
         token0,
         token0Info,
@@ -222,15 +234,16 @@ describe('SimpleToken Integration Tests', async function () {
       );
       const proof = await requestSpvProof(token1Info.chain, origin);
 
-      // Third party redeems
-      const redeemTx = (
-        (await token1.connect(redeemer)) as any
-      ).redeemCrossChain(receiver, amount, proof);
-      await redeemTx.wait();
+      // Redeem transfer
+      const tx = await token1
+        .connect(redeemer)
+        .redeemCrossChain(receiver, amount, proof);
+      await tx.wait();
 
       const senderBalanceAfter = await token0.balanceOf(sender.address);
       const receiverBalanceAfter = await token1.balanceOf(receiver.address);
       const recdeemerBalanceAfter = await token1.balanceOf(redeemer.address);
+
       expect(senderBalanceAfter).to.equals(senderBalanceBefore - amount);
       expect(receiverBalanceAfter).to.equal(receiverBalanceBefore + amount);
       expect(recdeemerBalanceAfter).to.equal(redeemerBalanceBefore);
@@ -296,11 +309,9 @@ describe('SimpleToken Integration Tests', async function () {
       );
 
       await expect(
-        (token1.connect(receiver) as any).redeemCrossChain(
-          receiver.address,
-          amount,
-          fakeProof,
-        ),
+        token1
+          .connect(receiver)
+          .redeemCrossChain(receiver.address, amount, fakeProof),
       ).to.be.revertedWithCustomError(token1, 'SPVVerificationFailed');
     });
   }); // End of Error Test Cases

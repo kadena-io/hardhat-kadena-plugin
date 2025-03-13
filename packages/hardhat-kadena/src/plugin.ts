@@ -19,6 +19,7 @@ import Web3 from 'web3';
 import { runRPCNode } from './server/runRPCNode.js';
 import { CHAIN_ID_ADDRESS, VERIFY_ADDRESS } from './utils/network-contracts.js';
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
+import picocolors from 'picocolors';
 
 extendConfig((config, userConfig) => {
   if (!userConfig.chainweb) {
@@ -220,7 +221,6 @@ const createInternalProvider = (
     process.on('SIGINT', stopHardhatNetwork);
     process.on('SIGTERM', stopHardhatNetwork);
     process.on('uncaughtException', stopHardhatNetwork);
-    console.log('Kadena plugin initialized chains', chainweb.chains);
 
     return startHardhatNetwork()
       .then(() => {
@@ -310,9 +310,20 @@ extendEnvironment((hre) => {
 
   hre.chainweb = {
     initialize: async () => {
-      console.log('Initializing chainweb plugin');
       if (api) return;
       const chainweb = hre.config.chainweb[hre.config.defaultChainweb];
+      if (!chainweb) {
+        throw new Error('Chainweb configuration not found');
+      }
+
+      console.log(
+        'Chainweb:',
+        picocolors.bgGreenBright(` ${hre.config.defaultChainweb} `),
+        'Chains:',
+        picocolors.bgGreenBright(` ${chainweb.chains} `),
+        '\n',
+      );
+
       if (chainweb.type === 'external') {
         api = createExternalProvider(hre, hre.config.defaultChainweb);
       } else {
@@ -337,7 +348,7 @@ const chainwebSwitch = ['chainweb', 'The name of the chainweb to use'] as const;
 
 task(
   'node',
-  'Starts a JSON-RPC server on top of Hardhat Network - or a Chainweb Network',
+  `Starts a JSON-RPC server on top of Default Chainweb; use ${picocolors.bgBlackBright(' --network ')} if you want to run a single network rather than a chainweb`,
 )
   .addOptionalParam(...chainwebSwitch)
   .setAction(async (taskArgs, hre, runSuper) => {
@@ -356,7 +367,7 @@ task(
 
     const config = hre.config.chainweb[hre.config.defaultChainweb];
     if (!config) {
-      console.error(
+      console.log(
         `Chainweb configuration ${hre.config.defaultChainweb} not found`,
       );
       return;
@@ -371,7 +382,7 @@ task(
     return runRPCNode(taskArgs, hre);
   });
 
-task('test', 'Run mocha tests; Modified to support chainweb')
+task('test', `Run mocha tests; Supports Chainweb`)
   .addOptionalParam(...chainwebSwitch)
   .setAction(async (taskArgs, hre, runSuper) => {
     if (!hre.chainweb.initialize) {
@@ -386,7 +397,7 @@ task('test', 'Run mocha tests; Modified to support chainweb')
 
 task(
   'run',
-  'Runs a user-defined script after compiling the project; Modified to support chainweb',
+  `Runs a user-defined script after compiling the project; Supports Chainweb`,
 )
   .addOptionalParam(...chainwebSwitch)
   .setAction(async (taskArgs, hre, runSuper) => {

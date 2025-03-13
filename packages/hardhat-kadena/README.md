@@ -1,110 +1,97 @@
 # Hardhat Kadena chainweb Plugin
 
-`@kadena/hardhat-chainweb` is a Hardhat plugin that allows developers to create a Kadena Chainweb EVM network, switch between chains, and request SPV proofs.
+`@kadena/hardhat-chainweb` is a Hardhat plugin that allows Ethereum developers to create a Kadena Chainweb EVM network, switch between chains, and request SPV proofs.
 
 ## What is Chainweb?
 
 Chainweb is a blockchain architecture designed by Kadena, which features a parallelized Proof-of-Work (PoW) system. Instead of a single blockchain, Chainweb consists of multiple chains running in parallel, each processing transactions independently while being cryptographically linked to one another. This allows it to achieve high scalability and security without sacrificing decentralization.
 
-## Installation
+## Features
 
-To install the plugin, run the following command:
+- 🔗 Multi-chain network simulation
+- 🔄 Cross-chain transaction support
+- ✅ SPV proof generation and verification
+- 🛠 Compatible with standard Hardhat workflows
+- 🔌 Support for both in-process and external networks
+- 📡 RPC server with HTTP and WebSocket support
+- 🔘 Multiple chainweb configuration support
+- 🔀 Support forks (coming soon)
+
+## Installation
 
 ```bash
 npm install @kadena/hardhat-chainweb
+# or
+yarn add @kadena/hardhat-chainweb
+# or
+pnpm install @kadena/hardhat-chainweb
 ```
 
-## Build from Source
+## Quick Start
 
-You can also build the plugin from source. To do this, first clone the repository and follow these steps:
+1. Import the plugin in your `hardhat.config.ts` (or `.js`):
 
-**Note**: You need to have `pnpm` installed.
-
-```bash
-pnpm install
-pnpm build
-```
-
-Once built, you can run the tests for the example project:
-
-```bash
-pnpm test
-```
-
-## Usage
-
-To use the plugin in your Hardhat project, import it in your Hardhat configuration file (`hardhat.config.ts` or `hardhat.config.js`):
-
-```ts
+```typescript
 import '@kadena/hardhat-chainweb';
 ```
 
-Then, configure the plugin in the `hardhat.config.ts` file:
+2. Add basic configuration:
 
-```ts
+```typescript
 module.exports = {
-  ...,
+  solidity: '0.8.20',
   chainweb: {
-    hardhat:{
-      chains: 3, // Number of chains in the Chainweb network
+    hardhat: {
+      chains: 3, // Creates a 3-chain network
     },
   },
 };
 ```
 
-now run the normal hardhat command
+3. Run your tests:
 
 ```bash
-# execute tests against inprocess hardhat chainweb
 npx hardhat test
 ```
 
-## Configuration
+4. Run chainweb node
 
-`chainweb` configuration follows the same pattern as networks sections, so you can add `hardhat` and any other custom chainweb if needed
+```bash
+npx hardhat node
+```
+
+5. Run your script against localhost
+
+```bash
+npx hardhat run ./scripts/my-scripts.js --chainweb localhost
+```
+
+## Configuration Guide
 
 ```TS
-type config = {
+interface HardhatChainwebUserConfig extends HardhatUserConfig {
   chainweb: {
     hardhat: ChainwebUserConfig;
     [chainwebName: string]: ChainwebUserConfig;
   };
   defaultChainweb: string
 }
+
+interface ChainwebUserConfig {
+  chains: number;                          // Number of chains (2, 3, 10, or 20 for auto-graph)
+  graph?: Record<number, number[]>;        // Custom chain connection graph
+  type?: 'in-process' | 'external';        // Network type (default: 'in-process')
+  chainIdOffset?: number;                  // Base chain ID (default: 626000)
+  logging?: 'none' | 'info' | 'debug';     // Logging level
+  accounts?: HardhatNetworkAccountsConfig; // Account configuration
+  externalHostUrl?: string;                // For external networks
+  precompiles?: {                          // Custom precompile addresses
+    chainwebChainId?: string;              // chainweb chainId precompile address
+    spvVerify?: string;                    // verify spv proof precompile address
+  };
+}
+
 ```
-
-- **hardhat**: this config uses the in-process hardhat network so its very fast for testing phase
-
-- **custom name**: a part from hardhat and localhost you can add any other configuration based on your requirement.
-
-## Setting the `defaultChainweb`
-
-You can set the default chainweb by adding `defaultChainweb` to the hardhat config file. (default value is `hardhat`)
-
-### Example of Setting defaultChainweb
-
-```ts
-module.exports = {
-  ...,
-  chainweb: {
-    hardhat:{
-      chains: 3, // Number of chains in the Chainweb network
-    },
-    localhost:{
-      chains: 20
-    }
-  },
-  defaultChainweb: "localhost"
-};
-```
-
-You can override defaultChainweb by using `--chainweb` switch, which is available on the following commands
-
-- node : `npx hardhat node --chainweb my-custom-chainweb`
-- test : `npx hardhat test --chainweb localhost`
-- run : `npx hardhat run ./scripts/my-script.js --chainweb hardhat`
-
-each chainweb uses the following configuration options:
 
 | Property          | Type                                                          | Description                                                                                                                                                            |
 | ----------------- | ------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -115,47 +102,97 @@ each chainweb uses the following configuration options:
 | `externalHostUrl` | `string` (optional)                                           | Defines the base url for external networks (default: `http://localhost:8545`)                                                                                          |
 | `logging`         | `'none' \| 'info' \| 'debug'` (optional)                      | Sets the logging level for debugging purposes (default: `"info"`).                                                                                                     |
 | `chainIdOffset`   | `number` (optional)                                           | chain id offset to be set (default: `626000`).                                                                                                                         |
-| `precombiles`     | `{ chainwebChainId?: string, spvVerify?: string }` (optional) | if you are using external networks the precompile addresses might be different from the default ones so you can set them via this config                               |
+| `precompiles`     | `{ chainwebChainId?: string, spvVerify?: string }` (optional) | if you are using external networks the precompile addresses might be different from the default ones so you can set them via this config                               |
 
-## Graph Configuration
+### Network Types
 
-**note**: this is only for in-process networks
+#### 1. In-Process Network (Default)
 
-If you don’t provide a graph, the plugin automatically generates one for the chains using its built-in algorithm. Currently, it supports only 2, 3, 10, or 20 chains. If you need a different number of chains, you must explicitly pass the graph property
+Best for development and testing. Uses Hardhat's built-in network.
 
-### Example Configuration
-
-```ts
+```typescript
 module.exports = {
-  solidity: "0.8.20",
+  solidity: '0.8.28',
   chainweb: {
-    hardhat:{
-      chains: 4,
-      graph: {
-        0: [1,2,3]
-        1: [0,2,3]
-        2: [0,1,3]
-        3: [0,1,2]
-      }
-    }
+    hardhat: {
+      chains: 3,
+      type: 'in-process', // this is the default value and can be skipped
+    },
   },
 };
 ```
 
-## Networks
+#### 2. External Network
 
-The plugin uses the Chainweb configuration and extends the Hardhat config by adding networks to it. the network names follow this pattern `chainweb_${chainwebName}${index}`;
+For connecting to existing Chainweb networks.
 
-e.g for `hardhat`: `chainweb_hardhat0`, `chainweb_hardhat1`
+```typescript
+module.exports = {
+  solidity: '0.8.28',
+  chainweb: {
+    // the external chainweb name can be anything except 'localhost' or `hardhat`
+    testnet: {
+      type: 'external',
+      chains: 2,
+      externalHostUrl: 'http://testnet.your-domain.org',
+      precompiles: {
+        chainwebChainId: '0x0000000000000000000000000000000000000100',
+        spvVerify: '0x0000000000000000000000000000000000000101',
+      },
+    },
+  },
+};
+```
 
-and for `custom_name`: `chainweb_custom_name0`, `chainweb_custom_name1`
+### Setting the Default Chainweb
 
-All in-process networks inherit the built-in Hardhat network config by default, except:
+You can set the default chainweb by adding `defaultChainweb` to the hardhat config file. (default value is `hardhat`)
 
-- `chainId`: Replaced by `(chainIdOffset (default == 626000)) + chainIndex` (e.g., `626000, 626001, 626002, ...`).
-- `chainwebChainId`: The chain index.
-- `loggingEnabled`: `"true"` if the `logging` option is set to `"debug"` in the Chainweb config; otherwise, `"false"`.
-- `accounts`: which comes from tha chainweb config if presented
+### Example of Setting Default Chainweb
+
+```ts
+module.exports = {
+  chainweb: {
+    hardhat: {
+      chains: 3, // Number of chains in the Chainweb network
+    },
+    // this is using 20 in-process chains
+    myChainweb: {
+      chains: 20,
+    },
+  },
+  defaultChainweb: 'myChainweb',
+};
+```
+
+### Chain Graph Configuration
+
+The chain graph defines how chains are connected. For standard configurations (2, 3, 10, or 20 chains), the plugin automatically generates an optimal Pearson graph. For custom configurations, you must specify the graph manually.
+
+```typescript
+module.exports = {
+  chainweb: {
+    // this config uses 4 in-process chains.
+    custom_graph: {
+      chains: 4,
+      graph: {
+        0: [1, 2], // Chain 0 connects to chains 1 and 2
+        1: [0, 3], // Chain 1 connects to chains 0 and 3
+        2: [0, 3], // Chain 2 connects to chains 0 and 3
+        3: [1, 2], // Chain 3 connects to chains 1 and 2
+      },
+    },
+  },
+};
+```
+
+### Chain IDs and Networking
+
+The plugin uses the Chainweb configuration and extends the Hardhat config by adding networks to it.
+
+- Each chain gets a unique chain ID: `chainIdOffset + chainIndex`
+- Default offset is 626000 (e.g., Chain 0 = 626000, Chain 1 = 626001)
+- Network names follow the pattern: `chainweb_${networkName}${chainIndex}`
 
 ### Override Network Configurations
 
@@ -178,48 +215,14 @@ module.exports = {
 };
 ```
 
-### Example of External Networks
+## API Reference
 
-Using the plugin to interact with external networks.
-
-**Note**: The external network should implement the SPV proof endpoint with the following pattern.
-
-```url
-:externalHostUrl/:targetChain/spv/chain/:sourceChain/height/:height/transaction/:txIdx/event/:eventIdx
-```
-
-```ts
-module.exports = {
-  solidity: '0.8.28',
-  // The plugin adds the following networks to the final config
-  // networks: {
-  //   chainweb_external0: {
-  //     url: 'http://localhost:8545/chain/0',
-  //     chainwebChainId: 0,
-  //     chainId: 626000,
-  //   },
-  //   chainweb_external1: {
-  //     url: 'http://localhost:8545/chain/1',
-  //     chainwebChainId: 1,
-  //     chainId: 626001,
-  //   },
-  // },
-  chainweb: {
-    external: {
-      chains: 2,
-      type: 'external',
-      externalHostUrl: 'http://localhost:8545',
-    },
-  },
-};
-```
-
-## Plugin API
+### Hardhat Runtime Environment Extensions
 
 The plugin adds a `chainweb` property to the Hardhat Runtime Environment (HRE):
 
 ```ts
-export interface ChainwebPluginApi {
+interface ChainwebPluginApi {
   getProvider: (cid: number) => HardhatEthersProvider;
   requestSpvProof: (targetChain: number, origin: Origin) => Promise<string>;
   switchChain: (cid: number) => Promise<void>;
@@ -242,6 +245,20 @@ export interface ChainwebPluginApi {
 }
 ```
 
+#### Origin type
+
+Origin type for spv proof creation
+
+```Ts
+interface Origin {
+  chain: bigint;
+  originContractAddress: string;
+  height: bigint;
+  txIdx: bigint;
+  eventIdx: bigint;
+}
+```
+
 | Function                 | Parameters                            | Return Type                                           | Description                                                                                                                                                                                                                                    |
 | ------------------------ | ------------------------------------- | ----------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `getProvider`            | `cid: number`                         | `HardhatEthersProvider`                               | Retrieves the provider for a specified chain.                                                                                                                                                                                                  |
@@ -253,18 +270,6 @@ export interface ChainwebPluginApi {
 | `createTamperedProof`    | `targetChain: number, origin: Origin` | `Promise<string>`                                     | Creates a tampered SPV proof for testing purposes.                                                                                                                                                                                             |
 | `computeOriginHash`      | `origin: Origin`                      | `string`                                              | Computes the hash of a transaction origin.                                                                                                                                                                                                     |
 | `initialize`             | None                                  | void                                                  | This function is called internally when using `node`, `test`, `run` command, so you mostly dont need it, However if you need to use the plugin in other command (e.g developing another plugin on top of this ) then you can call the function |
-
-For the spv proof you need to pass the origin with the following interface
-
-```TS
-export interface Origin {
-  chain: bigint;
-  originContractAddress: string;
-  height: bigint;
-  txIdx: bigint;
-  eventIdx: bigint;
-}
-```
 
 ### Example
 
@@ -353,7 +358,11 @@ http://127.0.0.1:8545/chain/1
 
 The server also accepts requests for SPV proofs with the following URL pattern:
 
-http://127.0.0.1:8545/chain/:targetChain/spv/chain/:sourceChain/height/:height/transaction/:txIdx/event/:eventIdx
+```URL
+GET /:externalHostUrl/chain/:targetChain/spv/chain/:sourceChain/height/:height/transaction/:txIdx/event/:eventIdx
+```
+
+check the [Origin interface](#Origin-type) for the details
 
 ### Example SPV proof request:
 
@@ -361,28 +370,217 @@ http://127.0.0.1:8545/chain/1/spv/chain/0/height/1234/transaction/16666/event/11
 
 ## Tasks
 
-the plugin uses standard hardhat tasks however it adds one more task to the hardhat.
+you can use the following command with chainweb which override the `defaultChainweb`
 
-- print-config: print the final configuration; this is useful for debugging since the plugin adds the networks to the final config
+### hardhat node
+
+```bash
+npx hardhat node --chainweb CHAINWEB_NAME
+```
+
+### hardhat run
+
+```bash
+npx hardhat run ./scripts/my-script.js --chainweb CHAINWEB_NAME
+```
+
+### hardhat test
+
+```bash
+npx hardhat test --chainweb CHAINWEB_NAME
+```
+
+### hardhat print-config
+
+Print the final configuration; this is useful for debugging since the plugin adds the networks to the final config
 
 ```bash
 npx hardhat print-config
+# the complete hardhat config as JSON
 ```
 
-## Features
+## Examples
 
-- Create a Chainweb network with configurable chain count and graph structure.
-- Spin up and Switch between chains seamlessly.
-- Request SPV proofs for cross-chain transactions.
-- Configure logging levels for better debugging.
-- Uses the Hardhat in-process network internally and creates multiple instances of it.
-- Expose RPC server via http and websocket
-- Support external chainweb configuration
-- Support multiple chainwebs configuration
+- [JavaScript example project](https://github.com/kadena-io/hardhat-kadena-plugin/tree/main/packages/solidity-example)
 
-## Future Works
+- [TypeScript example project](https://github.com/kadena-io/hardhat-kadena-plugin/tree/main/packages/solidity-ts-example)
 
-- Support chainweb docker compose
+## FAQ
+
+### **Why Adding Custom Chainwebs**
+
+You likely add external chainwebs for targeting different networks. like one for tesnet, mainnet or devnet and etc
+
+```typescript
+module.exports = {
+  solidity: '0.8.28',
+  chainweb: {
+    // testing external dev-net
+    devnet: {
+      type: 'external',
+      chains: 20,
+      externalHostUrl: 'http://localhost:1234',
+    },
+    // this network is not available yet
+    testnet: {
+      type: 'external',
+      chains: 20,
+      externalHostUrl: 'http://testnet.kadena.io',
+      // if the network uses different precompiles address
+      precompiles: {
+        chainwebChainId: '0x0000000000000000000000000000000000000100',
+        spvVerify: '0x0000000000000000000000000000000000000101',
+      },
+    },
+  },
+};
+```
+
+You can use several "in-process" chainweb config for testing your smart contract behavior against different chain numbers or graphs or any other configuration
+
+```typescript
+module.exports = {
+  solidity: '0.8.28',
+  chainweb: {
+    // use 2 chains for regular development so tests run fast
+    hardhat: {
+      chains: 2,
+    },
+    // use 5 chains with a custom graph that is close to testnet
+    semiTestnet: {
+      chains: 20,
+    },
+    // use 3 chains with a custom graph
+    nonStandardGraphChainweb: {
+      chains: 3,
+      graph: {
+        0: [1],
+        1: [2],
+        2: [0],
+      },
+    },
+  },
+};
+```
+
+#### Research Graph behaviors
+
+Graph has direct impact on the security and performance of the chainweb is also might change the SPV proof creation and verification time, so you can use this option for more advanced scenarios.
+
+```typescript
+module.exports = {
+  chainweb: {
+    // this config uses 4 in-process chains.
+    custom_graph_chainweb: {
+      chains: 4,
+      // using a custom graph to see the network behavior
+      graph: {
+        0: [1],
+        1: [0, 2, 3],
+        2: [0],
+        3: [1, 2, 0],
+      },
+    },
+  },
+};
+```
+
+### **How to use advance hardhat configs**
+
+All in-process networks inherit the default hardhat network configuration so if for example you want to set `allowUnlimitedContractSize` you just need to add it to the config
+
+```typescript
+module.exports = {
+  solidity: '0.8.28',
+  networks: {
+    // then both hardhat and semiTestnet chainweb uses this config since both are internal
+    hardhat: {
+      gasPrice : 0.1
+    }
+  }
+  chainweb: {
+    hardhat: {
+      chains: 2,
+    },
+    semiTestnet: {
+      chains: 20,
+    },
+  },
+};
+```
+
+### **What is the difference between `in-process` and `external` Chainweb types?**
+
+- **`in-process`**: Runs Chainweb as part of Hardhat's local network, ideal for development and testing.
+- **`external`**: Connects to an existing Chainweb network (e.g., testnet or mainnet) using an external RPC.
+
+### **How do I switch between different Chainwebs?**
+
+Use the `--chainweb` flag in your Hardhat commands:
+
+```bash
+npx hardhat test --chainweb devnet
+```
+
+Or manually set the `defaultChainweb` in your config.
+
+### **How do I deploy a contract to all chains in my Chainweb setup?**
+
+Use the `deployContractOnChains` function:
+
+```ts
+await chainweb.deployContractOnChains('SimpleToken');
+```
+
+This will deploy the contract to all available chains.
+
+### **How can I request an SPV proof for a cross-chain transaction?**
+
+Use the `requestSpvProof` function:
+
+```ts
+const proof = await chainweb.requestSpvProof(targetChain, origin);
+```
+
+### **Can I customize the Chainweb chain connection graph?**
+
+Yes, you can define a custom graph in your configuration:
+
+```ts
+chainweb: {
+  customGraphChainweb: {
+    chains: 4,
+    graph: {
+      0: [1, 2],
+      1: [0, 3],
+      2: [0, 3],
+      3: [1, 2],
+    },
+  },
+}
+```
+
+### **What happens if I don’t specify a `graph` configuration?**
+
+The plugin will automatically generate an optimal Pearson graph for standard configurations (2, 3, 10, or 20 chains).
+
+### **How do I override Hardhat network settings for specific chain?**
+
+You can define custom network configurations in `networks`:
+
+```ts
+networks: {
+  // use different chain id anf gas price for chain 0 of hardhat chainweb
+  chainweb_hardhat0: {
+    chainId: 123,
+    gasPrice: 0.1,
+  },
+}
+```
+
+### **Does this plugin support forking an existing network?**
+
+Only via configuration. `--fork` switch will be supported later
 
 ## License
 
