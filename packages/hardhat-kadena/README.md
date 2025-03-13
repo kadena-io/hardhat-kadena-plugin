@@ -451,7 +451,7 @@ module.exports = {
       chains: 20,
     },
     // use 3 chains with a custom graph
-    nonStandardGraph: {
+    nonStandardGraphChainweb: {
       chains: 3,
       graph: {
         0: [1],
@@ -471,7 +471,7 @@ Graph has direct impact on the security and performance of the chainweb is also 
 module.exports = {
   chainweb: {
     // this config uses 4 in-process chains.
-    custom_graph: {
+    custom_graph_chainweb: {
       chains: 4,
       // using a custom graph to see the network behavior
       graph: {
@@ -495,10 +495,7 @@ module.exports = {
   networks: {
     // then both hardhat and semiTestnet chainweb uses this config since both are internal
     hardhat: {
-      allowUnlimitedContractSize: true,
-      fork: {
-        url:''
-      }
+      gasPrice : 0.1
     }
   }
   chainweb: {
@@ -551,7 +548,7 @@ Yes, you can define a custom graph in your configuration:
 
 ```ts
 chainweb: {
-  customGraph: {
+  customGraphChainweb: {
     chains: 4,
     graph: {
       0: [1, 2],
