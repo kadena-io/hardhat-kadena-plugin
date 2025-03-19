@@ -1,6 +1,7 @@
 import {
   HardhatNetworkAccountsConfig,
   HardhatNetworkConfig,
+  HardhatNetworkUserConfig,
   HttpNetworkAccountsConfig,
   HttpNetworkAccountsUserConfig,
   HttpNetworkConfig,
@@ -17,6 +18,7 @@ interface INetworkOptions {
   numberOfChains?: number | undefined;
   accounts?: HardhatNetworkAccountsConfig | undefined;
   loggingEnabled?: boolean | undefined;
+  forking?: HardhatNetworkUserConfig['forking'];
 }
 
 export const getKadenaNetworks = ({
@@ -27,6 +29,7 @@ export const getKadenaNetworks = ({
   numberOfChains = 2,
   accounts,
   loggingEnabled = false,
+  forking,
 }: INetworkOptions): Record<string, HardhatNetworkConfig> => {
   const chainIds = new Array(numberOfChains)
     .fill(0)
@@ -40,6 +43,7 @@ export const getKadenaNetworks = ({
         accounts: accounts ?? hardhatNetwork.accounts,
         type: 'chainweb:in-process',
         loggingEnabled,
+        ...(forking ? forking : {}),
         ...availableNetworks[`${networkStem}${index}`],
       } as KadenaNetworkConfig;
       acc[`${networkStem}${index}`] = networkConfig;

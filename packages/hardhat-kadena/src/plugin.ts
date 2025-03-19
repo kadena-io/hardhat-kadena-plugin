@@ -33,7 +33,10 @@ extendConfig((config, userConfig) => {
     );
   }
 
-  config.defaultChainweb = userConfig.defaultChainweb ?? 'hardhat';
+  config.defaultChainweb =
+    process.env['HK_ACTIVE_CHAINWEB_NAME'] ??
+    userConfig.defaultChainweb ??
+    'hardhat';
 
   const hardhatConfig = {
     chains: 2,
@@ -41,22 +44,23 @@ extendConfig((config, userConfig) => {
     type: 'in-process',
   };
 
-  if (userConfig.chainweb['localhost']) {
-    console.warn(
-      'The user configuration contains a localhost chainweb configuration. This will be ignored; this configuration is automatically added by the plugin.',
-    );
-  }
-
   const userConfigWithLocalhost = {
     ...userConfig.chainweb,
     hardhat: hardhatConfig,
     localhost: {
       chains: hardhatConfig.chains,
       chainIdOffset: hardhatConfig.chainIdOffset ?? 626000,
-      type: 'external',
       externalHostUrl: 'http://localhost:8545',
+      ...userConfig.chainweb['localhost'],
+      type: 'external',
     },
   };
+
+  if (!(config.defaultChainweb in userConfigWithLocalhost)) {
+    throw new Error(
+      `Default chainweb ${config.defaultChainweb} not found in hardhat.config.js`,
+    );
+  }
 
   Object.entries(userConfigWithLocalhost).forEach(
     ([name, chainwebUserConfig]) => {
@@ -91,6 +95,9 @@ extendConfig((config, userConfig) => {
         }
         // add networks to hardhat
 
+        const { forking, ...chainwebInProcessUserConfigWithoutForking } =
+          chainwebInProcessUserConfig;
+
         const chainwebConfig: ChainwebInProcessConfig = {
           graph:
             chainwebInProcessUserConfig.graph ??
@@ -103,7 +110,15 @@ extendConfig((config, userConfig) => {
             chainwebChainId: CHAIN_ID_ADDRESS,
             spvVerify: VERIFY_ADDRESS,
           },
-          ...chainwebInProcessUserConfig,
+          ...chainwebInProcessUserConfigWithoutForking,
+          ...(forking?.url
+            ? {
+                forking: {
+                  enabled: true,
+                  ...forking,
+                },
+              }
+            : {}),
         };
 
         config.networks = {
@@ -115,6 +130,7 @@ extendConfig((config, userConfig) => {
             numberOfChains: chainwebConfig.chains,
             accounts: chainwebConfig.accounts,
             loggingEnabled: chainwebConfig.logging === 'debug',
+            forking: chainwebConfig.forking,
           }),
         };
         config.chainweb[name] = chainwebConfig;
@@ -183,6 +199,7 @@ const createExternalProvider = (
 const createInternalProvider = (
   hre: HardhatRuntimeEnvironment,
   chainwebName: string,
+  overrideForking?: { url: string; blockNumber?: number },
 ): Omit<ChainwebPluginApi, 'initialize'> => {
   const chainweb = hre.config.chainweb[chainwebName];
   if (!chainweb || chainweb.type !== 'in-process') {
@@ -193,6 +210,7 @@ const createInternalProvider = (
     chainweb,
     networks: hre.config.networks,
     chainwebName: chainwebName,
+    overrideForking,
   });
 
   async function startHardhatNetwork() {
@@ -286,17 +304,6 @@ const createInternalProvider = (
 
 // const spinupChainweb = () =>
 extendEnvironment((hre) => {
-  // This is here for "run" task. because hardhat runs the script as a separate process
-  // and we pass the chainweb_name to the new process via environment variable ACTIVE_CHAINWEB_NAME
-  const envChainweb = process.env['ACTIVE_CHAINWEB_NAME'];
-  if (envChainweb) {
-    if (!hre.config.chainweb[envChainweb]) {
-      throw new Error(
-        `Chainweb configuration ${envChainweb} not found in hardhat.config.js`,
-      );
-    }
-    hre.config.defaultChainweb = envChainweb;
-  }
   let api: Omit<ChainwebPluginApi, 'initialize'> | undefined = undefined;
 
   const safeCall =
@@ -309,7 +316,7 @@ extendEnvironment((hre) => {
     };
 
   hre.chainweb = {
-    initialize: async () => {
+    initialize: async (args) => {
       if (api) return;
       const chainweb = hre.config.chainweb[hre.config.defaultChainweb];
       if (!chainweb) {
@@ -327,7 +334,11 @@ extendEnvironment((hre) => {
       if (chainweb.type === 'external') {
         api = createExternalProvider(hre, hre.config.defaultChainweb);
       } else {
-        api = createInternalProvider(hre, hre.config.defaultChainweb);
+        api = createInternalProvider(
+          hre,
+          hre.config.defaultChainweb,
+          args?.forking,
+        );
       }
     },
     getProvider: safeCall(() => api!.getProvider),
@@ -339,7 +350,7 @@ extendEnvironment((hre) => {
     createTamperedProof: safeCall(() => api!.createTamperedProof),
     computeOriginHash: safeCall(() => api!.computeOriginHash),
   };
-  if (envChainweb) {
+  if (process.env['HK_INIT_CHAINWEB'] === 'true') {
     hre.chainweb.initialize();
   }
 });
@@ -362,6 +373,7 @@ task(
     if (hasNetwork) {
       return runSuper(taskArgs);
     }
+
     hre.config.defaultChainweb =
       taskArgs.chainweb ?? hre.config.defaultChainweb ?? 'hardhat';
 
@@ -377,7 +389,20 @@ task(
       return;
     }
 
-    await hre.chainweb.initialize();
+    let options:
+      | undefined
+      | { forking: { url: string; blockNumber?: number } } = undefined;
+
+    if (taskArgs.fork) {
+      options = {
+        forking: {
+          url: taskArgs.fork,
+          blockNumber: taskArgs.forkBlockNumber,
+        },
+      };
+    }
+
+    await hre.chainweb.initialize(options);
 
     return runRPCNode(taskArgs, hre);
   });
@@ -401,8 +426,12 @@ task(
 )
   .addOptionalParam(...chainwebSwitch)
   .setAction(async (taskArgs, hre, runSuper) => {
-    process.env['ACTIVE_CHAINWEB_NAME'] = hre.config.defaultChainweb =
+    // Since hardhat run the script in a separate process, we need to set the following configurations
+    // as environment variables then Hardhat forward them to the script process
+    process.env['HK_ACTIVE_CHAINWEB_NAME'] = hre.config.defaultChainweb =
       taskArgs.chainweb ?? hre.config.defaultChainweb ?? 'hardhat';
+    // then we know that the chainweb should run the initialization
+    process.env['HK_INIT_CHAINWEB'] = 'true';
     return runSuper(taskArgs);
   });
 

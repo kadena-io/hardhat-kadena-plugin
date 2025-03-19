@@ -4,6 +4,7 @@ import type { DeployContractOnChains } from './utils';
 import {
   EthereumProvider,
   HardhatNetworkAccountsConfig,
+  HardhatNetworkForkingConfig,
   HardhatNetworkUserConfig,
   HttpNetworkAccountsConfig,
 } from 'hardhat/types';
@@ -17,10 +18,12 @@ export interface ChainwebInProcessUserConfig {
   logging?: 'none' | 'info' | 'debug';
   type?: 'in-process';
   chainIdOffset?: number;
+  forking?: HardhatNetworkUserConfig['forking'];
 }
 
 export interface ChainwebInProcessConfig
-  extends Required<ChainwebInProcessUserConfig> {
+  extends Required<Omit<ChainwebInProcessUserConfig, 'forking'>> {
+  forking?: HardhatNetworkForkingConfig;
   precompiles: {
     chainwebChainId: string;
     spvVerify: string;
@@ -54,7 +57,9 @@ export type ChainwebUserConfig =
 export type ChainwebConfig = ChainwebInProcessConfig | ChainwebExternalConfig;
 
 export interface ChainwebPluginApi {
-  initialize: () => void;
+  initialize: (args?: {
+    forking?: { url: string; blockNumber?: number };
+  }) => void;
   getProvider: (cid: number) => Promise<EthereumProvider>;
   requestSpvProof: (
     targetChain: number,
