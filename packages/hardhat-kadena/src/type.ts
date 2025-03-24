@@ -71,6 +71,7 @@ export interface ChainwebPluginApi {
   deployContractOnChains: DeployContractOnChains;
   createTamperedProof: (targetChain: number, origin: Origin) => Promise<string>;
   computeOriginHash: (origin: Origin) => string;
+  runOverChains: <T>(callback: (chainId: number) => Promise<T>) => Promise<T[]>;
 }
 
 declare module 'hardhat/types' {

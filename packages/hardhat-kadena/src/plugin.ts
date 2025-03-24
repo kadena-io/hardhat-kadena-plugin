@@ -193,6 +193,7 @@ const createExternalProvider = (
     callChainIdContract: utils.callChainIdContract,
     createTamperedProof: utils.createTamperedProof,
     computeOriginHash: utils.computeOriginHash,
+    runOverChains: utils.runOverChains,
   };
 };
 
@@ -299,6 +300,7 @@ const createInternalProvider = (
     callChainIdContract: utils.callChainIdContract,
     createTamperedProof: utils.createTamperedProof,
     computeOriginHash: utils.computeOriginHash,
+    runOverChains: utils.runOverChains,
   };
 };
 
@@ -307,13 +309,14 @@ extendEnvironment((hre) => {
   let api: Omit<ChainwebPluginApi, 'initialize'> | undefined = undefined;
 
   const safeCall =
-    <A extends unknown[], B, T extends () => (...args: A) => B>(cb: T) =>
-    (...args: A) => {
-      if (api !== undefined) {
-        return cb()(...args);
-      }
-      throw new Error('Chainweb plugin not initialized');
-    };
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    <T extends () => (...args: any) => any>(cb: T) =>
+      (...args: Parameters<T>) => {
+        if (api !== undefined) {
+          return cb()(...args);
+        }
+        throw new Error('Chainweb plugin not initialized');
+      };
 
   hre.chainweb = {
     initialize: async (args) => {
@@ -349,6 +352,7 @@ extendEnvironment((hre) => {
     deployContractOnChains: safeCall(() => api!.deployContractOnChains),
     createTamperedProof: safeCall(() => api!.createTamperedProof),
     computeOriginHash: safeCall(() => api!.computeOriginHash),
+    runOverChains: safeCall(() => api!.runOverChains),
   };
   if (process.env['HK_INIT_CHAINWEB'] === 'true') {
     hre.chainweb.initialize();

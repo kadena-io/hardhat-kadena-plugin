@@ -1,7 +1,11 @@
-import { Contract } from 'ethers';
+import { ContractMethodArgs, Overrides, Signer } from 'ethers';
 import './type.js';
 import { CHAIN_ID_ABI } from './utils/network-contracts.js';
-import { HardhatRuntimeEnvironment, KadenaNetworkConfig } from 'hardhat/types';
+import {
+  FactoryOptions,
+  HardhatRuntimeEnvironment,
+  KadenaNetworkConfig,
+} from 'hardhat/types';
 import { BaseContract } from 'ethers';
 import { ContractTransactionResponse } from 'ethers';
 import { ChainwebNetwork } from './utils/chainweb.js';
@@ -49,15 +53,25 @@ export const getUtils = (
     return parseInt(hex, 16);
   }
 
-  async function deployContractOnChains(name: string) {
-    const chains = hre.chainweb.getChainIds();
-    console.log(
-      `Found ${chains.length} Kadena devnet networks: ${chains.join(', ')}`,
-    );
+  async function runOverChains<T>(callback: (chainId: number) => Promise<T>) {
+    const result: Array<T> = [];
+    for (const chainId of hre.chainweb.getChainIds()) {
+      await hre.chainweb.switchChain(chainId);
+      const cid = (network.config as KadenaNetworkConfig).chainwebChainId;
+      console.log(`Switched to network ${cid}`);
+      result.push(await callback(chainId));
+    }
+    return result;
+  }
 
-    const deployments = []; // Array for individual token access
-
-    for (const chainId of chains) {
+  const deployContractOnChains: DeployContractOnChains = async ({
+    name,
+    signer,
+    factoryOptions,
+    constructorArgs = [],
+    overrides,
+  }) => {
+    const deployments = await runOverChains(async (chainId) => {
       try {
         await hre.chainweb.switchChain(chainId);
         const cid = (network.config as KadenaNetworkConfig).chainwebChainId;
@@ -68,8 +82,13 @@ export const getUtils = (
         );
 
         /* Deploy the contract */
-        const factory = await ethers.getContractFactory(name);
-        const contract = await factory.deploy(ethers.parseEther('1000000'));
+        const factory = await ethers.getContractFactory(name, {
+          signer: signer ?? factoryOptions?.signer ?? deployer,
+          ...factoryOptions,
+        });
+        const contract = await factory.deploy(
+          ...(overrides ? [...constructorArgs, overrides] : constructorArgs),
+        );
         const deploymentTx = contract.deploymentTransaction();
         if (!deploymentTx) {
           throw new Error('Deployment transaction failed');
@@ -78,8 +97,9 @@ export const getUtils = (
         const tokenAddress = await contract.getAddress();
 
         // Store deployment info in both formats
-        const deploymentInfo = {
-          contract,
+        return {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          contract: contract as any,
           address: tokenAddress,
           chain: cid,
           network: {
@@ -87,18 +107,16 @@ export const getUtils = (
             name: `${networkStem}${chainId}`,
           },
         };
-
-        deployments.push(deploymentInfo);
       } catch (error) {
         console.error(`Failed to deploy to network ${chainId}:`, error);
+        return null;
       }
-    }
+    });
 
     return {
-      deployments,
-      tokens: deployments,
+      deployments: deployments.filter((d) => d !== null),
     };
-  }
+  };
 
   function computeOriginHash(origin: Origin) {
     // Create a proper ABI encoding matching Solidity struct layout
@@ -179,13 +197,14 @@ export const getUtils = (
     computeOriginHash,
     requestSpvProof,
     createTamperedProof,
+    runOverChains,
   };
 };
 
-export type DeployedContractsOnChains = {
-  contract: BaseContract & {
+export type DeployedContractsOnChains<T extends BaseContract = BaseContract> = {
+  contract: T & {
     deploymentTransaction(): ContractTransactionResponse;
-  } & Omit<Contract, keyof BaseContract>;
+  };
   address: string;
   chain: number;
   network: {
@@ -193,10 +212,15 @@ export type DeployedContractsOnChains = {
   };
 };
 
-export type DeployContractOnChains = (name: string) => Promise<{
-  deployments: DeployedContractsOnChains[];
-  /**
-   * @deprecated Use `deployments` instead
-   */
-  tokens: DeployedContractsOnChains[];
+export type DeployContractOnChains = <
+  T extends BaseContract = BaseContract,
+  A extends unknown[] = unknown[],
+>(args: {
+  name: string;
+  signer?: Signer;
+  factoryOptions?: FactoryOptions;
+  constructorArgs?: ContractMethodArgs<A>;
+  overrides?: Overrides;
+}) => Promise<{
+  deployments: DeployedContractsOnChains<T>[];
 }>;

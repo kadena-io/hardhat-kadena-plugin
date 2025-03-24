@@ -31,7 +31,10 @@ describe('SimpleToken Unit Tests', async function () {
     await switchChain(0);
     signers = await getSigners();
 
-    const deployed = await deployContractOnChains('SimpleToken');
+    const deployed = await deployContractOnChains({
+      name: 'SimpleToken',
+      constructorArgs: [ethers.parseUnits('1000000')],
+    });
 
     // Store contract instances for direct calls
     token0 = deployed.deployments[0].contract;

@@ -1,5 +1,5 @@
 import { DeployedContractsOnChains, Origin } from '@kadena/hardhat-chainweb';
-import { DeployedContract, HardhatEthersSigner, Signers } from './utils/utils';
+import { HardhatEthersSigner, Signers } from './utils/utils';
 
 import { expect } from 'chai';
 
@@ -31,18 +31,21 @@ describe('SimpleToken Unit Tests', async function () {
   let sender: HardhatEthersSigner;
   let receiver: HardhatEthersSigner;
   let amount: bigint;
-  let token0Info: DeployedContractsOnChains;
-  let token1Info: DeployedContractsOnChains;
+  let token0Info: DeployedContractsOnChains<SimpleToken>;
+  let token1Info: DeployedContractsOnChains<SimpleToken>;
 
   beforeEach(async function () {
     await switchChain(0);
     signers = await getSigners();
 
-    const deployed = await deployContractOnChains('SimpleToken');
+    const deployed = await deployContractOnChains<SimpleToken>({
+      name: 'SimpleToken',
+      constructorArgs: [ethers.parseUnits('1000000')],
+    });
 
     // Store contract instances for direct calls
-    token0 = deployed.deployments[0].contract as unknown as SimpleToken;
-    token1 = deployed.deployments[1].contract as unknown as SimpleToken;
+    token0 = deployed.deployments[0].contract;
+    token1 = deployed.deployments[1].contract;
 
     // Keep deployment info accessible when needed
     token0Info = deployed.deployments[0];
@@ -194,9 +197,9 @@ describe('SimpleToken Unit Tests', async function () {
 
       it('Should not set originHash to true when verifying a valid SPV proof', async function () {
         const proof = await requestSpvProof(token1Info.chain, origin);
-        const [crossChainMessage, originHash] = await token1.verifySPV(proof);
+        const [, originHash] = await token1.verifySPV(proof);
 
-        expect(await token1.completed(originHash)).to.be.false;
+        await expect(await token1.completed(originHash)).to.be.false;
       });
     }); // End of Success Test Cases
 
@@ -419,7 +422,7 @@ describe('SimpleToken Unit Tests', async function () {
 
         const tx = await token1.redeemCrossChain(receiver, amount, proof);
         await tx.wait();
-        expect(await token1.completed(originHash)).to.be.true;
+        await expect(await token1.completed(originHash)).to.be.true;
       });
     }); // End of Success Test Cases
 
@@ -431,6 +434,7 @@ describe('SimpleToken Unit Tests', async function () {
 
       beforeEach(async function () {
         const mocks = await deployMocks();
+        console.log('mocks:', mocks);
         mockToken0 = mocks.deployments[0]
           .contract as unknown as WrongOperationTypeToken;
         mockToken1 = mocks.deployments[1]
@@ -570,7 +574,7 @@ describe('SimpleToken Unit Tests', async function () {
 
         // Find CrossChainInitialized event index
         const eventIndex = receipt.logs.findIndex(
-          (log: any) =>
+          (log) =>
             log.topics[0] ===
             ethers.id('CrossChainInitialized(uint32,address,uint64,bytes)'),
         );

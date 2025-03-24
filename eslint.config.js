@@ -1,15 +1,37 @@
 const globals = require('globals');
 const pluginJs = require('@eslint/js');
 const tseslint = require('typescript-eslint');
-
-const checkFiles = (files) => (config) => config.map((c) => ({ ...c, files }));
+const { defineConfig } = require('eslint/config');
 
 /** @type {import('eslint').Linter.Config[]} */
-const config = [
+const eslintConfig = defineConfig(
   pluginJs.configs.recommended,
   { languageOptions: { globals: globals.browser } },
-  // somehow this plugin want to scan all files, but we only want to scan the files in the files array
   ...tseslint.configs.recommended,
-];
+  {
+    name: 'files',
+    files: ['packages/*/src/**/*.{mjs,ts}'],
+  },
+  {
+    name: 'globalIgnores',
+    ignores: ['packages/*/lib/**/*', 'eslint.config.js', '**/*.{mjs,cjs}'],
+  },
+  // {
+  //   overrides: [
+  //     {
+  //       files: ['**/*.js'], // Only apply to JS files
+  //       languageOptions: {
+  //         parserOptions: {
+  //           // sourceType: 'script', // Enable CommonJS
+  //         },
+  //       },
+  //     },
+  //   ],
+  // },
+);
 
-module.exports = checkFiles(['packages/*/src/**/*.{js,mjs,cjs,ts}'])(config);
+module.exports = eslintConfig;
+
+// module.exports = checkFiles({
+//   files: ['packages/*/src/**/*.{js,mjs,cjs,ts}'],
+// })(config);

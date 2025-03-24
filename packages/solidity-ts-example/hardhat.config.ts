@@ -5,15 +5,20 @@ import '@kadena/hardhat-chainweb';
 
 const config: HardhatUserConfig = {
   solidity: '0.8.28',
+  networks: {
+    hardhat: {
+      allowUnlimitedContractSize: true,
+    },
+  },
   chainweb: {
     hardhat: {
       chains: 2,
+      logging: 'none',
     },
     mychainweb: {
       chains: 3,
     },
   },
-  defaultChainweb: 'mychainweb',
 };
 
 export default config;

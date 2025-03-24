@@ -1,13 +1,11 @@
 import { expect } from 'chai';
-import { ethers, network, switchNetwork, chainweb } from 'hardhat';
+import { ethers, switchNetwork, chainweb } from 'hardhat';
 import {
   authorizeContracts,
   crossChainTransfer,
   initCrossChain,
   redeemCrossChain,
   getSigners,
-  DeployedContract,
-  HardhatEthersSigner,
   Signers,
   // deployContracts,
   // requestSpvProof,
@@ -21,19 +19,20 @@ describe('SimpleToken Integration Tests', async function () {
   let signers: Signers;
   let token0: SimpleToken; // this should be more specific to the contract; TODO: investigate type generation from contract
   let token1: SimpleToken;
-  let token0Info: DeployedContractsOnChains;
-  let token1Info: DeployedContractsOnChains;
+  let token0Info: DeployedContractsOnChains<SimpleToken>;
+  let token1Info: DeployedContractsOnChains<SimpleToken>;
 
   beforeEach(async function () {
     await chainweb.switchChain(0);
     signers = await getSigners();
-    const deployed = await deployContractOnChains('SimpleToken');
+    const deployed = await deployContractOnChains<SimpleToken>({
+      name: 'SimpleToken',
+      constructorArgs: [ethers.parseUnits('1000000')],
+    });
 
     // Store contract instances for direct calls
-    token0 = deployed.deployments[0].contract as unknown as SimpleToken;
-    token1 = deployed.deployments[1].contract as unknown as SimpleToken;
-
-    deployed.deployments[0].contract;
+    token0 = deployed.deployments[0].contract;
+    token1 = deployed.deployments[1].contract;
 
     // Keep deployment info accessible when needed
     token0Info = deployed.deployments[0];

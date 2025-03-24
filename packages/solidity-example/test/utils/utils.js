@@ -1,4 +1,4 @@
-const { switchNetwork, chainweb, network } = require('hardhat');
+const { switchNetwork, chainweb, ethers } = require('hardhat');
 
 const { requestSpvProof, switchChain, deployContractOnChains } = chainweb;
 
@@ -20,7 +20,10 @@ async function authorizeContracts(token, tokenInfo, authorizedTokenInfos) {
 
 function deployMocks() {
   console.log(`Found Kadena devnet networks while deploying mocks`);
-  return deployContractOnChains('WrongOperationTypeToken');
+  return deployContractOnChains({
+    name: 'WrongOperationTypeToken',
+    constructorArgs: [ethers.parseUnits('1000000')],
+  });
 }
 
 /* *************************************************************************** */
