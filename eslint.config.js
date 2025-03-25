@@ -16,22 +16,6 @@ const eslintConfig = defineConfig(
     name: 'globalIgnores',
     ignores: ['packages/*/lib/**/*', 'eslint.config.js', '**/*.{mjs,cjs}'],
   },
-  // {
-  //   overrides: [
-  //     {
-  //       files: ['**/*.js'], // Only apply to JS files
-  //       languageOptions: {
-  //         parserOptions: {
-  //           // sourceType: 'script', // Enable CommonJS
-  //         },
-  //       },
-  //     },
-  //   ],
-  // },
 );
 
 module.exports = eslintConfig;
-
-// module.exports = checkFiles({
-//   files: ['packages/*/src/**/*.{js,mjs,cjs,ts}'],
-// })(config);
