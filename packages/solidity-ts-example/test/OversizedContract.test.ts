@@ -1,12 +1,12 @@
 import { expect } from 'chai';
-import { ethers, chainweb } from 'hardhat';
+import hre, { chainweb } from 'hardhat';
 import { OversizedContract } from '../typechain-types';
 
 describe('OversizedContract Test', function () {
   it('Should deploy the oversized contract -- hardhat deployment', async function () {
     // This test should be successful if the contract is deployed on the hardhat network with allowUnlimitedContractSize set to true for hardhat
     const OversizedContract =
-      await ethers.getContractFactory('OversizedContract');
+      await hre.ethers.getContractFactory('OversizedContract');
     const oversized = await OversizedContract.deploy();
     await oversized.deploymentTransaction()?.wait();
 

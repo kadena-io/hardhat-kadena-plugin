@@ -19,6 +19,7 @@ interface INetworkOptions {
   accounts?: HardhatNetworkAccountsConfig | undefined;
   loggingEnabled?: boolean | undefined;
   forking?: HardhatNetworkUserConfig['forking'];
+  networkOptions?: HardhatNetworkUserConfig;
 }
 
 export const getKadenaNetworks = ({
@@ -30,6 +31,7 @@ export const getKadenaNetworks = ({
   accounts,
   loggingEnabled = false,
   forking,
+  networkOptions,
 }: INetworkOptions): Record<string, HardhatNetworkConfig> => {
   const chainIds = new Array(numberOfChains)
     .fill(0)
@@ -38,6 +40,7 @@ export const getKadenaNetworks = ({
     (acc, chainId, index) => {
       const networkConfig: KadenaNetworkConfig = {
         ...hardhatNetwork,
+        ...networkOptions,
         chainId: 626000 + chainId,
         chainwebChainId: chainId,
         accounts: accounts ?? hardhatNetwork.accounts,
@@ -62,6 +65,7 @@ interface IExternalNetworkOptions {
   numberOfChains?: number | undefined;
   accounts?: HttpNetworkAccountsConfig;
   baseUrl?: string;
+  networkOptions?: HttpNetworkUserConfig;
 }
 
 const toHttpNetworkAccountsConfig = (
@@ -89,6 +93,7 @@ export const getKadenaExternalNetworks = ({
   numberOfChains = 2,
   accounts = 'remote',
   baseUrl = 'http://localhost:8545',
+  networkOptions = {},
 }: IExternalNetworkOptions): Record<string, HttpNetworkConfig> => {
   const chainIds = new Array(numberOfChains)
     .fill(0)
@@ -99,6 +104,7 @@ export const getKadenaExternalNetworks = ({
         | HttpNetworkUserConfig
         | undefined;
       const networkConfig: HttpNetworkConfig = {
+        ...networkOptions,
         chainId: 626000 + chainId,
         chainwebChainId: chainId,
         type: 'chainweb:external',

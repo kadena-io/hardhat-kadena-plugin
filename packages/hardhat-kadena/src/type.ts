@@ -4,9 +4,9 @@ import type { DeployContractOnChains } from './utils';
 import {
   EthereumProvider,
   HardhatNetworkAccountsConfig,
-  HardhatNetworkForkingConfig,
   HardhatNetworkUserConfig,
   HttpNetworkAccountsConfig,
+  HttpNetworkUserConfig,
 } from 'hardhat/types';
 import 'hardhat/types/runtime';
 
@@ -18,16 +18,16 @@ export interface ChainwebInProcessUserConfig {
   logging?: 'none' | 'info' | 'debug';
   type?: 'in-process';
   chainIdOffset?: number;
-  forking?: HardhatNetworkUserConfig['forking'];
+  networkOptions?: HardhatNetworkUserConfig;
 }
 
 export interface ChainwebInProcessConfig
-  extends Required<Omit<ChainwebInProcessUserConfig, 'forking'>> {
-  forking?: HardhatNetworkForkingConfig;
+  extends Required<Omit<ChainwebInProcessUserConfig, 'networkOptions'>> {
   precompiles: {
     chainwebChainId: string;
     spvVerify: string;
   };
+  networkOptions?: HardhatNetworkUserConfig;
 }
 
 export interface ChainwebExternalUserConfig {
@@ -40,14 +40,16 @@ export interface ChainwebExternalUserConfig {
     chainwebChainId?: string;
     spvVerify?: string;
   };
+  networkOptions?: Omit<HttpNetworkUserConfig, 'chainId' | 'url'>;
 }
 
 export interface ChainwebExternalConfig
-  extends Required<ChainwebExternalUserConfig> {
+  extends Required<Omit<ChainwebExternalUserConfig, 'networkOptions'>> {
   precompiles: {
     chainwebChainId: string;
     spvVerify: string;
   };
+  networkOptions?: Omit<HttpNetworkUserConfig, 'chainId' | 'url'>;
 }
 
 export type ChainwebUserConfig =

@@ -177,7 +177,7 @@ function makeChainweb(
     if (networkName.includes(getNetworkStem(config.chainwebName))) {
       const networkConfig = networks[networkName] as KadenaNetworkConfig;
       if (config.overrideForking?.url) {
-        networkConfig.forking = { ...config.overrideForking, enabled: true };
+        networkConfig.forking = { enabled: true, ...config.overrideForking };
       }
 
       chains[networkConfig.chainwebChainId!] = new Chain(

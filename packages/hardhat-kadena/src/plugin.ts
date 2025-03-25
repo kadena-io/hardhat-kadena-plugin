@@ -95,9 +95,6 @@ extendConfig((config, userConfig) => {
         }
         // add networks to hardhat
 
-        const { forking, ...chainwebInProcessUserConfigWithoutForking } =
-          chainwebInProcessUserConfig;
-
         const chainwebConfig: ChainwebInProcessConfig = {
           graph:
             chainwebInProcessUserConfig.graph ??
@@ -110,15 +107,7 @@ extendConfig((config, userConfig) => {
             chainwebChainId: CHAIN_ID_ADDRESS,
             spvVerify: VERIFY_ADDRESS,
           },
-          ...chainwebInProcessUserConfigWithoutForking,
-          ...(forking?.url
-            ? {
-                forking: {
-                  enabled: true,
-                  ...forking,
-                },
-              }
-            : {}),
+          ...chainwebInProcessUserConfig,
         };
 
         config.networks = {
@@ -128,9 +117,14 @@ extendConfig((config, userConfig) => {
             hardhatNetwork: config.networks.hardhat,
             networkStem: getNetworkStem(name),
             numberOfChains: chainwebConfig.chains,
-            accounts: chainwebConfig.accounts,
+            accounts:
+              chainwebConfig.accounts ??
+              chainwebConfig.networkOptions?.accounts,
             loggingEnabled: chainwebConfig.logging === 'debug',
-            forking: chainwebConfig.forking,
+            forking: chainwebConfig.networkOptions?.forking?.url
+              ? { enabled: true, ...chainwebConfig.networkOptions.forking }
+              : undefined,
+            networkOptions: chainwebConfig.networkOptions,
           }),
         };
         config.chainweb[name] = chainwebConfig;
@@ -160,6 +154,7 @@ extendConfig((config, userConfig) => {
             numberOfChains: chainwebConfig.chains,
             accounts: chainwebConfig.accounts,
             baseUrl: chainwebConfig.externalHostUrl,
+            networkOptions: chainwebConfig.networkOptions,
           }),
         };
         config.chainweb[name] = chainwebConfig;
@@ -420,7 +415,13 @@ task('test', `Run mocha tests; Supports Chainweb`)
     }
     hre.config.defaultChainweb =
       taskArgs.chainweb ?? hre.config.defaultChainweb ?? 'hardhat';
+
     hre.chainweb.initialize();
+
+    if (!process.argv.includes('--network')) {
+      await hre.chainweb.switchChain(0);
+    }
+
     return runSuper(taskArgs);
   });
 
