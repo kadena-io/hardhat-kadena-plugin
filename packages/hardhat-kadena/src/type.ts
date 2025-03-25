@@ -27,7 +27,7 @@ export interface ChainwebInProcessConfig
     chainwebChainId: string;
     spvVerify: string;
   };
-  networkOptions?: HardhatNetworkUserConfig;
+  networkOptions?: Omit<HardhatNetworkUserConfig, 'chainId'>;
 }
 
 export interface ChainwebExternalUserConfig {
