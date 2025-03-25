@@ -10,11 +10,16 @@ const eslintConfig = defineConfig(
   ...tseslint.configs.recommended,
   {
     name: 'files',
-    files: ['packages/*/src/**/*.{mjs,ts}'],
+    files: ['packages/*/src/**/*.ts'],
   },
   {
     name: 'globalIgnores',
-    ignores: ['packages/*/lib/**/*', 'eslint.config.js', '**/*.{mjs,cjs}'],
+    ignores: [
+      'packages/*/lib/**/*',
+      'eslint.config.js',
+      '**/*.{mjs,cjs,js}',
+      '**/typechain-types/*',
+    ],
   },
 );
 
