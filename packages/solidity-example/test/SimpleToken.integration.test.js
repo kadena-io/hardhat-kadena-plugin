@@ -1,6 +1,5 @@
 const { expect } = require('chai');
-const { ethers, network, switchNetwork, chainweb } = require('hardhat');
-const { ZeroAddress } = require('ethers');
+const { ethers, switchNetwork, chainweb } = require('hardhat');
 const {
   authorizeContracts,
   crossChainTransfer,
@@ -21,13 +20,14 @@ describe('SimpleToken Integration Tests', async function () {
   beforeEach(async function () {
     // chainweb.switchChain(0) or switchNetwork("chain name") can be used to switch to a different chain
     signers = await getSigners();
-    const deployed = await deployContractOnChains('SimpleToken');
+    const deployed = await deployContractOnChains({
+      name: 'SimpleToken',
+      constructorArgs: [ethers.parseUnits('1000000')],
+    });
 
     // Store contract instances for direct calls
     token0 = deployed.deployments[0].contract;
     token1 = deployed.deployments[1].contract;
-
-    deployed.deployments[0].contract;
 
     // Keep deployment info accessible when needed
     token0Info = deployed.deployments[0];

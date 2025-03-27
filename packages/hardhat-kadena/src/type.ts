@@ -6,6 +6,7 @@ import {
   HardhatNetworkAccountsConfig,
   HardhatNetworkUserConfig,
   HttpNetworkAccountsConfig,
+  HttpNetworkUserConfig,
 } from 'hardhat/types';
 import 'hardhat/types/runtime';
 
@@ -17,14 +18,16 @@ export interface ChainwebInProcessUserConfig {
   logging?: 'none' | 'info' | 'debug';
   type?: 'in-process';
   chainIdOffset?: number;
+  networkOptions?: HardhatNetworkUserConfig;
 }
 
 export interface ChainwebInProcessConfig
-  extends Required<ChainwebInProcessUserConfig> {
+  extends Required<Omit<ChainwebInProcessUserConfig, 'networkOptions'>> {
   precompiles: {
     chainwebChainId: string;
     spvVerify: string;
   };
+  networkOptions?: Omit<HardhatNetworkUserConfig, 'chainId'>;
 }
 
 export interface ChainwebExternalUserConfig {
@@ -37,14 +40,16 @@ export interface ChainwebExternalUserConfig {
     chainwebChainId?: string;
     spvVerify?: string;
   };
+  networkOptions?: Omit<HttpNetworkUserConfig, 'chainId' | 'url'>;
 }
 
 export interface ChainwebExternalConfig
-  extends Required<ChainwebExternalUserConfig> {
+  extends Required<Omit<ChainwebExternalUserConfig, 'networkOptions'>> {
   precompiles: {
     chainwebChainId: string;
     spvVerify: string;
   };
+  networkOptions?: Omit<HttpNetworkUserConfig, 'chainId' | 'url'>;
 }
 
 export type ChainwebUserConfig =
@@ -54,7 +59,9 @@ export type ChainwebUserConfig =
 export type ChainwebConfig = ChainwebInProcessConfig | ChainwebExternalConfig;
 
 export interface ChainwebPluginApi {
-  initialize: () => void;
+  initialize: (args?: {
+    forking?: { url: string; blockNumber?: number };
+  }) => void;
   getProvider: (cid: number) => Promise<EthereumProvider>;
   requestSpvProof: (
     targetChain: number,
@@ -66,6 +73,7 @@ export interface ChainwebPluginApi {
   deployContractOnChains: DeployContractOnChains;
   createTamperedProof: (targetChain: number, origin: Origin) => Promise<string>;
   computeOriginHash: (origin: Origin) => string;
+  runOverChains: <T>(callback: (chainId: number) => Promise<T>) => Promise<T[]>;
 }
 
 declare module 'hardhat/types' {

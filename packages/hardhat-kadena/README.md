@@ -15,7 +15,7 @@ Chainweb is a blockchain architecture designed by Kadena, which features a paral
 - 🔌 Support for both in-process and external networks
 - 📡 RPC server with HTTP and WebSocket support
 - 🔘 Multiple chainweb configuration support
-- 🔀 Support forks (coming soon)
+- 🔀 Support forks
 
 ## Installation
 
@@ -89,20 +89,24 @@ interface ChainwebUserConfig {
     chainwebChainId?: string;              // chainweb chainId precompile address
     spvVerify?: string;                    // verify spv proof precompile address
   };
+  networkOptions?:                         // override default values that created networks use
+    | HardhatNetworkUserConfig
+    | HttpNetworkUserConfig
 }
 
 ```
 
-| Property          | Type                                                          | Description                                                                                                                                                            |
-| ----------------- | ------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `accounts`        | `HardhatNetworkAccountsConfig` (optional)                     | Defines the accounts configuration for the network (default: Hardhat network accounts).                                                                                |
-| `chains`          | `number`                                                      | Specifies the number of chains in the Chainweb network.                                                                                                                |
-| `graph`           | `{ [key: number]: number[] }` (optional)                      | Defines the graph structure of the Chainweb network where keys represent chain IDs and values are arrays of connected chain IDs (default: Pearson graph).              |
-| `type`            | `'in-process' \| 'external'` (optional)                       | Defines Chainweb type: “in-process” uses the Hardhat network, and “external” uses an external network (which you need to add to the networks—default: `'in-process'`). |
-| `externalHostUrl` | `string` (optional)                                           | Defines the base url for external networks (default: `http://localhost:8545`)                                                                                          |
-| `logging`         | `'none' \| 'info' \| 'debug'` (optional)                      | Sets the logging level for debugging purposes (default: `"info"`).                                                                                                     |
-| `chainIdOffset`   | `number` (optional)                                           | chain id offset to be set (default: `626000`).                                                                                                                         |
-| `precompiles`     | `{ chainwebChainId?: string, spvVerify?: string }` (optional) | if you are using external networks the precompile addresses might be different from the default ones so you can set them via this config                               |
+| Property          | Type                                                           | Description                                                                                                                                                            |
+| ----------------- | -------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `accounts`        | `HardhatNetworkAccountsConfig` (optional)                      | Defines the accounts configuration for the network (default: Hardhat network accounts).                                                                                |
+| `chains`          | `number`                                                       | Specifies the number of chains in the Chainweb network.                                                                                                                |
+| `graph`           | `{ [key: number]: number[] }` (optional)                       | Defines the graph structure of the Chainweb network where keys represent chain IDs and values are arrays of connected chain IDs (default: Pearson graph).              |
+| `type`            | `'in-process' \| 'external'` (optional)                        | Defines Chainweb type: “in-process” uses the Hardhat network, and “external” uses an external network (which you need to add to the networks—default: `'in-process'`). |
+| `externalHostUrl` | `string` (optional)                                            | Defines the base url for external networks (default: `http://localhost:8545`)                                                                                          |
+| `logging`         | `'none' \| 'info' \| 'debug'` (optional)                       | Sets the logging level for debugging purposes (default: `"info"`).                                                                                                     |
+| `chainIdOffset`   | `number` (optional)                                            | chain id offset to be set (default: `626000`).                                                                                                                         |
+| `precompiles`     | `{ chainwebChainId?: string, spvVerify?: string }` (optional)  | if you are using external networks the precompile addresses might be different from the default ones so you can set them via this config                               |
+| `networkOptions`  | `HardhatNetworkUserConfig \| HttpNetworkUserConfig` (optional) | You can override any option that hardhat adds by default for the created networks. check the examples                                                                  |
 
 ### Network Types
 
@@ -196,17 +200,46 @@ The plugin uses the Chainweb configuration and extends the Hardhat config by add
 
 ### Override Network Configurations
 
-If you want to override any option, you can add the network with the custom config in the `networks` section:
+#### Override the config for all chains created for a chainweb
+
+If you want to override any option, you can use networkOptions the custom network config
 
 ```ts
 module.exports = {
   solidity: '0.8.20',
-  networks: {
-    chainweb_hardhat0: {
-      chainId: 123, // Use custom chainId for chain 0
-      gasPrice: 0.1, // set custom gas price
+  chainweb: {
+    hardhat: {
+      chains: 2,
+      // the two created networks use the following config
+      networkOptions: {
+        gasPrice: 0.1,
+        allowUnlimitedContractSize: true,
+        forking: {
+          url: 'http://the-fork-url',
+        },
+      },
     },
   },
+};
+```
+
+#### Override the config a specific chain of the chainweb
+
+You also can override the config for spesific chain you just need to add the config in networks section
+
+```ts
+module.exports = {
+  solidity: '0.8.20',
+  networks:{
+    // wh you want only the chain 0 of chainweb uses the following config
+    chainweb_hardhat0:{
+      gasPrice: 0.1,
+      allowUnlimitedContractSize: true,
+      forking: {
+        url: 'http://the-fork-url',
+      },
+    }
+  }
   chainweb: {
     hardhat: {
       chains: 2,
@@ -228,7 +261,13 @@ interface ChainwebPluginApi {
   switchChain: (cid: number) => Promise<void>;
   getChainIds: () => number[];
   callChainIdContract: () => Promise<number>;
-  deployContractOnChains: (name: contract) => Promise<{
+  deployContractOnChains: ({
+    name: string;
+    signer?: Signer;
+    factoryOptions?: FactoryOptions;
+    constructorArgs?: ContractMethodArgs;
+    overrides?: Overrides;
+  }) => Promise<{
     deployments: {
       // ContractFactory from ethers
       contract: ReturnType<ContractFactory['deploy']>;
@@ -241,6 +280,7 @@ interface ChainwebPluginApi {
   }>;
   createTamperedProof: (targetChain: number, origin: Origin) => Promise<string>;
   computeOriginHash: (origin: Origin) => string;
+  runOverChains: <T>(callback: (chainId: number) => Promise<T>) => Promise<T[]>;
   initialize: () => void;
 }
 ```
@@ -259,24 +299,25 @@ interface Origin {
 }
 ```
 
-| Function                 | Parameters                            | Return Type                                           | Description                                                                                                                                                                                                                                    |
-| ------------------------ | ------------------------------------- | ----------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `getProvider`            | `cid: number`                         | `HardhatEthersProvider`                               | Retrieves the provider for a specified chain.                                                                                                                                                                                                  |
-| `requestSpvProof`        | `targetChain: number, origin: Origin` | `Promise<string>`                                     | Requests an SPV proof for a cross-chain transaction.                                                                                                                                                                                           |
-| `switchChain`            | `cid: number`                         | `Promise<void>`                                       | Switches the active chain.                                                                                                                                                                                                                     |
-| `getChainIds`            | None                                  | `number[]`                                            | Returns an array of available chain IDs.                                                                                                                                                                                                       |
-| `callChainIdContract`    | None                                  | `Promise<number>`                                     | Calls a contract to get the chain ID.                                                                                                                                                                                                          |
-| `deployContractOnChains` | `name: string`                        | check `deployContractOnChains` of `ChainwebPluginApi` | Deploys a contract on multiple chains.                                                                                                                                                                                                         |
-| `createTamperedProof`    | `targetChain: number, origin: Origin` | `Promise<string>`                                     | Creates a tampered SPV proof for testing purposes.                                                                                                                                                                                             |
-| `computeOriginHash`      | `origin: Origin`                      | `string`                                              | Computes the hash of a transaction origin.                                                                                                                                                                                                     |
-| `initialize`             | None                                  | void                                                  | This function is called internally when using `node`, `test`, `run` command, so you mostly dont need it, However if you need to use the plugin in other command (e.g developing another plugin on top of this ) then you can call the function |
+| Function                 | Parameters                                                                                                                     | Return Type                                        | Description                                                                                                                                                                                                                                   |
+| ------------------------ | ------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `getProvider`            | `cid: number`                                                                                                                  | `HardhatEthersProvider`                            | Retrieves the provider for a specified chain.                                                                                                                                                                                                 |
+| `requestSpvProof`        | `targetChain: number, origin: Origin`                                                                                          | `Promise<string>`                                  | Requests an SPV proof for a cross-chain transaction.                                                                                                                                                                                          |
+| `switchChain`            | `cid: number`                                                                                                                  | `Promise<void>`                                    | Switches the active chain.                                                                                                                                                                                                                    |
+| `getChainIds`            | None                                                                                                                           | `number[]`                                         | Returns an array of available chain IDs.                                                                                                                                                                                                      |
+| `callChainIdContract`    | None                                                                                                                           | `Promise<number>`                                  | Calls a contract to get the chain ID.                                                                                                                                                                                                         |
+| `deployContractOnChains` | `{name: string;signer?: Signer;factoryOptions?: FactoryOptions; constructorArgs?: ContractMethodArgs ;overrides?: Overrides;}` | check`deployContractOnChains`of`ChainwebPluginApi` | Deploys a contract on multiple chains.                                                                                                                                                                                                        |
+| `createTamperedProof`    | `targetChain: number, origin: Origin`                                                                                          | `Promise<string>`                                  | Creates a tampered SPV proof for testing purposes.                                                                                                                                                                                            |
+| `computeOriginHash`      | `origin: Origin`                                                                                                               | `string`                                           | Computes the hash of a transaction origin.                                                                                                                                                                                                    |
+| `runOverChains`          | `callback: (chainId: number) => Promise<T>`                                                                                    | `Promise<T[]>`                                     | Run the callback for all chains; the function switches the context so no need to call switchChain inside the callback                                                                                                                         |
+| `initialize`             | None                                                                                                                           | void                                               | This function is called internally when using`node`, `test`, `run` command, so you mostly dont need it, However if you need to use the plugin in other command (e.g developing another plugin on top of this ) then you can call the function |
 
 ### Example
 
 ```TS
 import { chainweb } from "hardhat"
 
-await chainweb.deployContractOnChains("SimpleToken") // deploy contract on all chains
+await chainweb.deployContractOnChains({name: "SimpleToken",  constructorArgs: [ethers.parseUnits('1000000')] }) // deploy contract on all chains
 await chainweb.switchChain(0); // configure hardhat to use chain 0
 ```
 
@@ -580,8 +621,46 @@ networks: {
 
 ### **Does this plugin support forking an existing network?**
 
-Only via configuration. `--fork` switch will be supported later
+You can use forking either via networkOptions property in the chianweb config or passing --fork to the command support it
+
+```
+npx hardhat node --frok https://THE_FORK_URL
+```
+
+using config
+
+```ts
+chainweb: {
+  customGraphChainweb: {
+    chains: 4,
+    networkOptions: {
+      forking:{
+        url: "https://THE_FORK_URL"
+      }
+    }
+  },
+}
+```
+
+### **Does this plugin support deploying oversized contracts?**
+
+Yes by adding `allowUnlimitedContractSize` to the networkOptions
+
+```ts
+chainweb: {
+  customGraphChainweb: {
+    chains: 4,
+    networkOptions: {
+      allowUnlimitedContractSize: true
+    }
+  },
+}
+```
 
 ## License
 
 This project is licensed under the MIT License.
+
+```
+
+```

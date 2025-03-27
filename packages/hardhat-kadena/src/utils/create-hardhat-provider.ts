@@ -35,7 +35,7 @@ export async function createHardhatProvider(
   artifacts?: Artifacts,
 ): Promise<EthereumProvider> {
   let forkConfig: ForkConfig | undefined;
-  const cachePath: string = `./chainweb/${hardhatNetConfig.chainwebChainId}`;
+  const cachePath: string = `./cache/chainweb/${hardhatNetConfig.chainwebChainId}`;
 
   if (
     hardhatNetConfig.forking?.enabled === true &&
@@ -46,6 +46,8 @@ export async function createHardhatProvider(
       blockNumber: hardhatNetConfig.forking?.blockNumber,
       httpHeaders: hardhatNetConfig.forking.httpHeaders,
     };
+
+    logger.info(`Forking from ${hardhatNetConfig.forking.url}`);
   }
 
   const accounts = normalizeHardhatNetworkAccountsConfig(

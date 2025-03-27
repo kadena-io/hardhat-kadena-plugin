@@ -8,12 +8,15 @@ const config: HardhatUserConfig = {
   chainweb: {
     hardhat: {
       chains: 2,
+      logging: 'none',
+      networkOptions: {
+        allowUnlimitedContractSize: true,
+      },
     },
     mychainweb: {
       chains: 3,
     },
   },
-  defaultChainweb: 'mychainweb',
 };
 
 export default config;

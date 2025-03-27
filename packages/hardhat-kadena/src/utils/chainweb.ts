@@ -10,9 +10,10 @@ import { HardhatEthersProvider } from '@nomicfoundation/hardhat-ethers/internal/
 import { getNetworkStem } from '../utils.js';
 
 interface INetworkOptions {
-  chainweb: Required<ChainwebInProcessConfig>;
+  chainweb: ChainwebInProcessConfig;
   networks: NetworksConfig;
   chainwebName: string;
+  overrideForking?: { url: string; blockNumber?: number };
 }
 
 export class ChainwebNetwork {
@@ -160,9 +161,10 @@ export class ChainwebNetwork {
 function makeChainweb(
   logger: Logger,
   config: {
-    chainweb: Required<ChainwebInProcessConfig>;
+    chainweb: ChainwebInProcessConfig;
     networks: NetworksConfig;
     chainwebName: string;
+    overrideForking?: { url: string; blockNumber?: number };
   },
 ) {
   const graph = config.chainweb.graph;
@@ -174,6 +176,10 @@ function makeChainweb(
   for (const networkName in networks) {
     if (networkName.includes(getNetworkStem(config.chainwebName))) {
       const networkConfig = networks[networkName] as KadenaNetworkConfig;
+      if (config.overrideForking?.url) {
+        networkConfig.forking = { enabled: true, ...config.overrideForking };
+      }
+
       chains[networkConfig.chainwebChainId!] = new Chain(
         networkConfig,
         config.chainweb.logging,

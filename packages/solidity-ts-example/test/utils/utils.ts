@@ -1,8 +1,8 @@
-import { ethers } from 'hardhat';
 import { DeployedContractsOnChains } from '@kadena/hardhat-chainweb';
 import { HardhatEthersHelpers } from 'hardhat/types';
 
-import { switchNetwork, chainweb } from 'hardhat';
+import { switchNetwork, chainweb, ethers } from 'hardhat';
+import { SimpleToken } from '../../typechain-types';
 
 const { requestSpvProof, switchChain, deployContractOnChains } = chainweb;
 
@@ -12,7 +12,7 @@ const EVENT_SIG_HASH =
 
 // Authorize contracts for cross-chain transfers to and from the token
 export async function authorizeContracts(
-  token: DeployedContract,
+  token: SimpleToken,
   tokenInfo: DeployedContractsOnChains,
   authorizedTokenInfos: [DeployedContractsOnChains, DeployedContractsOnChains],
 ) {
@@ -28,14 +28,17 @@ export async function authorizeContracts(
 
 export function deployMocks() {
   console.log(`Found Kadena devnet networks while deploying mocks`);
-  return deployContractOnChains('WrongOperationTypeToken');
+  return deployContractOnChains({
+    name: 'WrongOperationTypeToken',
+    constructorArgs: [ethers.parseUnits('1000000')],
+  });
 }
 
 /* *************************************************************************** */
 /* Initiate Cross-Chain Transfer */
 
 export async function initCrossChain(
-  sourceToken: DeployedContract,
+  sourceToken: SimpleToken,
   sourceTokenInfo: DeployedContractsOnChains,
   targetTokenInfo: DeployedContractsOnChains,
   sender: HardhatEthersSigner,
@@ -46,17 +49,20 @@ export async function initCrossChain(
     `Initiating cross-chain transfer from ${sourceTokenInfo.network.name} to ${targetTokenInfo.network.name}`,
   );
   await switchNetwork(sourceTokenInfo.network.name);
-  let response1 = await sourceToken
+  const response1 = await sourceToken
     .connect(sender)
     .transferCrossChain(receiver.address, amount, targetTokenInfo.chain);
-  let receipt1 = await response1.wait();
+  const receipt1 = await response1.wait();
+  if (receipt1 === null) {
+    throw new Error(`transfer-crosschain failed "receipt is null"`);
+  }
   console.log(
     `transfer-crosschain status: ${receipt1.status}, at block number ${receipt1.blockNumber} with hash ${receipt1.hash}`,
   );
 
   // Compute origin
-  let logIndex = receipt1.logs.findIndex(
-    (log: any) => log.topics[0] == EVENT_SIG_HASH,
+  const logIndex = receipt1.logs.findIndex(
+    (log) => log.topics[0] == EVENT_SIG_HASH,
   );
   console.log(`found log at tx ${receipt1.index} and event ${logIndex}`);
   return {
@@ -70,7 +76,7 @@ export async function initCrossChain(
 
 // Redeem cross-chain transfer tokens
 export async function redeemCrossChain(
-  targetToken: DeployedContract,
+  targetToken: SimpleToken,
   targetTokenInfo: DeployedContractsOnChains,
   receiver: HardhatEthersSigner,
   amount: bigint,
@@ -78,22 +84,23 @@ export async function redeemCrossChain(
 ) {
   await switchNetwork(targetTokenInfo.network.name);
   console.log(`Redeeming tokens on chain ${targetTokenInfo.network.name}`);
-  let response2 = await targetToken.redeemCrossChain(
+  const response2 = await targetToken.redeemCrossChain(
     receiver.address,
     amount,
     proof,
   );
-  let receipt2 = await response2.wait();
-  console.log(
-    `result at block height ${receipt2.blockNumber} received with status ${response2.status}`,
-  );
+  const receipt2 = await response2.wait();
+  if (receipt2 === null) {
+    throw new Error(`transfer-crosschain failed "receipt is null"`);
+  }
+  console.log(`result at block height ${receipt2.blockNumber} received`);
 }
 
 // Make a cross-chain transfer
 export async function crossChainTransfer(
-  sourceToken: DeployedContract,
+  sourceToken: SimpleToken,
   sourceTokenInfo: DeployedContractsOnChains,
-  targetToken: DeployedContract,
+  targetToken: SimpleToken,
   targetTokenInfo: DeployedContractsOnChains,
   sender: HardhatEthersSigner,
   receiver: HardhatEthersSigner,
@@ -142,4 +149,4 @@ export type Signers = {
   carol: HardhatEthersSigner;
 };
 
-export type DeployedContract = any; // DeployedContractsOnChains["contract"];
+export type DeployedContract = DeployedContractsOnChains['contract'];
