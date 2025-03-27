@@ -1,7 +1,10 @@
 const { chainweb } = require('hardhat');
 
 async function main() {
-  const deployed = await chainweb.deployContractOnChains('SimpleToken');
+  const deployed = await chainweb.deployContractOnChains({
+    name: 'SimpleToken',
+    constructorArgs: [ethers.parseUnits('1000000')],
+  });
 
   if (deployed.deployments.length === 0) {
     console.log('No contracts deployed');
