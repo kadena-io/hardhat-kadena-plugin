@@ -172,6 +172,7 @@ const createExternalProvider = (
   const utils = getUtils(hre);
   return {
     deployContractOnChains: utils.deployContractOnChains,
+    deployContractOnChainsDeterministic: utils.deployContractOnChainsDeterministic,
     getProvider: (cid: number) => {
       const name = `${networkStem}${cid}`;
       return createProvider(hre.config, name, hre.artifacts);
@@ -277,6 +278,7 @@ const createInternalProvider = (
 
   return {
     deployContractOnChains: utils.deployContractOnChains,
+    deployContractOnChainsDeterministic: utils.deployContractOnChainsDeterministic,
     getProvider: async (cid: number) => {
       await isNetworkReadyPromise;
       const provider = chainwebNetwork.getProvider(cid);
@@ -345,6 +347,9 @@ extendEnvironment((hre) => {
     getChainIds: safeCall(() => api!.getChainIds),
     callChainIdContract: safeCall(() => api!.callChainIdContract),
     deployContractOnChains: safeCall(() => api!.deployContractOnChains),
+    deployContractOnChainsDeterministic: safeCall(
+      () => api!.deployContractOnChainsDeterministic,
+    ),
     createTamperedProof: safeCall(() => api!.createTamperedProof),
     computeOriginHash: safeCall(() => api!.computeOriginHash),
     runOverChains: safeCall(() => api!.runOverChains),

@@ -1,6 +1,6 @@
 import 'hardhat/types';
 import type { Origin } from './utils/chainweb';
-import type { DeployContractOnChains } from './utils';
+import type { DeployContractOnChains, DeployContractOnChainsDeterministic } from './utils';
 import {
   EthereumProvider,
   HardhatNetworkAccountsConfig,
@@ -71,6 +71,7 @@ export interface ChainwebPluginApi {
   getChainIds: () => number[];
   callChainIdContract: () => Promise<number>;
   deployContractOnChains: DeployContractOnChains;
+  deployContractOnChainsDeterministic: DeployContractOnChainsDeterministic;
   createTamperedProof: (targetChain: number, origin: Origin) => Promise<string>;
   computeOriginHash: (origin: Origin) => string;
   runOverChains: <T>(callback: (chainId: number) => Promise<T>) => Promise<T[]>;

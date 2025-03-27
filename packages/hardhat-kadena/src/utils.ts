@@ -118,6 +118,173 @@ export const getUtils = (
     };
   };
 
+  /**
+  * Deploys a contract deterministically using CREATE2 to multiple chains,
+  * ensuring the same address across all chains.
+  * @param salt - Required parameter to ensure deterministic addresses
+  */
+  const deployContractOnChainsDeterministic: DeployContractOnChainsDeterministic = async ({
+    name,
+    signer,
+    factoryOptions,
+    constructorArgs = [],
+    overrides,
+    salt, // Required CREATE2 salt parameter
+  }) => {
+    // Format and validate salt for CREATE2
+    let create2Salt;
+
+    if (!salt) {
+      throw new Error('Salt is required for deterministic deployment');
+    } else if (typeof salt === 'string') {
+      // If it's a string but doesn't start with 0x, hash it
+      create2Salt = !salt.startsWith('0x') ? ethers.id(salt) : salt;
+    } else if (salt instanceof Uint8Array) {
+      // If it's already bytes, use as is
+      create2Salt = salt;
+    } else {
+      throw new Error('Salt must be a string or Uint8Array');
+    }
+    console.log(`Using CREATE2 with salt: ${create2Salt}`);
+
+    const deployments = await runOverChains(async (chainId) => {
+      try {
+        await hre.chainweb.switchChain(chainId);
+        const cid = (network.config as KadenaNetworkConfig).chainwebChainId;
+        console.log(`Switched to network ${cid}`);
+        const [deployer] = await ethers.getSigners();
+        console.log(
+          `Deploying with signer: ${deployer.address} on network ${chainId} using CREATE2`,
+        );
+
+        // Get contract factory
+        const factory = await ethers.getContractFactory(name, {
+          signer: signer ?? factoryOptions?.signer ?? deployer,
+          ...factoryOptions,
+        });
+
+        // Get bytecode with encoded constructor arguments
+        const encodedArgs = factory.interface.encodeDeploy(constructorArgs);
+        const bytecodeWithArgs = factory.bytecode + encodedArgs.slice(2);
+
+        // Calculate the CREATE2 address
+        const effectiveSigner = signer ?? factoryOptions?.signer ?? deployer;
+        const signerAddress = await effectiveSigner.getAddress();
+
+        // Use ethers v6 getCreate2Address method
+        const create2Address = ethers.getCreate2Address(
+          signerAddress,
+          create2Salt,
+          ethers.keccak256(bytecodeWithArgs)
+        );
+
+        console.log(`Predicted deployment address on chain ${cid}: ${create2Address}`);
+
+        // Check if contract is already deployed at this address
+        const code = await ethers.provider.getCode(create2Address);
+        if (code !== '0x') {
+          console.log(`Contract already deployed at ${create2Address} on chain ${cid}`);
+
+          // Get contract instance for already deployed contract
+          const contract = new ethers.Contract(
+            create2Address,
+            factory.interface,
+            signer ?? factoryOptions?.signer ?? deployer
+          ) as T & { deploymentTransaction(): ContractTransactionResponse };
+
+          return {
+            contract,
+            address: create2Address,
+            chain: cid,
+            network: {
+              chainId,
+              name: `${networkStem}${chainId}`,
+            },
+            alreadyDeployed: true,
+          };
+        }
+
+        // Create transaction with CREATE2
+        // First extract customData from overrides to handle it separately
+        const { customData, ...otherOverrides } = overrides || {};
+
+        // Create properly structured transaction request
+        const txRequest = {
+          data: bytecodeWithArgs,
+          gasLimit: (otherOverrides.gasLimit !== undefined) ? otherOverrides.gasLimit : 6000000,
+          ...otherOverrides,
+          // Merge existing customData with our CREATE2 salt
+          customData: {
+            ...(customData || {}),
+            create2Salt: create2Salt
+          }
+        };
+
+        const tx = await effectiveSigner.sendTransaction(txRequest);
+
+        console.log(`Deployment transaction on chain ${cid}: ${tx.hash}`);
+        const receipt = await tx.wait();
+
+        // Get deployed contract instance
+        const contract = new ethers.Contract(
+          receipt?.contractAddress || create2Address,
+          factory.interface,
+          effectiveSigner
+        ) as T & { deploymentTransaction(): ContractTransactionResponse };
+
+        const deployedAddress = await contract.getAddress();
+        console.log(`Contract deployed on chain ${cid} at address: ${deployedAddress}`);
+
+        // Verify the address matches prediction
+        if (deployedAddress.toLowerCase() === create2Address.toLowerCase()) {
+          console.log(`✅ Chain ${cid}: Deployment address matches prediction`);
+        } else {
+          console.error(`❌ Chain ${cid}: Deployment address doesn't match prediction!`);
+          console.error(`Expected: ${create2Address}`);
+          console.error(`Actual: ${deployedAddress}`);
+        }
+
+        return {
+          contract,
+          address: deployedAddress,
+          chain: cid,
+          network: {
+            chainId,
+            name: `${networkStem}${chainId}`,
+          },
+          alreadyDeployed: false,
+        };
+      } catch (error) {
+        console.error(`Failed to deploy to network ${chainId}:`, error);
+        return null;
+      }
+    });
+
+    const validDeployments = deployments.filter((d) => d !== null);
+
+    // Check if all addresses are the same
+    if (validDeployments.length > 1) {
+      const addresses = validDeployments.map(d => d?.address.toLowerCase());
+      const allSame = addresses.every(addr => addr === addresses[0]);
+
+      if (allSame) {
+        console.log(`✅ SUCCESS: Contract deployed to the same address on all chains: ${addresses[0]}`);
+      } else {
+        console.error(`❌ ERROR: Contract addresses differ across chains!`);
+        for (const deployment of validDeployments) {
+          console.error(`Chain ${deployment?.chain}: ${deployment?.address}`);
+        }
+      }
+    }
+
+    return {
+      deployments: validDeployments,
+    };
+  };
+
+
+
+
   function computeOriginHash(origin: Origin) {
     // Create a proper ABI encoding matching Solidity struct layout
     const abiEncoded = ethers.AbiCoder.defaultAbiCoder().encode(
@@ -194,6 +361,7 @@ export const getUtils = (
     getChainIdContract,
     callChainIdContract,
     deployContractOnChains,
+    deployContractOnChainsDeterministic,
     computeOriginHash,
     requestSpvProof,
     createTamperedProof,
@@ -223,4 +391,18 @@ export type DeployContractOnChains = <
   overrides?: Overrides;
 }) => Promise<{
   deployments: DeployedContractsOnChains<T>[];
+}>;
+
+export type DeployContractOnChainsDeterministic = <
+  T extends BaseContract = BaseContract,
+  A extends unknown[] = unknown[],
+>(args: {
+  name: string;
+  signer?: Signer;
+  factoryOptions?: FactoryOptions;
+  constructorArgs?: ContractMethodArgs<A>;
+  overrides?: Overrides;
+  salt?: string | Uint8Array; // Additional parameter for CREATE2
+}) => Promise<{
+  deployments: (DeployedContractsOnChains<T> & { alreadyDeployed?: boolean })[];
 }>;

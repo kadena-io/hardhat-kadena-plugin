@@ -15,6 +15,10 @@ async function main() {
   deployed.deployments.forEach(async (deployment) => {
     console.log(`${deployment.address} on ${deployment.chain}`);
   });
+
+  // get the ETH value of an EOA account
+  const balance = await ethers.provider.getBalance("0x44599C58D5F56918064FE4A7DB0D6543b401C4a3");
+  console.log(`Address balance: ${balance}`);
 }
 
 main()
