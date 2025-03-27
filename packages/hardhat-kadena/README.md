@@ -210,7 +210,7 @@ module.exports = {
   chainweb: {
     hardhat: {
       chains: 2,
-      // the two created network uses this the following config
+      // the two created networks use the following config
       networkOptions: {
         gasPrice: 0.1,
         allowUnlimitedContractSize: true,
