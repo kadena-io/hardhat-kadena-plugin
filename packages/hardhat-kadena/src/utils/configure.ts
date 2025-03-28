@@ -1,5 +1,8 @@
 import {
   HardhatNetworkAccountsConfig,
+  HardhatNetworkAccountsUserConfig,
+  HardhatNetworkChainConfig,
+  HardhatNetworkChainsConfig,
   HardhatNetworkConfig,
   HardhatNetworkUserConfig,
   HttpNetworkAccountsConfig,
@@ -22,6 +25,63 @@ interface INetworkOptions {
   networkOptions?: HardhatNetworkUserConfig;
 }
 
+// This function takes a default chains config and user chains config
+// Copied from hardhat source code hardhat/src/internal/core/config/config-resolution.ts
+const getChains = (
+  defaultChains: HardhatNetworkChainsConfig,
+  userChains?: HardhatNetworkUserConfig['chains'],
+) => {
+  const chains: HardhatNetworkChainsConfig = new Map(defaultChains);
+  if (userChains !== undefined) {
+    for (const [chainId, userChainConfig] of Object.entries(userChains)) {
+      const chainConfig: HardhatNetworkChainConfig = {
+        hardforkHistory: new Map(),
+      };
+      if (userChainConfig.hardforkHistory !== undefined) {
+        for (const [name, block] of Object.entries(
+          userChainConfig.hardforkHistory,
+        )) {
+          chainConfig.hardforkHistory.set(name, block as number);
+        }
+      }
+      chains.set(parseInt(chainId, 10), chainConfig);
+    }
+  }
+  return chains;
+};
+
+function normalizeHexString(str: string): string {
+  const normalized = str.trim().toLowerCase();
+  if (normalized.startsWith('0x')) {
+    return normalized;
+  }
+
+  return `0x${normalized}`;
+}
+
+// This function takes a default accounts config and user accounts config
+// and returns a normalized accounts config
+// Copied from hardhat source code hardhat/src/internal/core/config/config-resolution.ts
+const getAccounts = (
+  userAccounts: HardhatNetworkAccountsUserConfig | undefined,
+  defaultAccounts: HardhatNetworkAccountsConfig,
+) => {
+  const accounts: HardhatNetworkAccountsConfig =
+    userAccounts === undefined
+      ? defaultAccounts
+      : Array.isArray(userAccounts)
+        ? userAccounts.map(({ privateKey, balance }) => ({
+            privateKey: normalizeHexString(privateKey),
+            balance,
+          }))
+        : {
+            ...defaultAccounts,
+            ...userAccounts,
+          };
+
+  return accounts;
+};
+
 export const getKadenaNetworks = ({
   availableNetworks = {},
   hardhatNetwork,
@@ -38,17 +98,46 @@ export const getKadenaNetworks = ({
     .map((_, i) => i + chainIdOffset);
   const networks = chainIds.reduce(
     (acc, chainId, index) => {
+      const userNetworkConfig = availableNetworks[`${networkStem}${index}`] as
+        | HardhatNetworkUserConfig
+        | undefined;
+
+      const networkForking = forking
+        ? {
+            enabled: true,
+            ...forking,
+          }
+        : undefined;
+
       const networkConfig: KadenaNetworkConfig = {
         ...hardhatNetwork,
         ...networkOptions,
         chainId: 626000 + chainId,
         chainwebChainId: chainId,
-        accounts: accounts ?? hardhatNetwork.accounts,
         type: 'chainweb:in-process',
         loggingEnabled,
-        ...(forking ? forking : {}),
-        ...availableNetworks[`${networkStem}${index}`],
-      } as KadenaNetworkConfig;
+        ...userNetworkConfig,
+        forking: networkForking,
+        mining: {
+          ...hardhatNetwork.mining,
+          ...userNetworkConfig?.mining,
+          mempool: {
+            ...hardhatNetwork.mining.mempool,
+            ...userNetworkConfig?.mining?.mempool,
+          },
+        },
+        minGasPrice: BigInt(
+          userNetworkConfig?.minGasPrice ?? hardhatNetwork.minGasPrice,
+        ),
+        accounts: getAccounts(
+          accounts ?? userNetworkConfig?.['accounts'],
+          hardhatNetwork.accounts,
+        ),
+        chains: getChains(
+          hardhatNetwork.chains,
+          networkOptions?.chains ?? userNetworkConfig?.chains,
+        ),
+      };
       acc[`${networkStem}${index}`] = networkConfig;
       return acc;
     },
