@@ -1,5 +1,6 @@
 import {
   HardhatNetworkAccountsConfig,
+  HardhatNetworkAccountsUserConfig,
   HardhatNetworkChainConfig,
   HardhatNetworkChainsConfig,
   HardhatNetworkConfig,
@@ -24,6 +25,8 @@ interface INetworkOptions {
   networkOptions?: HardhatNetworkUserConfig;
 }
 
+// This function takes a default chains config and user chains config
+// Copied from hardhat source code hardhat/src/internal/core/config/config-resolution.ts
 const getChains = (
   defaultChains: HardhatNetworkChainsConfig,
   userChains?: HardhatNetworkUserConfig['chains'],
@@ -47,6 +50,38 @@ const getChains = (
   return chains;
 };
 
+function normalizeHexString(str: string): string {
+  const normalized = str.trim().toLowerCase();
+  if (normalized.startsWith('0x')) {
+    return normalized;
+  }
+
+  return `0x${normalized}`;
+}
+
+// This function takes a default accounts config and user accounts config
+// and returns a normalized accounts config
+// Copied from hardhat source code hardhat/src/internal/core/config/config-resolution.ts
+const getAccounts = (
+  userAccounts: HardhatNetworkAccountsUserConfig | undefined,
+  defaultAccounts: HardhatNetworkAccountsConfig,
+) => {
+  const accounts: HardhatNetworkAccountsConfig =
+    userAccounts === undefined
+      ? defaultAccounts
+      : Array.isArray(userAccounts)
+        ? userAccounts.map(({ privateKey, balance }) => ({
+            privateKey: normalizeHexString(privateKey),
+            balance,
+          }))
+        : {
+            ...defaultAccounts,
+            ...userAccounts,
+          };
+
+  return accounts;
+};
+
 export const getKadenaNetworks = ({
   availableNetworks = {},
   hardhatNetwork,
@@ -63,10 +98,6 @@ export const getKadenaNetworks = ({
     .map((_, i) => i + chainIdOffset);
   const networks = chainIds.reduce(
     (acc, chainId, index) => {
-      const networkAccounts: HardhatNetworkAccountsConfig = (accounts ??
-        availableNetworks[`${networkStem}${index}`]?.['accounts'] ??
-        hardhatNetwork.accounts) as unknown as HardhatNetworkAccountsConfig;
-
       const userNetworkConfig = availableNetworks[`${networkStem}${index}`] as
         | HardhatNetworkUserConfig
         | undefined;
@@ -98,7 +129,10 @@ export const getKadenaNetworks = ({
         minGasPrice: BigInt(
           userNetworkConfig?.minGasPrice ?? hardhatNetwork.minGasPrice,
         ),
-        accounts: networkAccounts,
+        accounts: getAccounts(
+          accounts ?? userNetworkConfig?.['accounts'],
+          hardhatNetwork.accounts,
+        ),
         chains: getChains(
           hardhatNetwork.chains,
           networkOptions?.chains ?? userNetworkConfig?.chains,
