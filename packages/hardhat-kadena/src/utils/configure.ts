@@ -1,5 +1,7 @@
 import {
   HardhatNetworkAccountsConfig,
+  HardhatNetworkChainConfig,
+  HardhatNetworkChainsConfig,
   HardhatNetworkConfig,
   HardhatNetworkUserConfig,
   HttpNetworkAccountsConfig,
@@ -22,6 +24,29 @@ interface INetworkOptions {
   networkOptions?: HardhatNetworkUserConfig;
 }
 
+const getChains = (
+  defaultChains: HardhatNetworkChainsConfig,
+  userChains?: HardhatNetworkUserConfig['chains'],
+) => {
+  const chains: HardhatNetworkChainsConfig = new Map(defaultChains);
+  if (userChains !== undefined) {
+    for (const [chainId, userChainConfig] of Object.entries(userChains)) {
+      const chainConfig: HardhatNetworkChainConfig = {
+        hardforkHistory: new Map(),
+      };
+      if (userChainConfig.hardforkHistory !== undefined) {
+        for (const [name, block] of Object.entries(
+          userChainConfig.hardforkHistory,
+        )) {
+          chainConfig.hardforkHistory.set(name, block as number);
+        }
+      }
+      chains.set(parseInt(chainId, 10), chainConfig);
+    }
+  }
+  return chains;
+};
+
 export const getKadenaNetworks = ({
   availableNetworks = {},
   hardhatNetwork,
@@ -38,17 +63,47 @@ export const getKadenaNetworks = ({
     .map((_, i) => i + chainIdOffset);
   const networks = chainIds.reduce(
     (acc, chainId, index) => {
+      const networkAccounts: HardhatNetworkAccountsConfig = (accounts ??
+        availableNetworks[`${networkStem}${index}`]?.['accounts'] ??
+        hardhatNetwork.accounts) as unknown as HardhatNetworkAccountsConfig;
+
+      const userNetworkConfig = availableNetworks[`${networkStem}${index}`] as
+        | HardhatNetworkUserConfig
+        | undefined;
+
+      const networkForking = forking
+        ? {
+            enabled: true,
+            ...forking,
+          }
+        : undefined;
+
       const networkConfig: KadenaNetworkConfig = {
         ...hardhatNetwork,
         ...networkOptions,
         chainId: 626000 + chainId,
         chainwebChainId: chainId,
-        accounts: accounts ?? hardhatNetwork.accounts,
         type: 'chainweb:in-process',
         loggingEnabled,
-        ...(forking ? { forking } : {}),
-        ...availableNetworks[`${networkStem}${index}`],
-      } as KadenaNetworkConfig;
+        ...userNetworkConfig,
+        forking: networkForking,
+        mining: {
+          ...hardhatNetwork.mining,
+          ...userNetworkConfig?.mining,
+          mempool: {
+            ...hardhatNetwork.mining.mempool,
+            ...userNetworkConfig?.mining?.mempool,
+          },
+        },
+        minGasPrice: BigInt(
+          userNetworkConfig?.minGasPrice ?? hardhatNetwork.minGasPrice,
+        ),
+        accounts: networkAccounts,
+        chains: getChains(
+          hardhatNetwork.chains,
+          networkOptions?.chains ?? userNetworkConfig?.chains,
+        ),
+      };
       acc[`${networkStem}${index}`] = networkConfig;
       return acc;
     },
