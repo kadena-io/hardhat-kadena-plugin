@@ -46,7 +46,7 @@ export const getKadenaNetworks = ({
         accounts: accounts ?? hardhatNetwork.accounts,
         type: 'chainweb:in-process',
         loggingEnabled,
-        ...(forking ? forking : {}),
+        ...(forking ? { forking } : {}),
         ...availableNetworks[`${networkStem}${index}`],
       } as KadenaNetworkConfig;
       acc[`${networkStem}${index}`] = networkConfig;
