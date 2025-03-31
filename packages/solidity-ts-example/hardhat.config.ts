@@ -5,16 +5,6 @@ import '@kadena/hardhat-chainweb';
 
 const config: HardhatUserConfig = {
   solidity: '0.8.28',
-  /*
-  networks: {
-    hardhat: {
-      forking: {
-       url: 'https://eth.drpc.org',
-       // blockNumber: 19431000
-      }
-    }
-  }*/
-
   chainweb: {
     hardhat: {
       chains: 2,
@@ -22,8 +12,9 @@ const config: HardhatUserConfig = {
         allowUnlimitedContractSize: true,
         forking: {
           url: 'https://eth.drpc.org',
-          //blockNumber: 22145333
+          blockNumber: 22166219
         },
+       
       },
     },
     mychainweb: {
