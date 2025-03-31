@@ -47,7 +47,6 @@
     "chai": "^4.2.0",
     "ethers": "^6.1.0",
     "hardhat": "^2.22.18",
-    "mocha": "^11.1.0",
     "web3": "^4.16.0"
   },
   "devDependencies": {

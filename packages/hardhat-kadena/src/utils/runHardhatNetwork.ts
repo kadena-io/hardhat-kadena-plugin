@@ -5,14 +5,6 @@ import { spawn } from 'child_process';
 import { Logger, streamLogger } from './logger';
 import { sleep } from './sleep';
 
-// * support graphs that include non-evm chains (by just skipping over them)
-// * Consider deploying the spv precompile at an hash address that won't colide
-//   with future Ethereum extensions.
-// * Use mocha root hooks to manage hardhat network
-// * move all of this into a hardhat-plugin
-// * Make logging verbosity configurable
-// * Manage hardhat ports internally
-
 /* *************************************************************************** */
 /* Run Hardhat Network */
 
