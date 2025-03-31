@@ -1,6 +1,6 @@
 {
   "name": "@kadena/hardhat-chainweb",
-  "version": "1.4.3",
+  "version": "1.4.5",
   "description": "Hardhat plugin for Kadena's Chainweb network",
   "author": "Javad Khalilian <javad@kadena.io>",
   "contributors": [
@@ -12,8 +12,7 @@
   "scripts": {
     "build": "eslint && tsc",
     "dev": "eslint && tsc --watch",
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "postinstall": "eslint && tsc"
+    "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
     "type": "git",
@@ -48,7 +47,6 @@
     "chai": "^4.2.0",
     "ethers": "^6.1.0",
     "hardhat": "^2.22.18",
-    "mocha": "^11.1.0",
     "web3": "^4.16.0"
   },
   "devDependencies": {
