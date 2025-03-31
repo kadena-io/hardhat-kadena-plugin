@@ -12,16 +12,13 @@ const config: HardhatUserConfig = {
         allowUnlimitedContractSize: true,
         forking: {
           url: 'https://eth.drpc.org',
-          blockNumber: 22166219
         },
-       
       },
     },
     mychainweb: {
       chains: 3,
     },
   },
-
 };
 
 export default config;
