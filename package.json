@@ -14,7 +14,8 @@
     "format:check": "prettier --check .",
     "lint:check": "eslint .",
     "lint:fix": "eslint --fix .",
-    "release": "pnpm publish --filter @kadena/hardhat-chainweb  --access public"
+    "release": "pnpm publish --filter @kadena/hardhat-chainweb  --access public",
+    "postinstall": "pnpm build"
   },
   "keywords": [],
   "author": "",
