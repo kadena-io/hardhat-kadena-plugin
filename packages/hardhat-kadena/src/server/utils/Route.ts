@@ -62,63 +62,65 @@ export class Router<CTX, PROXY_ARG> {
     this.routes.set(route, { handler, validate });
   }
 
-  async execute(
-    url: string | undefined,
-    next: RouteNext<PROXY_ARG>,
-    context: CTX,
-  ) {
-    if (url === undefined) {
-      next.failure('No route found', 404);
-      return;
-    }
-    for (const [route, { handler, validate }] of this.routes.entries()) {
-      const matchRoute = match(route);
-      const matched = matchRoute(url);
-      if (matched && validate(matched.params)) {
-        console.log(`request:`, matched.path);
-        try {
-          const result = await handler(
-            matched.params as Record<string, string>,
-            {
-              success: (msg, mimeType) => ({
-                type: 'success',
-                result: { msg, mimeType },
-              }),
-              failure: (msg, code) => ({
-                type: 'failure',
-                error: { msg, code },
-              }),
-              proxy: (handler) => ({
-                type: 'proxy',
-                handler,
-              }),
-            },
-            context,
-          );
+  execute =
+    (tag: string) =>
+    async (
+      url: string | undefined,
+      next: RouteNext<PROXY_ARG>,
+      context: CTX,
+    ) => {
+      if (url === undefined) {
+        next.failure('No route found', 404);
+        return;
+      }
+      for (const [route, { handler, validate }] of this.routes.entries()) {
+        const matchRoute = match(route);
+        const matched = matchRoute(url);
+        if (matched && validate(matched.params)) {
+          console.log(`[${tag}]`, matched.path);
+          try {
+            const result = await handler(
+              matched.params as Record<string, string>,
+              {
+                success: (msg, mimeType) => ({
+                  type: 'success',
+                  result: { msg, mimeType },
+                }),
+                failure: (msg, code) => ({
+                  type: 'failure',
+                  error: { msg, code },
+                }),
+                proxy: (handler) => ({
+                  type: 'proxy',
+                  handler,
+                }),
+              },
+              context,
+            );
 
-          switch (result?.type) {
-            case 'success':
-              return next.success(result.result.msg, result.result.mimeType);
+            switch (result?.type) {
+              case 'success':
+                return next.success(result.result.msg, result.result.mimeType);
 
-            case 'failure':
-              return next.failure(result.error.msg, result.error.code);
+              case 'failure':
+                return next.failure(result.error.msg, result.error.code);
 
-            case 'proxy':
-              console.log('proxying to handler');
-              return next.proxy(result.handler);
-            default:
-              console.error(
-                'the handler must return a valid result ("success" | "failure" | "proxy")',
-              );
-              return next.failure('Invalid handler result', 500);
+              case 'proxy':
+                console.log(`[${tag}] proxying to handler`);
+                return next.proxy(result.handler);
+              default:
+                console.error(
+                  `[${tag}] the handler must return a valid result ("success" | "failure" | "proxy")`,
+                );
+                return next.failure('Invalid handler result', 500);
+            }
+          } catch (e) {
+            console.error(e);
+            return next.failure('Internal server error', 500);
           }
-        } catch (e) {
-          console.error(e);
-          return next.failure('Internal server error', 500);
         }
       }
-    }
 
-    next.failure(`NOT FOUND: ${url}`, 404);
-  }
+      next.failure(`NOT FOUND: ${url}`, 404);
+    };
 }

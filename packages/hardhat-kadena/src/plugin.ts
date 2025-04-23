@@ -305,10 +305,10 @@ extendEnvironment((hre) => {
 
   const safeCall =
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    <T extends () => (...args: any) => any>(cb: T) =>
-      (...args: Parameters<T>) => {
+    <T extends (api: ChainwebPluginApi) => (...args: any) => any>(cb: T) =>
+      (...args: Parameters<ReturnType<T>>) => {
         if (api !== undefined) {
-          return cb()(...args);
+          return cb(api as ChainwebPluginApi)(...args);
         }
         throw new Error('Chainweb plugin not initialized');
       };
@@ -339,15 +339,15 @@ extendEnvironment((hre) => {
         );
       }
     },
-    getProvider: safeCall(() => api!.getProvider),
-    requestSpvProof: safeCall(() => api!.requestSpvProof),
-    switchChain: safeCall(() => api!.switchChain),
-    getChainIds: safeCall(() => api!.getChainIds),
-    callChainIdContract: safeCall(() => api!.callChainIdContract),
-    deployContractOnChains: safeCall(() => api!.deployContractOnChains),
-    createTamperedProof: safeCall(() => api!.createTamperedProof),
-    computeOriginHash: safeCall(() => api!.computeOriginHash),
-    runOverChains: safeCall(() => api!.runOverChains),
+    getProvider: safeCall((api) => api.getProvider),
+    requestSpvProof: safeCall((api) => api.requestSpvProof),
+    switchChain: safeCall((api) => api.switchChain),
+    getChainIds: safeCall((api) => api.getChainIds),
+    callChainIdContract: safeCall((api) => api.callChainIdContract),
+    deployContractOnChains: safeCall((api) => api.deployContractOnChains),
+    createTamperedProof: safeCall((api) => api.createTamperedProof),
+    computeOriginHash: safeCall((api) => api.computeOriginHash),
+    runOverChains: safeCall((api) => api.runOverChains),
   };
   if (process.env['HK_INIT_CHAINWEB'] === 'true') {
     hre.chainweb.initialize();
@@ -436,7 +436,9 @@ task(
     process.env['HK_ACTIVE_CHAINWEB_NAME'] = hre.config.defaultChainweb =
       taskArgs.chainweb ?? hre.config.defaultChainweb ?? 'hardhat';
     // then we know that the chainweb should run the initialization
-    process.env['HK_INIT_CHAINWEB'] = 'true';
+    process.env['HK_INIT_CHAINWEB'] = process.argv.includes('--network')
+      ? 'false'
+      : 'true';
     return runSuper(taskArgs);
   });
 

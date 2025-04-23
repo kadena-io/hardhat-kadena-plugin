@@ -46,4 +46,13 @@ router.route(
   },
 );
 
+router.route('/', (_, { failure, proxy }, { handlers }) => {
+  const handler = handlers.find(([id]) => 0 === id)?.[1];
+  if (handler === undefined) {
+    return failure(`chainweb index 0 default is not found`, 404);
+  }
+  console.log('no chain url use 0 as default');
+  return proxy(handler);
+});
+
 export const pluginRouter = router;

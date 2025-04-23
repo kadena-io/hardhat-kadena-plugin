@@ -56,7 +56,7 @@ export class ChainwebJsonRpcServer implements IJsonRpcServer {
     handlers: Array<[number, JsonRpcHandler]>;
   }) {
     httpServer.on('request', async (req, res) => {
-      pluginRouter.execute(
+      pluginRouter.execute('http')(
         req.url,
         {
           success: (msg, mimeType) => {
@@ -68,7 +68,6 @@ export class ChainwebJsonRpcServer implements IJsonRpcServer {
             res.end(msg);
           },
           proxy: (handler) => {
-            console.log('pass request to handler');
             handler.handleHttp(req, res);
           },
         },
@@ -79,7 +78,7 @@ export class ChainwebJsonRpcServer implements IJsonRpcServer {
     });
 
     wsServer.on('connection', async (ws) => {
-      pluginRouter.execute(
+      pluginRouter.execute('ws')(
         ws.url,
         {
           success: (msg) => {
