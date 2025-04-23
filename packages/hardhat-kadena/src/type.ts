@@ -10,6 +10,19 @@ import {
 } from 'hardhat/types';
 import 'hardhat/types/runtime';
 
+// Separate precompile types for in-process vs external
+export interface InProcessPrecompiles {
+  chainwebChainId: string;
+  spvVerify: string;
+  // No create2Proxy for in-process networks
+}
+
+export interface ExternalPrecompiles {
+  chainwebChainId: string;
+  spvVerify: string;
+  create2Proxy: string;  // Only for external networks
+}
+
 //HttpNetworkAccountsConfig
 export interface ChainwebInProcessUserConfig {
   accounts?: HardhatNetworkAccountsConfig;
@@ -23,11 +36,7 @@ export interface ChainwebInProcessUserConfig {
 
 export interface ChainwebInProcessConfig
   extends Required<Omit<ChainwebInProcessUserConfig, 'networkOptions'>> {
-  precompiles: {
-    chainwebChainId: string;
-    spvVerify: string;
-    create2Proxy: string;
-  };
+  precompiles: InProcessPrecompiles;
   networkOptions?: Omit<HardhatNetworkUserConfig, 'chainId'>;
 }
 
@@ -40,18 +49,14 @@ export interface ChainwebExternalUserConfig {
   precompiles?: {
     chainwebChainId?: string;
     spvVerify?: string;
-    create2Proxy: string;
+    create2Proxy?: string;
   };
   networkOptions?: Omit<HttpNetworkUserConfig, 'chainId' | 'url'>;
 }
 
 export interface ChainwebExternalConfig
   extends Required<Omit<ChainwebExternalUserConfig, 'networkOptions'>> {
-  precompiles: {
-    chainwebChainId: string;
-    spvVerify: string;
-    create2Proxy: string;
-  };
+  precompiles: ExternalPrecompiles;
   networkOptions?: Omit<HttpNetworkUserConfig, 'chainId' | 'url'>;
 }
 

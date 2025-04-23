@@ -17,7 +17,7 @@ import { getNetworkStem, getUtils } from './utils.js';
 import { HardhatEthersProvider } from '@nomicfoundation/hardhat-ethers/internal/hardhat-ethers-provider.js';
 import Web3 from 'web3';
 import { runRPCNode } from './server/runRPCNode.js';
-import { CHAIN_ID_ADDRESS, VERIFY_ADDRESS, CREATE2_PROXY_ADDRESS, } from './utils/network-contracts.js';
+import { CHAIN_ID_ADDRESS, VERIFY_ADDRESS, CREATE2_PROXY_ADDRESS } from './utils/network-contracts.js';
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
 import picocolors from 'picocolors';
 
@@ -106,7 +106,7 @@ extendConfig((config, userConfig) => {
           precompiles: {
             chainwebChainId: CHAIN_ID_ADDRESS,
             spvVerify: VERIFY_ADDRESS,
-            create2Proxy: CREATE2_PROXY_ADDRESS,
+            // No create2Proxy because Hardhat doesn't support CREATE2 precompile
           },
           ...chainwebInProcessUserConfig,
         };

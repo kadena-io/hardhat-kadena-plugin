@@ -25,15 +25,11 @@ async function main() {
   const salt = ethers.id(saltStr);
   console.log(`Salt (bytes32): ${salt}`);
 
-  console.log("About to call deployContractOnChainsDeterministic");
-
   const deployed = await chainweb.deployContractOnChainsDeterministic({
     name: contractName,
     constructorArgs: [initialSupply],
     salt: salt,
   });
-
-  console.log("After call deployContractOnChainsDeterministic");
 
   if (deployed.deployments.length === 0) {
     console.log('No contracts deployed');

@@ -5,26 +5,20 @@ import { FactoryOptions, HardhatRuntimeEnvironment, KadenaNetworkConfig } from '
 import { BaseContract } from 'ethers';
 import { ContractTransactionResponse } from 'ethers';
 import { ChainwebNetwork } from './utils/chainweb.js';
-import {
-  CREATE2_PROXY_ADDRESS,
-  CREATE2_PROXY_ABI,
-  CREATE2_PROXY_BYTE_CODE
-} from './utils/network-contracts.js';
-
-
-
-interface Create2Proxy extends BaseContract {
-  deploy(
-    salt: string | Uint8Array,
-    initCode: string,
-    overrides?: Overrides
-  ): Promise<ContractTransactionResponse>;
-  connect(signer: Signer): Create2Proxy;
-}
+import { InProcessPrecompiles, ExternalPrecompiles } from './type.js';
+import { CREATE2 } from './constants';
 
 
 export const getNetworkStem = (chainwebName: string) =>
   `chainweb_${chainwebName}`;
+
+// Add type guard here
+function isExternalPrecompiles(
+  precompiles: InProcessPrecompiles | ExternalPrecompiles
+): precompiles is ExternalPrecompiles {
+  return 'create2Proxy' in precompiles;
+}
+
 
 export interface Origin {
   chain: bigint;
@@ -32,6 +26,20 @@ export interface Origin {
   height: bigint;
   txIdx: bigint;
   eventIdx: bigint;
+}
+
+interface Create2Config {
+  address: string;
+  abi: readonly string[];
+}
+
+interface Create2Proxy extends BaseContract {
+  connect(signer: Signer): Create2Proxy;
+  deploy(
+    salt: string | Uint8Array,
+    bytecode: string,
+    overrides?: Overrides
+  ): Promise<ContractTransactionResponse>;
 }
 
 export const getUtils = (
@@ -151,9 +159,35 @@ export const getUtils = (
     return ethers.keccak256(abiEncoded);
   }
 
+  async function getCreate2Config(hre: HardhatRuntimeEnvironment): Promise<Create2Config> {
+    const networkName = hre.network.name.toLowerCase();
+    const isLocalNetwork = networkName.includes('hardhat') || networkName.includes('localhost');
+    const chainweb = hre.config.chainweb[hre.config.defaultChainweb];
 
+    if (isLocalNetwork) {
+      // Deploy CREATE2 proxy locally
+      const [signer] = await hre.ethers.getSigners();
+      const tx = await signer.sendTransaction({ data: CREATE2.BYTECODE });
+      const receipt = await tx.wait();
+      if (!receipt?.contractAddress) {
+        throw new Error('Failed to deploy CREATE2 proxy');
+      }
+      return {
+        address: receipt.contractAddress,
+        abi: CREATE2.ABI
+      };
+    }
 
+    // For external networks, check if precompiles has create2Proxy
+    if (!('create2Proxy' in chainweb.precompiles)) {
+      throw new Error('create2Proxy address not found in network configuration');
+    }
 
+    return {
+      address: (chainweb.precompiles as ExternalPrecompiles).create2Proxy,
+      abi: CREATE2.ABI
+    };
+  }
 
   /**
    * Deploys a contract deterministically using CREATE2 to multiple chains,
@@ -173,12 +207,14 @@ export const getUtils = (
 
     const chainweb = hre.config.chainweb[hre.config.defaultChainweb];
 
-    // Use the precompiled Create2 proxy to deploy deterministically
+    // Get the CREATE2 proxy contract
+    const create2Config = await getCreate2Config(hre);
     const create2Proxy = new ethers.Contract(
-      chainweb.precompiles.create2Proxy,
-      CREATE2_PROXY_ABI,
+      create2Config.address,
+      create2Config.abi,
       ethers.provider
     ) as unknown as Create2Proxy;
+
 
     // Get contract factory for the contract to be deployed
     const contractFactory = await ethers.getContractFactory(name);
@@ -200,42 +236,55 @@ export const getUtils = (
 
     const deployments = await runOverChains(async (cid) => {
       try {
-        console.log(`Deploying to chain ${cid} using CREATE2 precompile...`);
-        const [signer] = await ethers.getSigners();
+        await hre.chainweb.switchChain(cid);
+        const chainwebChainId = (hre.network.config as KadenaNetworkConfig).chainwebChainId;
+        console.log(`Switched to chain ${chainwebChainId} using CREATE2 precompile...`);
 
-        // Deploy using precompile
+        // Use hre's provider instead of creating new one
+        const provider = hre.ethers.provider;
+
+        const [signer] = await ethers.getSigners();
+        console.log(`Using signer: ${signer.address}`);
+
+
+        // Get the expected CREATE2 address
+        const expectedAddress = ethers.getCreate2Address(
+          isExternalPrecompiles(chainweb.precompiles)
+            ? chainweb.precompiles.create2Proxy
+            : create2Config.address,  // Use the deployed contract address for in-process
+          create2Salt,
+          ethers.keccak256(bytecodeWithArgs)
+        );
+
         const tx = await create2Proxy.connect(signer).deploy(
           create2Salt,
           bytecodeWithArgs,
-          { ...overrides, gasLimit: 6000000 }
+          { gasLimit: 1000000 }
         );
+
+        await tx.wait();
+
+
         const receipt = await tx.wait();
+        if (receipt?.status === 0) {
+          throw new Error(`Transaction failed on chain ${cid}`);
+        }
 
         console.log(`Transaction hash: ${tx.hash}`);
         console.log("receipt", receipt);
 
-        // Get the deployed address from the raw response
-        const response = await ethers.provider.call({
-          to: chainweb.precompiles.create2Proxy,
-          data: create2Proxy.interface.encodeFunctionData('deploy', [
-            create2Salt,
-            bytecodeWithArgs
-          ])
-        });
-
-        // Find deployed address from receipt events
-        //const deployedAddress = tx.result;
-        const deployedAddress = ethers.getAddress(`0x${response.slice(-40)}`);
-        if (!deployedAddress) {
-          throw new Error(`Failed to get deployed contract address on chain ${cid}`);
+        // Verify code exists
+        const code = await provider.getCode(expectedAddress);
+        if (code.length <= 2) {
+          throw new Error(`No code at deployed address ${expectedAddress}`);
         }
 
-        console.log(`Deployed to ${deployedAddress} on chain ${cid}`);
+        console.log(`Deployed to ${expectedAddress} on chain ${cid}`);
 
         return {
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          contract: contractFactory.attach(deployedAddress) as any,
-          address: deployedAddress,
+          contract: contractFactory.attach(expectedAddress) as any,
+          address: expectedAddress,
           chain: cid,
           network: {
             chainId: cid,
