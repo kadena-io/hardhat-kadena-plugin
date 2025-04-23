@@ -10,9 +10,10 @@
   "main": "./lib/cjs/index.js",
   "types": "./lib/cjs/index.d.ts",
   "scripts": {
-    "build": "eslint && tsc",
+    "build": "pnpm compile:create2factory eslint && tsc",
     "test": "echo \"Error: no test specified\" && exit 1",
-    "postinstall": "eslint && tsc"
+    "postinstall": "eslint && tsc",
+    "compile:create2factory": "ts-node -P tsconfig.build.json scripts/compile-deterministic-deployment-proxy.ts"
   },
   "repository": {
     "type": "git",
@@ -54,19 +55,26 @@
     "@nomicfoundation/hardhat-ethers": "^3.0.8",
     "@nomicfoundation/hardhat-toolbox": "^5.0.0",
     "@types/async-lock": "^1.4.2",
+    "@types/elliptic": "6.4.9",
     "@types/minimist": "^1.2.5",
     "@types/mocha": "^10.0.10",
     "@types/ws": "^8.5.14",
+    "@zoltu/rlp-encoder": "1.0.1",
     "chai": "^4.2.0",
+    "elliptic": "6.5.0",
     "ethers": "^6.1.0",
     "hardhat": "^2.22.18",
+    "js-sha3": "0.8.0",
     "mocha": "^11.1.0",
+    "ts-node": "^10.9.2",
     "typescript": "^5.7.3",
     "web3": "^4.16.0"
   },
   "files": [
     "lib",
     "src",
+    "contracts",
+    "artifacts",
     "tsconfig.json",
     "README.md"
   ]

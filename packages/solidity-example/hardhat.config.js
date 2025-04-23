@@ -9,6 +9,12 @@ module.exports = {
   chainweb: {
     hardhat: {
       chains: 2,
+      /*
+      networkOptions: {
+        forking: {
+          url: 'https://eth.drpc.org',
+        },
+      },*/
     },
   },
 };

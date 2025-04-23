@@ -1,10 +1,27 @@
 import { ContractMethodArgs, Overrides, Signer } from 'ethers';
 import './type.js';
 import { CHAIN_ID_ABI } from './utils/network-contracts.js';
-import { FactoryOptions, HardhatRuntimeEnvironment } from 'hardhat/types';
+import { FactoryOptions, HardhatRuntimeEnvironment, KadenaNetworkConfig } from 'hardhat/types';
 import { BaseContract } from 'ethers';
 import { ContractTransactionResponse } from 'ethers';
 import { ChainwebNetwork } from './utils/chainweb.js';
+import {
+  CREATE2_PROXY_ADDRESS,
+  CREATE2_PROXY_ABI,
+  CREATE2_PROXY_BYTE_CODE
+} from './utils/network-contracts.js';
+
+
+
+interface Create2Proxy extends BaseContract {
+  deploy(
+    salt: string | Uint8Array,
+    initCode: string,
+    overrides?: Overrides
+  ): Promise<ContractTransactionResponse>;
+  connect(signer: Signer): Create2Proxy;
+}
+
 
 export const getNetworkStem = (chainwebName: string) =>
   `chainweb_${chainwebName}`;
@@ -59,21 +76,21 @@ export const getUtils = (
     return result;
   }
 
-  const deployContractOnChains: DeployContractOnChains = async <
-    T extends BaseContract = BaseContract,
-    A extends unknown[] = unknown[],
-  >({
+  const deployContractOnChains: DeployContractOnChains = async ({
     name,
     signer,
     factoryOptions,
-    constructorArgs,
+    constructorArgs = [],
     overrides,
-  }: Omit<DeployContractProps<A>, 'salt'>) => {
-    const deployments = await runOverChains(async (cid) => {
+  }) => {
+    const deployments = await runOverChains(async (chainId) => {
       try {
+        await hre.chainweb.switchChain(chainId);
+        const cid = (hre.network.config as KadenaNetworkConfig).chainwebChainId;
+        console.log(`Switched to network ${cid}`);
         const [deployer] = await ethers.getSigners();
         console.log(
-          `Deploying with signer: ${deployer.address} on network ${cid}`,
+          `Deploying with signer: ${deployer.address} on network ${chainId}`,
         );
 
         /* Deploy the contract */
@@ -81,10 +98,9 @@ export const getUtils = (
           signer: signer ?? factoryOptions?.signer ?? deployer,
           ...factoryOptions,
         });
-        const args = constructorArgs || [];
-        const contract = (await factory.deploy(
-          ...(overrides ? [...args, overrides] : args),
-        )) as unknown as T;
+        const contract = await factory.deploy(
+          ...(overrides ? [...constructorArgs, overrides] : constructorArgs),
+        );
         const deploymentTx = contract.deploymentTransaction();
         if (!deploymentTx) {
           throw new Error('Deployment transaction failed');
@@ -99,12 +115,12 @@ export const getUtils = (
           address: tokenAddress,
           chain: cid,
           network: {
-            chainId: cid,
-            name: `${networkStem}${cid}`,
+            chainId,
+            name: `${networkStem}${chainId}`,
           },
         };
       } catch (error) {
-        console.error(`Failed to deploy to network ${cid}:`, error);
+        console.error(`Failed to deploy to network ${chainId}:`, error);
         return null;
       }
     });
@@ -114,186 +130,7 @@ export const getUtils = (
     };
   };
 
-  /**
-   * Deploys a contract deterministically using CREATE2 to multiple chains,
-   * ensuring the same address across all chains.
-   * @param salt - Required parameter to ensure deterministic addresses
-   */
-  const deployContractOnChainsDeterministic: DeployContractOnChainsDeterministic =
-    async <
-      T extends BaseContract = BaseContract,
-      A extends unknown[] = unknown[],
-    >({
-      name,
-      signer,
-      factoryOptions,
-      constructorArgs,
-      overrides,
-      salt, // Required CREATE2 salt parameter
-    }: DeployContractProps<A>) => {
-      // Format and validate salt for CREATE2
-      let create2Salt;
 
-      if (!salt) {
-        throw new Error('Salt is required for deterministic deployment');
-      } else if (typeof salt === 'string') {
-        // If it's a string but doesn't start with 0x, hash it
-        create2Salt = !salt.startsWith('0x') ? ethers.id(salt) : salt;
-      } else if (salt instanceof Uint8Array) {
-        // If it's already bytes, use as is
-        create2Salt = salt;
-      } else {
-        throw new Error('Salt must be a string or Uint8Array');
-      }
-      console.log(`Using CREATE2 with salt: ${create2Salt}`);
-
-      const deployments = await runOverChains(async (cid) => {
-        try {
-          const [deployer] = await ethers.getSigners();
-          console.log(
-            `Deploying with signer: ${deployer.address} on chain ${cid} using CREATE2`,
-          );
-
-          // Get contract factory
-          const factory = await ethers.getContractFactory(name, {
-            signer: signer ?? factoryOptions?.signer ?? deployer,
-            ...factoryOptions,
-          });
-
-          // Get bytecode with encoded constructor arguments
-          const encodedArgs = factory.interface.encodeDeploy(constructorArgs);
-          const bytecodeWithArgs = factory.bytecode + encodedArgs.slice(2);
-
-          // Calculate the CREATE2 address
-          const effectiveSigner = signer ?? factoryOptions?.signer ?? deployer;
-          const signerAddress = await effectiveSigner.getAddress();
-
-          // Use ethers v6 getCreate2Address method
-          const create2Address = ethers.getCreate2Address(
-            signerAddress,
-            create2Salt,
-            ethers.keccak256(bytecodeWithArgs),
-          );
-
-          console.log(
-            `Predicted deployment address on chain ${cid}: ${create2Address}`,
-          );
-
-          // Check if contract is already deployed at this address
-          const code = await ethers.provider.getCode(create2Address);
-          if (code !== '0x') {
-            console.log(
-              `Contract already deployed at ${create2Address} on chain ${cid}`,
-            );
-
-            // Get contract instance for already deployed contract
-            const contract = new ethers.Contract(
-              create2Address,
-              factory.interface,
-              signer ?? factoryOptions?.signer ?? deployer,
-            ) as unknown as T;
-
-            return {
-              contract,
-              address: create2Address,
-              chain: cid,
-              network: {
-                chainId: cid,
-                name: `${networkStem}${cid}`,
-              },
-              alreadyDeployed: true,
-            };
-          }
-
-          // Create transaction with CREATE2
-          // First extract customData from overrides to handle it separately
-          const { customData, ...otherOverrides } = overrides || {};
-
-          // Create properly structured transaction request
-          const txRequest = {
-            data: bytecodeWithArgs,
-            gasLimit:
-              otherOverrides.gasLimit !== undefined
-                ? otherOverrides.gasLimit
-                : 6000000,
-            ...otherOverrides,
-            // Merge existing customData with our CREATE2 salt
-            customData: {
-              ...(customData || {}),
-              create2Salt: create2Salt,
-            },
-          };
-
-          const tx = await effectiveSigner.sendTransaction(txRequest);
-
-          console.log(`Deployment transaction on chain ${cid}: ${tx.hash}`);
-          const receipt = await tx.wait();
-
-          // Get deployed contract instance
-          const contract = new ethers.Contract(
-            receipt?.contractAddress || create2Address,
-            factory.interface,
-            effectiveSigner,
-          );
-
-          const deployedAddress = await contract.getAddress();
-          console.log(
-            `Contract deployed on chain ${cid} at address: ${deployedAddress}`,
-          );
-
-          // Verify the address matches prediction
-          if (deployedAddress.toLowerCase() === create2Address.toLowerCase()) {
-            console.log(
-              `✅ Chain ${cid}: Deployment address matches prediction`,
-            );
-          } else {
-            console.error(
-              `❌ Chain ${cid}: Deployment address doesn't match prediction!`,
-            );
-            console.error(`Expected: ${create2Address}`);
-            console.error(`Actual: ${deployedAddress}`);
-          }
-
-          return {
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            contract: contract as any,
-            address: deployedAddress,
-            chain: cid,
-            network: {
-              chainId: cid,
-              name: `${networkStem}${cid}`,
-            },
-            alreadyDeployed: false,
-          };
-        } catch (error) {
-          console.error(`Failed to deploy to network ${cid}:`, error);
-          return null;
-        }
-      });
-
-      const validDeployments = deployments.filter((d) => d !== null);
-
-      // Check if all addresses are the same
-      if (validDeployments.length > 1) {
-        const addresses = validDeployments.map((d) => d?.address.toLowerCase());
-        const allSame = addresses.every((addr) => addr === addresses[0]);
-
-        if (allSame) {
-          console.log(
-            `✅ SUCCESS: Contract deployed to the same address on all chains: ${addresses[0]}`,
-          );
-        } else {
-          console.error(`❌ ERROR: Contract addresses differ across chains!`);
-          for (const deployment of validDeployments) {
-            console.error(`Chain ${deployment?.chain}: ${deployment?.address}`);
-          }
-        }
-      }
-
-      return {
-        deployments: validDeployments,
-      };
-    };
 
   function computeOriginHash(origin: Origin) {
     // Create a proper ABI encoding matching Solidity struct layout
@@ -313,6 +150,110 @@ export const getUtils = (
     // Hash it using keccak256
     return ethers.keccak256(abiEncoded);
   }
+
+
+
+
+
+  /**
+   * Deploys a contract deterministically using CREATE2 to multiple chains,
+   * ensuring the same address across all chains.
+   * @param salt - Required parameter to ensure deterministic addresses
+   */
+  const deployContractOnChainsDeterministic: DeployContractOnChainsDeterministic = async ({
+    name,
+    constructorArgs,
+    overrides,
+    salt,
+  }) => {
+    console.log("******** inside deployContractOnChainsDeterministic ****");
+    if (!salt) {
+      throw new Error('Salt is required for deterministic deployment');
+    }
+
+    const chainweb = hre.config.chainweb[hre.config.defaultChainweb];
+
+    // Use the precompiled Create2 proxy to deploy deterministically
+    const create2Proxy = new ethers.Contract(
+      chainweb.precompiles.create2Proxy,
+      CREATE2_PROXY_ABI,
+      ethers.provider
+    ) as unknown as Create2Proxy;
+
+    // Get contract factory for the contract to be deployed
+    const contractFactory = await ethers.getContractFactory(name);
+
+    // Prepare bytecode with constructor args
+    const args = constructorArgs || [];
+    const encodedArgs = contractFactory.interface.encodeDeploy(args);
+    const bytecodeWithArgs = contractFactory.bytecode + encodedArgs.slice(2);
+
+    // Calculate salt
+    const create2Salt = typeof salt === 'string'
+      ? (!salt.startsWith('0x') ? ethers.id(salt) : salt)
+      : salt;
+
+    console.log("Calculating expected address with:", {
+      salt: create2Salt,
+      bytecodeLength: bytecodeWithArgs.length
+    });
+
+    const deployments = await runOverChains(async (cid) => {
+      try {
+        console.log(`Deploying to chain ${cid} using CREATE2 precompile...`);
+        const [signer] = await ethers.getSigners();
+
+        // Deploy using precompile
+        const tx = await create2Proxy.connect(signer).deploy(
+          create2Salt,
+          bytecodeWithArgs,
+          { ...overrides, gasLimit: 6000000 }
+        );
+        const receipt = await tx.wait();
+
+        console.log(`Transaction hash: ${tx.hash}`);
+        console.log("receipt", receipt);
+
+        // Get the deployed address from the raw response
+        const response = await ethers.provider.call({
+          to: chainweb.precompiles.create2Proxy,
+          data: create2Proxy.interface.encodeFunctionData('deploy', [
+            create2Salt,
+            bytecodeWithArgs
+          ])
+        });
+
+        // Find deployed address from receipt events
+        //const deployedAddress = tx.result;
+        const deployedAddress = ethers.getAddress(`0x${response.slice(-40)}`);
+        if (!deployedAddress) {
+          throw new Error(`Failed to get deployed contract address on chain ${cid}`);
+        }
+
+        console.log(`Deployed to ${deployedAddress} on chain ${cid}`);
+
+        return {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          contract: contractFactory.attach(deployedAddress) as any,
+          address: deployedAddress,
+          chain: cid,
+          network: {
+            chainId: cid,
+            name: `${networkStem}${cid}`,
+          },
+          alreadyDeployed: false
+        };
+      } catch (error) {
+        console.error(`Failed to deploy to chain ${cid}:`, error);
+        return null;
+      }
+    });
+
+    return {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      deployments: deployments.filter((d) => d !== null),
+    };
+  };
 
   /* *************************************************************************** */
   /* Off-Chain: SPV Proof Creation */
@@ -390,29 +331,30 @@ export type DeployedContractsOnChains<T extends BaseContract = BaseContract> = {
   };
 };
 
-export type DeployContractProps<A extends unknown[] = unknown[]> = {
+
+export type DeployContractOnChains = <
+  T extends BaseContract = BaseContract,
+  A extends unknown[] = unknown[],
+>(args: {
   name: string;
   signer?: Signer;
   factoryOptions?: FactoryOptions;
   constructorArgs?: ContractMethodArgs<A>;
   overrides?: Overrides;
-  salt?: string | Uint8Array; // Additional parameter for CREATE2
-};
-
-export type DeployContractOnChains = <
-  T extends BaseContract = BaseContract,
-  A extends unknown[] = unknown[],
->(
-  args: Omit<DeployContractProps<A>, 'salt'>,
-) => Promise<{
+}) => Promise<{
   deployments: DeployedContractsOnChains<T>[];
 }>;
 
 export type DeployContractOnChainsDeterministic = <
   T extends BaseContract = BaseContract,
   A extends unknown[] = unknown[],
->(
-  args: DeployContractProps<A>,
-) => Promise<{
+>(args: {
+  name: string;
+  signer?: Signer;
+  factoryOptions?: FactoryOptions;
+  constructorArgs?: ContractMethodArgs<A>;
+  overrides?: Overrides;
+  salt: string | Uint8Array;  // Required for deterministic deployment
+}) => Promise<{
   deployments: (DeployedContractsOnChains<T> & { alreadyDeployed?: boolean })[];
 }>;

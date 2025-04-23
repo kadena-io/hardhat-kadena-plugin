@@ -26,3 +26,18 @@ export const VERIFY_BYTE_CODE =
 export const VERIFY_ABI = [
   'function verify(bytes memory proof) public pure returns (bytes memory data)',
 ];
+
+// The create2 Deterministic Deployment Proxy (factory). This is a copy of https://github.com/Arachnid/deterministic-deployment-proxy
+export const CREATE2_PROXY_ADDRESS = ethers.dataSlice(
+  ethers.id('/Chainweb/Create2/Proxy/'),
+  12,
+);
+
+// TODO: copy bytecode automatically from the build process? May not be necessary, as the code shouldn't cchange
+// Generated from: packages/hardhat-kadena/contracts/deterministic-deployment-proxy.yul
+// Artifact: packages/hardhat-kadena/artifacts/contracts/deterministic-deployment-proxy.yul/Proxy/bytecode.txt
+// Being copied here for now
+export const CREATE2_PROXY_BYTE_CODE = '0x604580600e600039806000f350fe7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffe03601600081602082378035828234f58015156039578182fd5b8082525050506014600cf3';
+export const CREATE2_PROXY_ABI = [
+  'function deploy(bytes32 salt, bytes memory initCode) returns (address)',
+];

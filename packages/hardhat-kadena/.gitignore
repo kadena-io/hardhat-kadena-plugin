@@ -1,2 +1,11 @@
 lib
 node_modules
+
+# Hardhat artifacts
+artifacts/
+
+# Generated JavaScript and type definition files
+scripts/**/*.js
+scripts/**/*.js.map
+scripts/**/*.d.ts
+scripts/**/*.d.ts.map

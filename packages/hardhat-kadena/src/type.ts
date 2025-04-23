@@ -26,6 +26,7 @@ export interface ChainwebInProcessConfig
   precompiles: {
     chainwebChainId: string;
     spvVerify: string;
+    create2Proxy: string;
   };
   networkOptions?: Omit<HardhatNetworkUserConfig, 'chainId'>;
 }
@@ -39,6 +40,7 @@ export interface ChainwebExternalUserConfig {
   precompiles?: {
     chainwebChainId?: string;
     spvVerify?: string;
+    create2Proxy: string;
   };
   networkOptions?: Omit<HttpNetworkUserConfig, 'chainId' | 'url'>;
 }
@@ -48,6 +50,7 @@ export interface ChainwebExternalConfig
   precompiles: {
     chainwebChainId: string;
     spvVerify: string;
+    create2Proxy: string;
   };
   networkOptions?: Omit<HttpNetworkUserConfig, 'chainId' | 'url'>;
 }

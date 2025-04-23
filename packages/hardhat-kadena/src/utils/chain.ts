@@ -7,6 +7,8 @@ import {
   CHAIN_ID_BYTE_CODE,
   VERIFY_ADDRESS,
   VERIFY_BYTE_CODE,
+  CREATE2_PROXY_ADDRESS,
+  CREATE2_PROXY_BYTE_CODE,
 } from './network-contracts.js';
 import { EthereumProvider, KadenaNetworkConfig } from 'hardhat/types';
 import { COLOR_PALETTE, logError, Logger, logInfo } from './logger.js';
@@ -147,6 +149,14 @@ export class Chain {
     ]);
   }
 
+  async initializeCreate2Proxy() {
+    await this.provider.send('hardhat_setCode', [
+      CREATE2_PROXY_ADDRESS,
+      CREATE2_PROXY_BYTE_CODE,
+    ]);
+  }
+
+
   async enableAutomine() {
     if (!this.autominer) {
       this.autominer = setInterval(() => this.runPending(), 100);
@@ -177,6 +187,7 @@ export class Chain {
     // initialize system contracts
     await this.initializeCidContract();
     await this.initializeVerificationPrecompile();
+    await this.initializeCreate2Proxy();
 
     // setup automining
     await this.provider.send('evm_setAutomine', [false]);
