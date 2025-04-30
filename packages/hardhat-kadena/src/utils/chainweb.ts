@@ -189,7 +189,12 @@ function makeChainweb(
 
   // Put Chains into the Chainweb Graph
   logger.info('integrating chains into Chainweb');
+
   for (const c in chains) {
+    if (graph[c] === undefined) {
+      console.log(c, graph);
+      throw new Error(`Missing configuration for chain ${c}`);
+    }
     chains[c].adjacents = graph[c].map((x) => {
       const a = chains[x];
       if (a === undefined) {

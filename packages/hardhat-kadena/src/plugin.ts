@@ -125,6 +125,7 @@ extendConfig((config, userConfig) => {
               ? { enabled: true, ...chainwebConfig.networkOptions.forking }
               : undefined,
             networkOptions: chainwebConfig.networkOptions,
+            chainIdOffset: chainwebConfig.chainIdOffset,
           }),
         };
         config.chainweb[name] = chainwebConfig;
@@ -155,6 +156,7 @@ extendConfig((config, userConfig) => {
             accounts: chainwebConfig.accounts,
             baseUrl: chainwebConfig.externalHostUrl,
             networkOptions: chainwebConfig.networkOptions,
+            chainIdOffset: chainwebConfig.chainIdOffset,
           }),
         };
         config.chainweb[name] = chainwebConfig;

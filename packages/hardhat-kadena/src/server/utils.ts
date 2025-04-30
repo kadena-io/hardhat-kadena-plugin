@@ -15,5 +15,5 @@ export const parseSpvProofRequest = (url: string) => {
 };
 
 export const mapChainIdToRoute = (id: number): string => {
-  return `/chain/${id}`;
+  return `/chain/${id}/evm/rpc`;
 };

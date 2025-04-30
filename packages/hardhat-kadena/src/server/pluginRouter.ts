@@ -36,7 +36,7 @@ router.route(
 
 // Chain route
 router.route(
-  `/chain/:chainId`,
+  `/chain/:chainId/evm/rpc`,
   ({ chainId }, { failure, proxy }, { handlers }) => {
     const handler = handlers.find(([id]) => parseInt(chainId) === id)?.[1];
     if (handler === undefined) {

@@ -12,6 +12,7 @@ import {
   KadenaNetworkConfig,
   NetworksUserConfig,
 } from 'hardhat/types';
+import { mapChainIdToRoute } from '../server/utils';
 
 interface INetworkOptions {
   availableNetworks: undefined | NetworksUserConfig;
@@ -86,7 +87,7 @@ export const getKadenaNetworks = ({
   availableNetworks = {},
   hardhatNetwork,
   networkStem = 'kadena_devnet_',
-  chainIdOffset = 0,
+  chainIdOffset = 626000,
   numberOfChains = 2,
   accounts,
   loggingEnabled = false,
@@ -97,10 +98,10 @@ export const getKadenaNetworks = ({
     .fill(0)
     .map((_, i) => i + chainIdOffset);
   const networks = chainIds.reduce(
-    (acc, chainId, index) => {
-      const userNetworkConfig = availableNetworks[`${networkStem}${index}`] as
-        | HardhatNetworkUserConfig
-        | undefined;
+    (acc, chainId, chainwebChainId) => {
+      const userNetworkConfig = availableNetworks[
+        `${networkStem}${chainwebChainId}`
+      ] as HardhatNetworkUserConfig | undefined;
 
       const networkForking = forking
         ? {
@@ -112,8 +113,8 @@ export const getKadenaNetworks = ({
       const networkConfig: KadenaNetworkConfig = {
         ...hardhatNetwork,
         ...networkOptions,
-        chainId: 626000 + chainId,
-        chainwebChainId: chainId,
+        chainId: chainId,
+        chainwebChainId,
         type: 'chainweb:in-process',
         loggingEnabled,
         ...userNetworkConfig,
@@ -138,7 +139,7 @@ export const getKadenaNetworks = ({
           networkOptions?.chains ?? userNetworkConfig?.chains,
         ),
       };
-      acc[`${networkStem}${index}`] = networkConfig;
+      acc[`${networkStem}${chainwebChainId}`] = networkConfig;
       return acc;
     },
     {} as Record<string, KadenaNetworkConfig>,
@@ -178,7 +179,7 @@ const toHttpNetworkAccountsConfig = (
 export const getKadenaExternalNetworks = ({
   availableNetworks = {},
   networkStem = 'kadena_devnet_',
-  chainIdOffset = 0,
+  chainIdOffset = 626000,
   numberOfChains = 2,
   accounts = 'remote',
   baseUrl = 'http://localhost:8545',
@@ -188,27 +189,27 @@ export const getKadenaExternalNetworks = ({
     .fill(0)
     .map((_, i) => i + chainIdOffset);
   const networks = chainIds.reduce(
-    (acc, chainId, index) => {
-      const userConfig = availableNetworks[`${networkStem}${index}`] as
-        | HttpNetworkUserConfig
-        | undefined;
+    (acc, chainId, chainwebChainId) => {
+      const userConfig = availableNetworks[
+        `${networkStem}${chainwebChainId}`
+      ] as HttpNetworkUserConfig | undefined;
       const networkConfig: HttpNetworkConfig = {
         ...networkOptions,
-        chainId: 626000 + chainId,
-        chainwebChainId: chainId,
+        chainId: chainId,
+        chainwebChainId,
         type: 'chainweb:external',
         gasPrice: 'auto',
         gas: 'auto',
         gasMultiplier: 1,
         timeout: 20000,
         httpHeaders: {},
-        url: `${baseUrl}/chain/${chainId}`,
+        url: `${baseUrl}${mapChainIdToRoute(chainwebChainId)}`,
         ...userConfig,
         accounts: userConfig?.accounts
           ? toHttpNetworkAccountsConfig(userConfig.accounts)
           : accounts,
       };
-      acc[`${networkStem}${index}`] = networkConfig;
+      acc[`${networkStem}${chainwebChainId}`] = networkConfig;
       return acc;
     },
     {} as Record<string, HttpNetworkConfig>,

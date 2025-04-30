@@ -1,4 +1,4 @@
-import { chainweb, ethers } from 'hardhat';
+import hre from 'hardhat';
 
 /** This script checks the ETH balance of a specific wallet on two different forked chainweb chains.
  * It is meant to test forking of Ethereum mainnet. Other chains can be forked the same way.
@@ -9,26 +9,25 @@ import { chainweb, ethers } from 'hardhat';
  * Run the script uisng the command `npx hardhat run scripts/check-balance.ts --chainweb localhost`
  * Note the use of chainweb.switchChain to switch between the two chains to get the balance
  */
-async function main() {
+async function main(account: string) {
   console.log('Checking ETH balance...');
 
-  // Check Binance hot wallet which typically has a large ETH balance
-  const binanceHotWallet = '0xDFd5293D8e347dFe59E90eFd55b2956a1343963d';
+  await hre.chainweb.runOverChains(async (chainId) => {
+    const balance = await hre.ethers.provider.getBalance(account);
+    console.log(
+      `ETH balance of ${account}: ${hre.ethers.formatEther(balance)} on chain ${chainId}`,
+    );
+  });
 
-  await chainweb.switchChain(0);
-  const balance0 = await ethers.provider.getBalance(binanceHotWallet);
-  console.log(
-    `ETH balance of ${binanceHotWallet}: ${ethers.formatEther(balance0)} on chain0`,
-  );
-
-  await chainweb.switchChain(1);
-  const balance1 = await ethers.provider.getBalance(binanceHotWallet);
-  console.log(
-    `ETH balance of ${binanceHotWallet}: ${ethers.formatEther(balance1)} on chain1`,
-  );
+  console.log('Done checking ETH balance');
 }
 
-main()
+// Check Binance hot wallet which typically has a large ETH balance
+// const binanceHotWallet = '0xDFd5293D8e347dFe59E90eFd55b2956a1343963d';
+
+const devnetAccount = '0x8849BAbdDcfC1327Ad199877861B577cEBd8A7b6';
+
+main(devnetAccount)
   .then(() => process.exit(0))
   .catch((error) => {
     console.error(error);
