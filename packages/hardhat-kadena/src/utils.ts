@@ -1,24 +1,17 @@
 import { ContractMethodArgs, Overrides, Signer } from 'ethers';
 import './type.js';
-import { CHAIN_ID_ABI } from './utils/network-contracts.js';
-import { FactoryOptions, HardhatRuntimeEnvironment, KadenaNetworkConfig } from 'hardhat/types';
+import { CHAIN_ID_ABI, CREATE2_PROXY_ABI } from './utils/network-contracts.js';
+import {
+  FactoryOptions,
+  HardhatRuntimeEnvironment,
+  KadenaNetworkConfig,
+} from 'hardhat/types';
 import { BaseContract } from 'ethers';
 import { ContractTransactionResponse } from 'ethers';
 import { ChainwebNetwork } from './utils/chainweb.js';
-import { InProcessPrecompiles, ExternalPrecompiles } from './type.js';
-import { CREATE2 } from './constants';
-
 
 export const getNetworkStem = (chainwebName: string) =>
   `chainweb_${chainwebName}`;
-
-// Add type guard here
-function isExternalPrecompiles(
-  precompiles: InProcessPrecompiles | ExternalPrecompiles
-): precompiles is ExternalPrecompiles {
-  return 'create2Proxy' in precompiles;
-}
-
 
 export interface Origin {
   chain: bigint;
@@ -28,17 +21,12 @@ export interface Origin {
   eventIdx: bigint;
 }
 
-interface Create2Config {
-  address: string;
-  abi: readonly string[];
-}
-
 interface Create2Proxy extends BaseContract {
   connect(signer: Signer): Create2Proxy;
   deploy(
     salt: string | Uint8Array,
     bytecode: string,
-    overrides?: Overrides
+    overrides?: Overrides,
   ): Promise<ContractTransactionResponse>;
 }
 
@@ -64,6 +52,15 @@ export const getUtils = (
     );
   }
 
+  function getCreate2Contract() {
+    const chainweb = hre.config.chainweb[hre.config.defaultChainweb];
+    return new ethers.Contract(
+      chainweb.precompiles.create2Proxy,
+      CREATE2_PROXY_ABI,
+      ethers.provider,
+    ) as unknown as Create2Proxy;
+  }
+
   async function callChainIdContract() {
     const chainweb = hre.config.chainweb[hre.config.defaultChainweb];
     const hex = await ethers.provider.send('eth_call', [
@@ -72,6 +69,51 @@ export const getUtils = (
       {},
     ]);
     return parseInt(hex, 16);
+  }
+
+  function isContractDeployed(address: string): Promise<boolean> {
+    return ethers.provider.getCode(address).then((code) => code !== '0x');
+  }
+
+  async function callCreate2Contract(
+    contractBytecode: string,
+    saltString: string,
+  ) {
+    const factoryAddress =
+      hre.config.chainweb[hre.config.defaultChainweb].precompiles.create2Proxy;
+
+    const Factory = await hre.ethers.getContractFactory('Create2Factory');
+
+    const create2 = Factory.attach(factoryAddress);
+
+    const salt = ethers.id(saltString);
+
+    const predictedAddress = ethers.getCreate2Address(
+      factoryAddress,
+      salt,
+      ethers.keccak256(contractBytecode),
+    );
+
+    if (await isContractDeployed(predictedAddress)) {
+      console.log(
+        `Contract already deployed at ${predictedAddress}. Skipping deployment.`,
+      );
+      return predictedAddress;
+    }
+
+    // Deploy using CREATE2
+    const tx = await create2.deploy(contractBytecode, salt);
+    await tx.wait();
+
+    if (!(await isContractDeployed(predictedAddress))) {
+      console.log(
+        `CREATE2 failed:  No contract at predicted address ${predictedAddress}`,
+      );
+      throw new Error(
+        `CREATE2 failed:  No contract at predicted address ${predictedAddress}`,
+      );
+    }
+    return predictedAddress;
   }
 
   async function runOverChains<T>(callback: (cid: number) => Promise<T>) {
@@ -93,9 +135,7 @@ export const getUtils = (
   }) => {
     const deployments = await runOverChains(async (chainId) => {
       try {
-        await hre.chainweb.switchChain(chainId);
-        const cid = (hre.network.config as KadenaNetworkConfig).chainwebChainId;
-        console.log(`Switched to network ${cid}`);
+        const cid = chainId;
         const [deployer] = await ethers.getSigners();
         console.log(
           `Deploying with signer: ${deployer.address} on network ${chainId}`,
@@ -138,7 +178,60 @@ export const getUtils = (
     };
   };
 
+  const deployContractOnChainsUsingCreate2: DeployContractOnChains = async ({
+    name,
+    signer,
+    factoryOptions,
+    constructorArgs = [],
+    overrides,
+  }) => {
+    const deployments = await runOverChains(async (chainId) => {
+      try {
+        const cid = chainId;
+        const [deployer] = await ethers.getSigners();
+        console.log(
+          `Deploying with signer: ${deployer.address} on network ${chainId}`,
+        );
 
+        /* Deploy the contract */
+        const factory = await ethers.getContractFactory(name, {
+          signer: signer ?? factoryOptions?.signer ?? deployer,
+          ...factoryOptions,
+        });
+        const transaction = await factory.getDeployTransaction(
+          ...(overrides ? [...constructorArgs, overrides] : constructorArgs),
+        );
+        // Prepare the bytecode of the contract to deploy
+        const bytecode = transaction.data;
+
+        const contractAddress = await hre.chainweb.callCreate2Contract(
+          bytecode,
+          'kadena_hardhat_plugin',
+        );
+
+        const contract = factory.attach(contractAddress);
+
+        // Store deployment info in both formats
+        return {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          contract: contract as any,
+          address: contractAddress,
+          chain: cid,
+          network: {
+            chainId,
+            name: `${networkStem}${chainId}`,
+          },
+        };
+      } catch (error) {
+        console.error(`Failed to deploy to network ${chainId}:`, error);
+        return null;
+      }
+    });
+
+    return {
+      deployments: deployments.filter((d) => d !== null),
+    };
+  };
 
   function computeOriginHash(origin: Origin) {
     // Create a proper ABI encoding matching Solidity struct layout
@@ -159,150 +252,109 @@ export const getUtils = (
     return ethers.keccak256(abiEncoded);
   }
 
-  async function getCreate2Config(hre: HardhatRuntimeEnvironment): Promise<Create2Config> {
-    const networkName = hre.network.name.toLowerCase();
-    const isLocalNetwork = networkName.includes('hardhat') || networkName.includes('localhost');
-    const chainweb = hre.config.chainweb[hre.config.defaultChainweb];
-
-    if (isLocalNetwork) {
-      // Deploy CREATE2 proxy locally
-      const [signer] = await hre.ethers.getSigners();
-      const tx = await signer.sendTransaction({ data: CREATE2.BYTECODE });
-      const receipt = await tx.wait();
-      if (!receipt?.contractAddress) {
-        throw new Error('Failed to deploy CREATE2 proxy');
-      }
-      return {
-        address: receipt.contractAddress,
-        abi: CREATE2.ABI
-      };
-    }
-
-    // For external networks, check if precompiles has create2Proxy
-    if (!('create2Proxy' in chainweb.precompiles)) {
-      throw new Error('create2Proxy address not found in network configuration');
-    }
-
-    return {
-      address: (chainweb.precompiles as ExternalPrecompiles).create2Proxy,
-      abi: CREATE2.ABI
-    };
-  }
-
   /**
    * Deploys a contract deterministically using CREATE2 to multiple chains,
    * ensuring the same address across all chains.
    * @param salt - Required parameter to ensure deterministic addresses
    */
-  const deployContractOnChainsDeterministic: DeployContractOnChainsDeterministic = async ({
-    name,
-    constructorArgs,
-    overrides,
-    salt,
-  }) => {
-    console.log("******** inside deployContractOnChainsDeterministic ****");
-    if (!salt) {
-      throw new Error('Salt is required for deterministic deployment');
-    }
-
-    const chainweb = hre.config.chainweb[hre.config.defaultChainweb];
-
-    // Get the CREATE2 proxy contract
-    const create2Config = await getCreate2Config(hre);
-    const create2Proxy = new ethers.Contract(
-      create2Config.address,
-      create2Config.abi,
-      ethers.provider
-    ) as unknown as Create2Proxy;
-
-
-    // Get contract factory for the contract to be deployed
-    const contractFactory = await ethers.getContractFactory(name);
-
-    // Prepare bytecode with constructor args
-    const args = constructorArgs || [];
-    const encodedArgs = contractFactory.interface.encodeDeploy(args);
-    const bytecodeWithArgs = contractFactory.bytecode + encodedArgs.slice(2);
-
-    // Calculate salt
-    const create2Salt = typeof salt === 'string'
-      ? (!salt.startsWith('0x') ? ethers.id(salt) : salt)
-      : salt;
-
-    console.log("Calculating expected address with:", {
-      salt: create2Salt,
-      bytecodeLength: bytecodeWithArgs.length
-    });
-
-    const deployments = await runOverChains(async (cid) => {
-      try {
-        await hre.chainweb.switchChain(cid);
-        const chainwebChainId = (hre.network.config as KadenaNetworkConfig).chainwebChainId;
-        console.log(`Switched to chain ${chainwebChainId} using CREATE2 precompile...`);
-
-        // Use hre's provider instead of creating new one
-        const provider = hre.ethers.provider;
-
-        const [signer] = await ethers.getSigners();
-        console.log(`Using signer: ${signer.address}`);
-
-
-        // Get the expected CREATE2 address
-        const expectedAddress = ethers.getCreate2Address(
-          isExternalPrecompiles(chainweb.precompiles)
-            ? chainweb.precompiles.create2Proxy
-            : create2Config.address,  // Use the deployed contract address for in-process
-          create2Salt,
-          ethers.keccak256(bytecodeWithArgs)
-        );
-
-        const tx = await create2Proxy.connect(signer).deploy(
-          create2Salt,
-          bytecodeWithArgs,
-          { gasLimit: 1000000 }
-        );
-
-        await tx.wait();
-
-
-        const receipt = await tx.wait();
-        if (receipt?.status === 0) {
-          throw new Error(`Transaction failed on chain ${cid}`);
-        }
-
-        console.log(`Transaction hash: ${tx.hash}`);
-        console.log("receipt", receipt);
-
-        // Verify code exists
-        const code = await provider.getCode(expectedAddress);
-        if (code.length <= 2) {
-          throw new Error(`No code at deployed address ${expectedAddress}`);
-        }
-
-        console.log(`Deployed to ${expectedAddress} on chain ${cid}`);
-
-        return {
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          contract: contractFactory.attach(expectedAddress) as any,
-          address: expectedAddress,
-          chain: cid,
-          network: {
-            chainId: cid,
-            name: `${networkStem}${cid}`,
-          },
-          alreadyDeployed: false
-        };
-      } catch (error) {
-        console.error(`Failed to deploy to chain ${cid}:`, error);
-        return null;
+  const deployContractOnChainsDeterministic: DeployContractOnChainsDeterministic =
+    async ({ name, constructorArgs, salt }) => {
+      console.log('******** inside deployContractOnChainsDeterministic ****');
+      if (!salt) {
+        throw new Error('Salt is required for deterministic deployment');
       }
-    });
 
-    return {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      deployments: deployments.filter((d) => d !== null),
+      const chainweb = hre.config.chainweb[hre.config.defaultChainweb];
+
+      // Get the CREATE2 proxy contract
+      const create2Proxy = getCreate2Contract() as Create2Proxy;
+
+      // Get contract factory for the contract to be deployed
+      const contractFactory = await ethers.getContractFactory(name);
+
+      // Prepare bytecode with constructor args
+      const args = constructorArgs || [];
+      const encodedArgs = contractFactory.interface.encodeDeploy(args);
+      const bytecodeWithArgs = contractFactory.bytecode + encodedArgs.slice(2);
+
+      // Calculate salt
+      const create2Salt =
+        typeof salt === 'string'
+          ? !salt.startsWith('0x')
+            ? ethers.id(salt)
+            : salt
+          : salt;
+
+      console.log('Calculating expected address with:', {
+        salt: create2Salt,
+        bytecodeLength: bytecodeWithArgs.length,
+      });
+
+      const deployments = await runOverChains(async (cid) => {
+        try {
+          await hre.chainweb.switchChain(cid);
+          const chainwebChainId = (hre.network.config as KadenaNetworkConfig)
+            .chainwebChainId;
+          console.log(
+            `Switched to chain ${chainwebChainId} using CREATE2 precompile...`,
+          );
+
+          // Use hre's provider instead of creating new one
+          const provider = hre.ethers.provider;
+
+          const [signer] = await ethers.getSigners();
+          console.log(`Using signer: ${signer.address}`);
+
+          // Get the expected CREATE2 address
+          const expectedAddress = ethers.getCreate2Address(
+            chainweb.precompiles.create2Proxy,
+            create2Salt,
+            ethers.keccak256(bytecodeWithArgs),
+          );
+
+          const tx = await create2Proxy
+            .connect(signer)
+            .deploy(create2Salt, bytecodeWithArgs, { gasLimit: 1000000 });
+
+          await tx.wait();
+
+          const receipt = await tx.wait();
+          if (receipt?.status === 0) {
+            throw new Error(`Transaction failed on chain ${cid}`);
+          }
+
+          console.log(`Transaction hash: ${tx.hash}`);
+          console.log('receipt', receipt);
+
+          // Verify code exists
+          const code = await provider.getCode(expectedAddress);
+          if (code.length <= 2) {
+            throw new Error(`No code at deployed address ${expectedAddress}`);
+          }
+
+          console.log(`Deployed to ${expectedAddress} on chain ${cid}`);
+
+          return {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            contract: contractFactory.attach(expectedAddress) as any,
+            address: expectedAddress,
+            chain: cid,
+            network: {
+              chainId: cid,
+              name: `${networkStem}${cid}`,
+            },
+            alreadyDeployed: false,
+          };
+        } catch (error) {
+          console.error(`Failed to deploy to chain ${cid}:`, error);
+          return null;
+        }
+      });
+
+      return {
+        deployments: deployments.filter((d) => d !== null),
+      };
     };
-  };
 
   /* *************************************************************************** */
   /* Off-Chain: SPV Proof Creation */
@@ -357,10 +409,12 @@ export const getUtils = (
     return '0x' + Buffer.from(bytes).toString('hex');
   }
   return {
+    callCreate2Contract,
     getNetworks,
     getChainIdContract,
     callChainIdContract,
     deployContractOnChains,
+    deployContractOnChainsUsingCreate2,
     deployContractOnChainsDeterministic,
     computeOriginHash,
     requestSpvProof,
@@ -379,7 +433,6 @@ export type DeployedContractsOnChains<T extends BaseContract = BaseContract> = {
     name: string;
   };
 };
-
 
 export type DeployContractOnChains = <
   T extends BaseContract = BaseContract,
@@ -403,7 +456,7 @@ export type DeployContractOnChainsDeterministic = <
   factoryOptions?: FactoryOptions;
   constructorArgs?: ContractMethodArgs<A>;
   overrides?: Overrides;
-  salt: string | Uint8Array;  // Required for deterministic deployment
+  salt: string | Uint8Array; // Required for deterministic deployment
 }) => Promise<{
   deployments: (DeployedContractsOnChains<T> & { alreadyDeployed?: boolean })[];
 }>;

@@ -17,7 +17,11 @@ import { getNetworkStem, getUtils } from './utils.js';
 import { HardhatEthersProvider } from '@nomicfoundation/hardhat-ethers/internal/hardhat-ethers-provider.js';
 import Web3 from 'web3';
 import { runRPCNode } from './server/runRPCNode.js';
-import { CHAIN_ID_ADDRESS, VERIFY_ADDRESS, CREATE2_PROXY_ADDRESS } from './utils/network-contracts.js';
+import {
+  CHAIN_ID_ADDRESS,
+  VERIFY_ADDRESS,
+  CREATE2_PROXY_ADDRESS,
+} from './utils/network-contracts.js';
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
 import picocolors from 'picocolors';
 
@@ -106,6 +110,7 @@ extendConfig((config, userConfig) => {
           precompiles: {
             chainwebChainId: CHAIN_ID_ADDRESS,
             spvVerify: VERIFY_ADDRESS,
+            create2Proxy: CREATE2_PROXY_ADDRESS,
             // No create2Proxy because Hardhat doesn't support CREATE2 precompile
           },
           ...chainwebInProcessUserConfig,
@@ -145,8 +150,8 @@ extendConfig((config, userConfig) => {
             spvVerify:
               externalUserConfig.precompiles?.spvVerify ?? VERIFY_ADDRESS,
             create2Proxy:
-              externalUserConfig.precompiles?.create2Proxy ?? CREATE2_PROXY_ADDRESS,
-
+              externalUserConfig.precompiles?.create2Proxy ??
+              CREATE2_PROXY_ADDRESS,
           },
         };
         // add networks to hardhat
@@ -176,7 +181,8 @@ const createExternalProvider = (
   const utils = getUtils(hre);
   return {
     deployContractOnChains: utils.deployContractOnChains,
-    deployContractOnChainsDeterministic: utils.deployContractOnChainsDeterministic,
+    deployContractOnChainsDeterministic:
+      utils.deployContractOnChainsDeterministic,
     getProvider: (cid: number) => {
       const name = `${networkStem}${cid}`;
       return createProvider(hre.config, name, hre.artifacts);
@@ -194,6 +200,9 @@ const createExternalProvider = (
     createTamperedProof: utils.createTamperedProof,
     computeOriginHash: utils.computeOriginHash,
     runOverChains: utils.runOverChains,
+    callCreate2Contract: utils.callCreate2Contract,
+    deployContractOnChainsUsingCreate2:
+      utils.deployContractOnChainsUsingCreate2,
   };
 };
 
@@ -282,7 +291,8 @@ const createInternalProvider = (
 
   return {
     deployContractOnChains: utils.deployContractOnChains,
-    deployContractOnChainsDeterministic: utils.deployContractOnChainsDeterministic,
+    deployContractOnChainsDeterministic:
+      utils.deployContractOnChainsDeterministic,
     getProvider: async (cid: number) => {
       await isNetworkReadyPromise;
       const provider = chainwebNetwork.getProvider(cid);
@@ -302,6 +312,9 @@ const createInternalProvider = (
     createTamperedProof: utils.createTamperedProof,
     computeOriginHash: utils.computeOriginHash,
     runOverChains: utils.runOverChains,
+    callCreate2Contract: utils.callCreate2Contract,
+    deployContractOnChainsUsingCreate2:
+      utils.deployContractOnChainsUsingCreate2,
   };
 };
 
@@ -357,6 +370,10 @@ extendEnvironment((hre) => {
     createTamperedProof: safeCall(() => api!.createTamperedProof),
     computeOriginHash: safeCall(() => api!.computeOriginHash),
     runOverChains: safeCall(() => api!.runOverChains),
+    callCreate2Contract: safeCall(() => api!.callCreate2Contract),
+    deployContractOnChainsUsingCreate2: safeCall(
+      () => api!.deployContractOnChainsUsingCreate2,
+    ),
   };
   if (process.env['HK_INIT_CHAINWEB'] === 'true') {
     hre.chainweb.initialize();

@@ -10,7 +10,7 @@
   "main": "./lib/cjs/index.js",
   "types": "./lib/cjs/index.d.ts",
   "scripts": {
-    "build": "pnpm compile:create2factory eslint && tsc",
+    "build": "eslint && tsc",
     "test": "echo \"Error: no test specified\" && exit 1",
     "postinstall": "eslint && tsc",
     "compile:create2factory": "ts-node -P tsconfig.build.json scripts/compile-deterministic-deployment-proxy.ts"

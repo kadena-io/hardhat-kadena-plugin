@@ -1,6 +1,9 @@
 import 'hardhat/types';
 import type { Origin } from './utils/chainweb';
-import type { DeployContractOnChains, DeployContractOnChainsDeterministic } from './utils';
+import type {
+  DeployContractOnChains,
+  DeployContractOnChainsDeterministic,
+} from './utils';
 import {
   EthereumProvider,
   HardhatNetworkAccountsConfig,
@@ -11,16 +14,11 @@ import {
 import 'hardhat/types/runtime';
 
 // Separate precompile types for in-process vs external
-export interface InProcessPrecompiles {
+export interface Precompiles {
   chainwebChainId: string;
   spvVerify: string;
+  create2Proxy: string;
   // No create2Proxy for in-process networks
-}
-
-export interface ExternalPrecompiles {
-  chainwebChainId: string;
-  spvVerify: string;
-  create2Proxy: string;  // Only for external networks
 }
 
 //HttpNetworkAccountsConfig
@@ -36,7 +34,7 @@ export interface ChainwebInProcessUserConfig {
 
 export interface ChainwebInProcessConfig
   extends Required<Omit<ChainwebInProcessUserConfig, 'networkOptions'>> {
-  precompiles: InProcessPrecompiles;
+  precompiles: Precompiles;
   networkOptions?: Omit<HardhatNetworkUserConfig, 'chainId'>;
 }
 
@@ -56,7 +54,7 @@ export interface ChainwebExternalUserConfig {
 
 export interface ChainwebExternalConfig
   extends Required<Omit<ChainwebExternalUserConfig, 'networkOptions'>> {
-  precompiles: ExternalPrecompiles;
+  precompiles: Precompiles;
   networkOptions?: Omit<HttpNetworkUserConfig, 'chainId' | 'url'>;
 }
 
@@ -79,10 +77,15 @@ export interface ChainwebPluginApi {
   getChainIds: () => number[];
   callChainIdContract: () => Promise<number>;
   deployContractOnChains: DeployContractOnChains;
+  deployContractOnChainsUsingCreate2: DeployContractOnChains;
   deployContractOnChainsDeterministic: DeployContractOnChainsDeterministic;
   createTamperedProof: (targetChain: number, origin: Origin) => Promise<string>;
   computeOriginHash: (origin: Origin) => string;
   runOverChains: <T>(callback: (chainId: number) => Promise<T>) => Promise<T[]>;
+  callCreate2Contract: (
+    contractBytecode: string,
+    saltString: string,
+  ) => Promise<string>;
 }
 
 declare module 'hardhat/types' {
