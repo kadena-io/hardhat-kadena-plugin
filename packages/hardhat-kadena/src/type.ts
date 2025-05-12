@@ -9,6 +9,7 @@ import {
   HttpNetworkUserConfig,
 } from 'hardhat/types';
 import 'hardhat/types/runtime';
+import { Create2Helpers } from './create2';
 
 //HttpNetworkAccountsConfig
 export interface ChainwebInProcessUserConfig {
@@ -74,6 +75,7 @@ export interface ChainwebPluginApi {
   createTamperedProof: (targetChain: number, origin: Origin) => Promise<string>;
   computeOriginHash: (origin: Origin) => string;
   runOverChains: <T>(callback: (chainId: number) => Promise<T>) => Promise<T[]>;
+  create2Helpers: Create2Helpers;
 }
 
 declare module 'hardhat/types' {

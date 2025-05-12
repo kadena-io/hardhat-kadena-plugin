@@ -20,6 +20,7 @@ import { runRPCNode } from './server/runRPCNode.js';
 import { CHAIN_ID_ADDRESS, VERIFY_ADDRESS } from './utils/network-contracts.js';
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
 import picocolors from 'picocolors';
+import { getCreate2Helpers } from './create2/index.js';
 
 extendConfig((config, userConfig) => {
   if (!userConfig.chainweb) {
@@ -191,6 +192,7 @@ const createExternalProvider = (
     createTamperedProof: utils.createTamperedProof,
     computeOriginHash: utils.computeOriginHash,
     runOverChains: utils.runOverChains,
+    create2Helpers: getCreate2Helpers(hre),
   };
 };
 
@@ -298,6 +300,7 @@ const createInternalProvider = (
     createTamperedProof: utils.createTamperedProof,
     computeOriginHash: utils.computeOriginHash,
     runOverChains: utils.runOverChains,
+    create2Helpers: getCreate2Helpers(hre),
   };
 };
 
@@ -350,6 +353,20 @@ extendEnvironment((hre) => {
     createTamperedProof: safeCall(() => api!.createTamperedProof),
     computeOriginHash: safeCall(() => api!.computeOriginHash),
     runOverChains: safeCall(() => api!.runOverChains),
+    create2Helpers: {
+      getCreate2FactoryAddress: safeCall(
+        () => api!.create2Helpers.getCreate2FactoryAddress,
+      ),
+      deployCreate2Factory: safeCall(
+        () => api!.create2Helpers.deployCreate2Factory,
+      ),
+      deployOnChainsUsingCreate2: safeCall(
+        () => api!.create2Helpers.deployOnChainsUsingCreate2,
+      ),
+      predictCreate2Address: safeCall(
+        () => api!.create2Helpers.predictCreate2Address,
+      ),
+    },
   };
   if (process.env['HK_INIT_CHAINWEB'] === 'true') {
     hre.chainweb.initialize();

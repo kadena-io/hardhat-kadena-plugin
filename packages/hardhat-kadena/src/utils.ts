@@ -71,19 +71,22 @@ export const getUtils = (
     constructorArgs = [],
     overrides,
   }) => {
-    const deployments = await runOverChains(async (chainId) => {
+    const deployments = await runOverChains(async (cwId) => {
       try {
-        await hre.chainweb.switchChain(chainId);
-        const cid = (network.config as KadenaNetworkConfig).chainwebChainId;
-        console.log(`Switched to network ${cid}`);
-        const [deployer] = await ethers.getSigners();
+        console.log(`Switched to network ${cwId}`);
+        const [defaultDeployer] = await ethers.getSigners();
+
+        const contractDeployer =
+          signer ?? factoryOptions?.signer ?? defaultDeployer;
+
+        const deployerAddress = await contractDeployer.getAddress();
         console.log(
-          `Deploying with signer: ${deployer.address} on network ${chainId}`,
+          `Deploying with signer: ${deployerAddress} on network ${cwId}`,
         );
 
         /* Deploy the contract */
         const factory = await ethers.getContractFactory(name, {
-          signer: signer ?? factoryOptions?.signer ?? deployer,
+          signer: contractDeployer,
           ...factoryOptions,
         });
         const contract = await factory.deploy(
@@ -101,14 +104,15 @@ export const getUtils = (
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           contract: contract as any,
           address: tokenAddress,
-          chain: cid,
+          chain: cwId,
+          deployer: deployerAddress,
           network: {
-            chainId,
-            name: `${networkStem}${chainId}`,
+            chainId: cwId,
+            name: `${networkStem}${cwId}`,
           },
         };
       } catch (error) {
-        console.error(`Failed to deploy to network ${chainId}:`, error);
+        console.error(`Failed to deploy to network ${cwId}:`, error);
         return null;
       }
     });
@@ -212,15 +216,28 @@ export type DeployedContractsOnChains<T extends BaseContract = BaseContract> = {
   };
 };
 
-export type DeployContractOnChains = <
-  T extends BaseContract = BaseContract,
-  A extends unknown[] = unknown[],
->(args: {
+export type DeployContractProperties<A extends unknown[] = unknown[]> = {
   name: string;
   signer?: Signer;
   factoryOptions?: FactoryOptions;
   constructorArgs?: ContractMethodArgs<A>;
   overrides?: Overrides;
-}) => Promise<{
+};
+
+export type DeployContractOnChains = <
+  T extends BaseContract = BaseContract,
+  A extends unknown[] = unknown[],
+>(
+  args: DeployContractProperties<A>,
+) => Promise<{
+  deployments: DeployedContractsOnChains<T>[];
+}>;
+
+export type DeployOnChainsUsingCreate2 = <
+  T extends BaseContract = BaseContract,
+  A extends unknown[] = unknown[],
+>(
+  args: DeployContractProperties<A> & { userSalt?: string },
+) => Promise<{
   deployments: DeployedContractsOnChains<T>[];
 }>;
