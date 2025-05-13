@@ -12,14 +12,10 @@ export interface Create2Helpers {
     version?: number,
   ) => Promise<string>;
   deployOnChainsUsingCreate2: DeployOnChainsUsingCreate2;
-  deployCreate2Factory: ({
-    signer,
-    version,
-    fundingDeployerWith,
-  }: {
-    signer: Signer;
+  deployCreate2Factory: (props?: {
+    signer?: string;
     version?: number;
-    fundingDeployerWith?: number;
+    fundingDeployerWith?: string;
   }) => Promise<
     {
       contract: unknown;
