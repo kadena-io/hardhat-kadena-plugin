@@ -1,7 +1,7 @@
 import { ContractMethodArgs, Overrides, Signer } from 'ethers';
 import './type.js';
 import { CHAIN_ID_ABI } from './utils/network-contracts.js';
-import { FactoryOptions, KadenaNetworkConfig } from 'hardhat/types';
+import { FactoryOptions } from 'hardhat/types';
 import { BaseContract } from 'ethers';
 import { ContractTransactionResponse } from 'ethers';
 import { ChainwebNetwork } from './utils/chainweb.js';
@@ -9,7 +9,6 @@ import hre from 'hardhat';
 import { getNetworkStem, Origin } from './pure-utils.js';
 
 const networkStem = getNetworkStem(hre.config.defaultChainweb);
-const { ethers, network } = hre;
 
 export function getNetworks() {
   return Object.keys(hre.config.networks).filter((net) =>
@@ -19,16 +18,16 @@ export function getNetworks() {
 
 export function getChainIdContract() {
   const chainweb = hre.config.chainweb[hre.config.defaultChainweb];
-  return new ethers.Contract(
+  return new hre.ethers.Contract(
     chainweb.precompiles.chainwebChainId,
     CHAIN_ID_ABI,
-    ethers.provider,
+    hre.ethers.provider,
   );
 }
 
 export async function callChainIdContract() {
   const chainweb = hre.config.chainweb[hre.config.defaultChainweb];
-  const hex = await ethers.provider.send('eth_call', [
+  const hex = await hre.ethers.provider.send('eth_call', [
     { to: chainweb.precompiles.chainwebChainId },
     'latest',
     {},
@@ -57,7 +56,7 @@ export const deployContractOnChains: DeployContractOnChains = async ({
 }) => {
   const deployments = await runOverChains(async (cwId) => {
     try {
-      const [defaultDeployer] = await ethers.getSigners();
+      const [defaultDeployer] = await hre.ethers.getSigners();
 
       const contractDeployer =
         signer ?? factoryOptions?.signer ?? defaultDeployer;
@@ -68,7 +67,7 @@ export const deployContractOnChains: DeployContractOnChains = async ({
       );
 
       /* Deploy the contract */
-      const factory = await ethers.getContractFactory(name, {
+      const factory = await hre.ethers.getContractFactory(name, {
         signer: contractDeployer,
         ...factoryOptions,
       });

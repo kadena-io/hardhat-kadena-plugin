@@ -3,7 +3,7 @@ import { HardhatEthersSigner, Signers } from './utils/utils';
 
 import { expect } from 'chai';
 
-import hre, { ethers, chainweb, switchNetwork } from 'hardhat';
+import { ethers, chainweb, switchNetwork } from 'hardhat';
 import { ZeroAddress } from 'ethers';
 import {
   authorizeContracts,
