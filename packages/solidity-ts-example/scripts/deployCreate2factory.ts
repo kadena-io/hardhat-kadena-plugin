@@ -1,17 +1,43 @@
-import { chainweb } from 'hardhat';
+import { chainweb, ethers } from 'hardhat';
 
 async function main() {
   await chainweb.switchChain(0);
 
-  const result = await chainweb.create2Helpers.deployCreate2Factory();
+  const deployFactory = await chainweb.create2Helpers.deployCreate2Factory();
 
   console.log(
     'deployCreate2Factory',
-    result.map((r) => ({ chain: r.chain, address: r.address })),
+    deployFactory.map((r) => ({ chain: r.chain, address: r.address })),
   );
+
+  const deployed = await chainweb.create2Helpers.deployOnChainsUsingCreate2({
+    name: 'SimpleToken',
+    constructorArgs: [ethers.parseUnits('1000000')],
+  });
+
+  if (deployed.deployments.length === 0) {
+    console.log('No contracts deployed');
+    return;
+  }
+  console.log('Contracts deployed');
+
+  deployed.deployments.forEach(async (deployment) => {
+    console.log(`${deployment.address} on ${deployment.chain}`);
+  });
 }
 
-main().catch((error) => {
-  console.error(error);
-  process.exitCode = 1;
-});
+main()
+  .then(() => {
+    console.log('Running main for the second time');
+    console.log(
+      'So the process should skip deploying the proxy and contracts as they are already deployed',
+    );
+    return main();
+  })
+  .then(() => {
+    process.exit(0);
+  })
+  .catch((error) => {
+    console.error(error);
+    process.exitCode = 1;
+  });

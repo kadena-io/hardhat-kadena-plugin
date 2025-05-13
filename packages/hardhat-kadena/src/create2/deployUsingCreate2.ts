@@ -3,7 +3,10 @@ import { DeployOnChainsUsingCreate2, getNetworkStem, getUtils } from '../utils';
 import { ChainwebNetwork } from '../utils/chainweb';
 import { getBytes, Signer } from 'ethers';
 import { HardhatEthersSigner } from '@nomicfoundation/hardhat-ethers/signers';
-import { getCreate2FactoryUtils } from './deployCreate2Factory';
+import {
+  create2Artifacts,
+  getCreate2FactoryUtils,
+} from './deployCreate2Factory';
 
 export const getCreate2Utils = (
   hre: HardhatRuntimeEnvironment,
@@ -27,7 +30,7 @@ export const getCreate2Utils = (
 
     // The user salt is expected to be 12 bytes (Kadena user salt)
     const userSaltBytes = getBytes(
-      ethers.dataSlice(ethers.id(userSalt), USER_SALT_LENGTH),
+      ethers.dataSlice(ethers.id(userSalt), 0, USER_SALT_LENGTH),
     );
     if (senderBytes.length !== ADDRESS_LENGTH) {
       throw new Error(`Sender address must be ${ADDRESS_LENGTH} bytes`);
@@ -38,8 +41,8 @@ export const getCreate2Utils = (
     // Concatenate the sender address and user salt
     const result = new Uint8Array(USER_SALT_LENGTH + ADDRESS_LENGTH);
     result.set(senderBytes, 0);
-    result.set(userSaltBytes, USER_SALT_LENGTH);
-    return result;
+    result.set(userSaltBytes, ADDRESS_LENGTH);
+    return [result, ethers.toBigInt(userSaltBytes)] as const;
   }
 
   async function predictCreate2Address(
@@ -48,10 +51,11 @@ export const getCreate2Utils = (
     userSalt: string,
   ) {
     const factoryAddress = await getCreate2FactoryAddress(signer);
+    const [salt] = createSalt(await signer.getAddress(), userSalt);
 
     const predictedAddress = ethers.getCreate2Address(
       factoryAddress,
-      createSalt(await signer.getAddress(), userSalt),
+      salt,
       ethers.keccak256(contractBytecode),
     );
 
@@ -65,15 +69,17 @@ export const getCreate2Utils = (
   ) {
     const factoryAddress = await getCreate2FactoryAddress(signer);
 
-    const Factory = await hre.ethers.getContractFactory('Create2Factory', {
-      signer: signer,
-    });
+    const Factory = await hre.ethers.getContractFactory(
+      create2Artifacts.abi,
+      create2Artifacts.bin,
+      signer,
+    );
 
     const create2 = Factory.attach(factoryAddress);
 
     const senderAddress = await signer.getAddress();
 
-    const salt = createSalt(senderAddress, userSalt);
+    const [salt, userSaltBigInt] = createSalt(senderAddress, userSalt);
 
     // Compute the predicted address
 
@@ -83,6 +89,20 @@ export const getCreate2Utils = (
       ethers.keccak256(contractBytecode),
     );
 
+    const computedAddress = await create2.computeAddress(
+      contractBytecode,
+      userSaltBigInt,
+    );
+
+    if (computedAddress !== predictedAddress) {
+      console.log(
+        `ADDRESS MISMATCH: computed address (${computedAddress}) != predicted address (${predictedAddress})`,
+      );
+      throw new Error(
+        `ADDRESS MISMATCH: computed address (${computedAddress}) != predicted address (${predictedAddress})`,
+      );
+    }
+
     if (await isContractDeployed(predictedAddress)) {
       console.log(
         `Contract already deployed at ${predictedAddress}. Skipping deployment.`,
@@ -91,7 +111,7 @@ export const getCreate2Utils = (
     }
 
     // Deploy using CREATE2
-    const tx = await create2.deploy(contractBytecode, userSalt);
+    const tx = await create2.deploy(contractBytecode, userSaltBigInt);
     await tx.wait();
 
     if (!(await isContractDeployed(predictedAddress))) {

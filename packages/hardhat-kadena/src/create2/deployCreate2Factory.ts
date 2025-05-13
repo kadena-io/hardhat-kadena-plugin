@@ -10,6 +10,9 @@ import { getNetworkStem, getUtils } from '../utils';
 
 import create2Artifact from '../../build/create2-factory/combined.json';
 
+export const create2Artifacts =
+  create2Artifact.contracts['contracts/Create2Factory.sol:Create2Factory'];
+
 export const getCreate2FactoryUtils = (hre: HardhatRuntimeEnvironment) => {
   const { ethers } = hre;
   const { runOverChains } = getUtils(hre);
@@ -117,12 +120,8 @@ export const getCreate2FactoryUtils = (hre: HardhatRuntimeEnvironment) => {
         );
 
         const Factory = await hre.ethers.getContractFactory(
-          create2Artifact.contracts[
-            'contracts/Create2Factory.sol:Create2Factory'
-          ].abi,
-          create2Artifact.contracts[
-            'contracts/Create2Factory.sol:Create2Factory'
-          ].bin,
+          create2Artifacts.abi,
+          create2Artifacts.bin,
         );
         const create2 = Factory.attach(factoryAddress);
 
