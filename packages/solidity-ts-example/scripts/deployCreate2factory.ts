@@ -1,8 +1,6 @@
 import { chainweb, ethers } from 'hardhat';
 
 async function main() {
-  await chainweb.switchChain(0);
-
   const deployFactory = await chainweb.create2Helpers.deployCreate2Factory();
 
   console.log(

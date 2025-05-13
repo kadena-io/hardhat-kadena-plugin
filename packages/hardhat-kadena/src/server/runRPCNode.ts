@@ -39,7 +39,6 @@ export async function runRPCNode(
   const chainweb = hre.config.chainweb[hre.config.defaultChainweb];
 
   if (chainweb) {
-    // TODO: run my network
     const providers: [chainId: number, provider: EIP1193Provider][] =
       await Promise.all(
         (await hre.chainweb.getChainIds()).map(

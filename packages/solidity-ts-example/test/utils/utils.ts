@@ -128,7 +128,6 @@ export const CrossChainOperation = {
 };
 
 export async function getSigners() {
-  await switchChain(0);
   const [deployer, alice, bob, carol] = await ethers.getSigners();
   return {
     deployer,

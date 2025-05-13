@@ -40,7 +40,7 @@ router.route(
   ({ chainId }, { failure, proxy }, { handlers }) => {
     const handler = handlers.find(([id]) => parseInt(chainId) === id)?.[1];
     if (handler === undefined) {
-      return failure(`chainweb index ${chainId} is not found`, 404);
+      return failure(`NOT FOUND: ChainwebChainId (${chainId})`, 404);
     }
     return proxy(handler);
   },

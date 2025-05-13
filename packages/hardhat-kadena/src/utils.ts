@@ -41,11 +41,9 @@ export async function runOverChains<T>(
 ) {
   const result: Array<T> = [];
   const chainwebChainIds = await hre.chainweb.getChainIds();
-  for (const chainId of chainwebChainIds) {
-    await hre.chainweb.switchChain(chainId);
-    const cid = (network.config as KadenaNetworkConfig).chainwebChainId;
-    console.log(`Switched to network ${cid}`);
-    result.push(await callback(chainId));
+  for (const cid of chainwebChainIds) {
+    await hre.chainweb.switchChain(cid);
+    result.push(await callback(cid));
   }
   return result;
 }
@@ -59,7 +57,6 @@ export const deployContractOnChains: DeployContractOnChains = async ({
 }) => {
   const deployments = await runOverChains(async (cwId) => {
     try {
-      console.log(`Switched to network ${cwId}`);
       const [defaultDeployer] = await ethers.getSigners();
 
       const contractDeployer =
@@ -165,6 +162,15 @@ export async function createTamperedProof(
 
   return '0x' + Buffer.from(bytes).toString('hex');
 }
+
+export const getChainIds = async () => {
+  const chainweb = hre.config.chainweb[hre.config.defaultChainweb];
+  return Promise.resolve(
+    new Array(chainweb.chains)
+      .fill(0)
+      .map((_, i) => i + chainweb.chainwebChainIdOffset),
+  );
+};
 
 export type DeployedContractsOnChains<T extends BaseContract = BaseContract> = {
   contract: T & {

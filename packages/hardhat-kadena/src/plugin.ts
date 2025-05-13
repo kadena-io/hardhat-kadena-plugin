@@ -38,22 +38,28 @@ extendConfig((config, userConfig) => {
     userConfig.defaultChainweb ??
     'hardhat';
 
-  const hardhatConfig = {
+  const defaultChainwebChainIdOffset = 0;
+
+  const hardhatConfig: ChainwebInProcessUserConfig = {
     chains: 2,
+    chainwebChainIdOffset: defaultChainwebChainIdOffset,
     ...userConfig.chainweb.hardhat,
     type: 'in-process',
+  };
+
+  const localhostConfig: ChainwebExternalUserConfig = {
+    chains: hardhatConfig.chains,
+    chainIdOffset: hardhatConfig.chainIdOffset ?? 626000,
+    externalHostUrl: 'http://localhost:8545',
+    chainwebChainIdOffset: hardhatConfig.chainwebChainIdOffset,
+    ...userConfig.chainweb['localhost'],
+    type: 'external',
   };
 
   const userConfigWithLocalhost = {
     ...userConfig.chainweb,
     hardhat: hardhatConfig,
-    localhost: {
-      chains: hardhatConfig.chains,
-      chainIdOffset: hardhatConfig.chainIdOffset ?? 626000,
-      externalHostUrl: 'http://localhost:8545',
-      ...userConfig.chainweb['localhost'],
-      type: 'external',
-    },
+    localhost: localhostConfig,
   };
 
   if (!(config.defaultChainweb in userConfigWithLocalhost)) {
@@ -93,12 +99,23 @@ extendConfig((config, userConfig) => {
             );
           }
         }
+
+        const offset = chainwebInProcessUserConfig.chainwebChainIdOffset ?? 0;
+
+        const graphWithOffset = createGraph(
+          chainwebInProcessUserConfig.chains,
+        ).reduce(
+          (acc, targets, source) => ({
+            ...acc,
+            [source + offset]: targets.map((target) => target + offset),
+          }),
+          {},
+        );
+
         // add networks to hardhat
 
         const chainwebConfig: ChainwebInProcessConfig = {
-          graph:
-            chainwebInProcessUserConfig.graph ??
-            createGraph(chainwebInProcessUserConfig.chains),
+          graph: chainwebInProcessUserConfig.graph ?? graphWithOffset,
           logging: 'info',
           type: 'in-process',
           chainIdOffset: 626000,
@@ -107,6 +124,7 @@ extendConfig((config, userConfig) => {
             chainwebChainId: CHAIN_ID_ADDRESS,
             spvVerify: VERIFY_ADDRESS,
           },
+          chainwebChainIdOffset: defaultChainwebChainIdOffset,
           ...chainwebInProcessUserConfig,
         };
 
@@ -126,6 +144,7 @@ extendConfig((config, userConfig) => {
               : undefined,
             networkOptions: chainwebConfig.networkOptions,
             chainIdOffset: chainwebConfig.chainIdOffset,
+            chainwebChainIdOffset: chainwebConfig.chainwebChainIdOffset,
           }),
         };
         config.chainweb[name] = chainwebConfig;
@@ -137,6 +156,7 @@ extendConfig((config, userConfig) => {
           chainIdOffset: 626000,
           externalHostUrl: 'http://localhost:8545',
           accounts: 'remote',
+          chainwebChainIdOffset: defaultChainwebChainIdOffset,
           ...externalUserConfig,
           precompiles: {
             chainwebChainId:
@@ -157,6 +177,7 @@ extendConfig((config, userConfig) => {
             baseUrl: chainwebConfig.externalHostUrl,
             networkOptions: chainwebConfig.networkOptions,
             chainIdOffset: chainwebConfig.chainIdOffset,
+            chainwebChainIdOffset: chainwebConfig.chainwebChainIdOffset,
           }),
         };
         config.chainweb[name] = chainwebConfig;
@@ -171,7 +192,6 @@ const createExternalProvider = async (
 ): Promise<Omit<ChainwebPluginApi, 'initialize'>> => {
   const utils = await import('./utils.js');
   const create2Helpers = await import('./create2/index.js');
-  const chainweb = hre.config.chainweb[chainwebName];
   const networkStem = getNetworkStem(chainwebName);
   return {
     deployContractOnChains: utils.deployContractOnChains,
@@ -184,12 +204,13 @@ const createExternalProvider = async (
     switchChain: async (cid: number | string) => {
       if (typeof cid === 'string') {
         await hre.switchNetwork(cid);
+        console.log(`Switched to ${cid}`);
       } else {
+        console.log(`Switched to ${networkStem}${cid}`);
         await hre.switchNetwork(`${networkStem}${cid}`);
       }
     },
-    getChainIds: () =>
-      Promise.resolve(new Array(chainweb.chains).fill(0).map((_, i) => i)),
+    getChainIds: utils.getChainIds,
     callChainIdContract: utils.callChainIdContract,
     createTamperedProof: (targetChain, origin) =>
       utils.createTamperedProof(targetChain, origin),
@@ -274,7 +295,7 @@ const createInternalProvider = async (
       if ('web3' in hre) {
         hre.web3 = new Web3(provider);
       }
-      console.log(`Switched to chain ${cid}`);
+      console.log(`Switched to ${cid}`);
       return;
     }
     originalSwitchNetwork(networkName);
@@ -299,8 +320,7 @@ const createInternalProvider = async (
         await hre.switchNetwork(`${networkStem}${cid}`);
       }
     },
-    getChainIds: () =>
-      Promise.resolve(new Array(chainweb.chains).fill(0).map((_, i) => i)),
+    getChainIds: utils.getChainIds,
     callChainIdContract: utils.callChainIdContract,
     createTamperedProof: (targetChain, origin) =>
       utils.createTamperedProof(targetChain, origin, chainwebNetwork),
@@ -450,7 +470,8 @@ task('test', `Run mocha tests; Supports Chainweb`)
     hre.chainweb.initialize();
 
     if (!process.argv.includes('--network')) {
-      await hre.chainweb.switchChain(0);
+      const [first] = await hre.chainweb.getChainIds();
+      await hre.chainweb.switchChain(first);
     }
 
     return runSuper(taskArgs);
