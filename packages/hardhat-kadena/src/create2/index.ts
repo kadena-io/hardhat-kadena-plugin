@@ -1,7 +1,5 @@
-import { HardhatRuntimeEnvironment } from 'hardhat/types';
-import { getCreate2FactoryUtils } from './deployCreate2Factory';
-import { getCreate2Utils } from './deployUsingCreate2';
-import { ChainwebNetwork } from '../utils/chainweb';
+export * from './deployCreate2Factory';
+export * from './deployUsingCreate2';
 import { Signer } from 'ethers';
 import { HardhatEthersSigner } from '@nomicfoundation/hardhat-ethers/signers';
 import { DeployOnChainsUsingCreate2 } from '../utils';
@@ -34,23 +32,3 @@ export interface Create2Helpers {
     userSalt: string,
   ) => Promise<string>;
 }
-
-export const getCreate2Helpers = (
-  hre: HardhatRuntimeEnvironment,
-  chainwebNetwork?: ChainwebNetwork,
-): Create2Helpers => {
-  const { getCreate2FactoryAddress, deployCreate2Factory } =
-    getCreate2FactoryUtils(hre);
-
-  const { deployOnChainsUsingCreate2, predictCreate2Address } = getCreate2Utils(
-    hre,
-    chainwebNetwork,
-  );
-
-  return {
-    getCreate2FactoryAddress,
-    deployCreate2Factory,
-    deployOnChainsUsingCreate2,
-    predictCreate2Address,
-  };
-};

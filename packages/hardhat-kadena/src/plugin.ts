@@ -13,14 +13,13 @@ import {
   getKadenaNetworks,
 } from './utils/configure.js';
 import { createGraph } from './utils/chainweb-graph.js';
-import { getNetworkStem, getUtils } from './utils.js';
 import { HardhatEthersProvider } from '@nomicfoundation/hardhat-ethers/internal/hardhat-ethers-provider.js';
 import Web3 from 'web3';
 import { runRPCNode } from './server/runRPCNode.js';
 import { CHAIN_ID_ADDRESS, VERIFY_ADDRESS } from './utils/network-contracts.js';
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
 import picocolors from 'picocolors';
-import { getCreate2Helpers } from './create2/index.js';
+import { computeOriginHash, getNetworkStem } from './pure-utils.js';
 
 extendConfig((config, userConfig) => {
   if (!userConfig.chainweb) {
@@ -166,20 +165,22 @@ extendConfig((config, userConfig) => {
   );
 });
 
-const createExternalProvider = (
+const createExternalProvider = async (
   hre: HardhatRuntimeEnvironment,
   chainwebName: string,
-): Omit<ChainwebPluginApi, 'initialize'> => {
+): Promise<Omit<ChainwebPluginApi, 'initialize'>> => {
+  const utils = await import('./utils.js');
+  const create2Helpers = await import('./create2/index.js');
   const chainweb = hre.config.chainweb[chainwebName];
   const networkStem = getNetworkStem(chainwebName);
-  const utils = getUtils(hre);
   return {
     deployContractOnChains: utils.deployContractOnChains,
     getProvider: (cid: number) => {
       const name = `${networkStem}${cid}`;
       return createProvider(hre.config, name, hre.artifacts);
     },
-    requestSpvProof: utils.requestSpvProof,
+    requestSpvProof: (targetChain, origin) =>
+      utils.requestSpvProof(targetChain, origin),
     switchChain: async (cid: number | string) => {
       if (typeof cid === 'string') {
         await hre.switchNetwork(cid);
@@ -187,24 +188,28 @@ const createExternalProvider = (
         await hre.switchNetwork(`${networkStem}${cid}`);
       }
     },
-    getChainIds: () => new Array(chainweb.chains).fill(0).map((_, i) => i),
+    getChainIds: () =>
+      Promise.resolve(new Array(chainweb.chains).fill(0).map((_, i) => i)),
     callChainIdContract: utils.callChainIdContract,
-    createTamperedProof: utils.createTamperedProof,
-    computeOriginHash: utils.computeOriginHash,
+    createTamperedProof: (targetChain, origin) =>
+      utils.createTamperedProof(targetChain, origin),
+    computeOriginHash: computeOriginHash,
     runOverChains: utils.runOverChains,
-    create2Helpers: getCreate2Helpers(hre),
+    create2Helpers,
   };
 };
 
-const createInternalProvider = (
+const createInternalProvider = async (
   hre: HardhatRuntimeEnvironment,
   chainwebName: string,
   overrideForking?: { url: string; blockNumber?: number },
-): Omit<ChainwebPluginApi, 'initialize'> => {
+): Promise<Omit<ChainwebPluginApi, 'initialize'>> => {
   const chainweb = hre.config.chainweb[chainwebName];
   if (!chainweb || chainweb.type !== 'in-process') {
     throw new Error('Chainweb configuration not found');
   }
+  const utils = await import('./utils.js');
+  const create2Helpers = await import('./create2/index.js');
   const networkStem = getNetworkStem(chainwebName);
   const chainwebNetwork = new ChainwebNetwork({
     chainweb,
@@ -275,8 +280,6 @@ const createInternalProvider = (
     originalSwitchNetwork(networkName);
   };
 
-  const utils = getUtils(hre, chainwebNetwork);
-
   spinupChainweb();
 
   return {
@@ -286,7 +289,8 @@ const createInternalProvider = (
       const provider = chainwebNetwork.getProvider(cid);
       return provider;
     },
-    requestSpvProof: utils.requestSpvProof,
+    requestSpvProof: (targetChain, origin) =>
+      utils.requestSpvProof(targetChain, origin, chainwebNetwork),
     switchChain: async (cid: number | string) => {
       await isNetworkReadyPromise;
       if (typeof cid === 'string') {
@@ -295,23 +299,30 @@ const createInternalProvider = (
         await hre.switchNetwork(`${networkStem}${cid}`);
       }
     },
-    getChainIds: () => new Array(chainweb.chains).fill(0).map((_, i) => i),
+    getChainIds: () =>
+      Promise.resolve(new Array(chainweb.chains).fill(0).map((_, i) => i)),
     callChainIdContract: utils.callChainIdContract,
-    createTamperedProof: utils.createTamperedProof,
-    computeOriginHash: utils.computeOriginHash,
+    createTamperedProof: (targetChain, origin) =>
+      utils.createTamperedProof(targetChain, origin, chainwebNetwork),
+    computeOriginHash,
     runOverChains: utils.runOverChains,
-    create2Helpers: getCreate2Helpers(hre),
+    create2Helpers,
   };
 };
 
 // const spinupChainweb = () =>
 extendEnvironment((hre) => {
   let api: Omit<ChainwebPluginApi, 'initialize'> | undefined = undefined;
+  let initDone = () => {};
+  const init = new Promise<void>((resolve) => {
+    initDone = resolve;
+  });
 
   const safeCall =
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     <T extends () => (...args: any) => any>(cb: T) =>
-      (...args: Parameters<T>) => {
+      async (...args: Parameters<T>) => {
+        await init;
         if (api !== undefined) {
           return cb()(...args);
         }
@@ -335,14 +346,15 @@ extendEnvironment((hre) => {
       );
 
       if (chainweb.type === 'external') {
-        api = createExternalProvider(hre, hre.config.defaultChainweb);
+        api = await createExternalProvider(hre, hre.config.defaultChainweb);
       } else {
-        api = createInternalProvider(
+        api = await createInternalProvider(
           hre,
           hre.config.defaultChainweb,
           args?.forking,
         );
       }
+      initDone();
     },
     getProvider: safeCall(() => api!.getProvider),
     requestSpvProof: safeCall(() => api!.requestSpvProof),
@@ -351,7 +363,7 @@ extendEnvironment((hre) => {
     callChainIdContract: safeCall(() => api!.callChainIdContract),
     deployContractOnChains: safeCall(() => api!.deployContractOnChains),
     createTamperedProof: safeCall(() => api!.createTamperedProof),
-    computeOriginHash: safeCall(() => api!.computeOriginHash),
+    computeOriginHash,
     runOverChains: safeCall(() => api!.runOverChains),
     create2Helpers: {
       getCreate2FactoryAddress: safeCall(

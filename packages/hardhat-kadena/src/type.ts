@@ -69,7 +69,7 @@ export interface ChainwebPluginApi {
     origin: Omit<Origin, 'originContractAddress'>,
   ) => Promise<string>;
   switchChain: (cid: number) => Promise<void>;
-  getChainIds: () => number[];
+  getChainIds: () => Promise<number[]>;
   callChainIdContract: () => Promise<number>;
   deployContractOnChains: DeployContractOnChains;
   createTamperedProof: (targetChain: number, origin: Origin) => Promise<string>;
