@@ -1,7 +1,7 @@
 {
   "$schema": "http://json.schemastore.org/tsconfig",
   "compilerOptions": {
-    "outDir": "lib/cjs",
+    "outDir": "lib",
     "rootDir": "./src",
     "forceConsistentCasingInFileNames": true,
     "jsx": "react",
@@ -20,6 +20,7 @@
     "skipLibCheck": true,
     "allowJs": true,
     "module": "commonjs",
+    "resolveJsonModule": true,
     "types": [
       "node",
       "hardhat/types",

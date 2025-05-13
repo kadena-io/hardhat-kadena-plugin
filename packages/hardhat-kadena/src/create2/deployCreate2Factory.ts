@@ -8,6 +8,8 @@ import {
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
 import { getNetworkStem, getUtils } from '../utils';
 
+import create2Artifact from '../../build/create2-factory/combined.json';
+
 export const getCreate2FactoryUtils = (hre: HardhatRuntimeEnvironment) => {
   const { ethers } = hre;
   const { runOverChains } = getUtils(hre);
@@ -114,7 +116,14 @@ export const getCreate2FactoryUtils = (hre: HardhatRuntimeEnvironment) => {
           `the factory address ${factoryAddress} is already deployed`,
         );
 
-        const Factory = await ethers.getContractFactory('Create2Factory');
+        const Factory = await hre.ethers.getContractFactory(
+          create2Artifact.contracts[
+            'contracts/Create2Factory.sol:Create2Factory'
+          ].abi,
+          create2Artifact.contracts[
+            'contracts/Create2Factory.sol:Create2Factory'
+          ].bin,
+        );
         const create2 = Factory.attach(factoryAddress);
 
         console.log(
@@ -163,9 +172,13 @@ export const getCreate2FactoryUtils = (hre: HardhatRuntimeEnvironment) => {
       }
 
       /* Deploy the contract */
-      const factory = await ethers.getContractFactory('Create2Factory', {
-        signer: secondaryKey,
-      });
+      const factory = await hre.ethers.getContractFactory(
+        create2Artifact.contracts['contracts/Create2Factory.sol:Create2Factory']
+          .abi,
+        create2Artifact.contracts['contracts/Create2Factory.sol:Create2Factory']
+          .bin,
+        secondaryKey,
+      );
       const contract = await factory.deploy();
       const deploymentTx = contract.deploymentTransaction();
       if (!deploymentTx) {
