@@ -12,7 +12,11 @@ const config: HardhatUserConfig = {
   solidity: '0.8.28',
   chainweb: {
     hardhat: {
-      chains: 20,
+      chains: 2,
+      chainwebChainIdOffset: 20,
+      networkOptions: {
+        allowUnlimitedContractSize: true,
+      },
     },
     devnet: {
       chains: 2,
