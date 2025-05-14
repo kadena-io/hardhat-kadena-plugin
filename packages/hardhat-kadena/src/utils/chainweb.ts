@@ -170,7 +170,7 @@ function makeChainweb(
   const graph = config.chainweb.graph;
   const networks = config.networks;
 
-  // Create Indiviual Chains
+  // Create Individual Chains
   logger.info('creating chains');
   const chains: Record<number, Chain> = {};
   for (const networkName in networks) {

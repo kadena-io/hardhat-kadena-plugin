@@ -20,6 +20,7 @@ export interface ChainwebInProcessUserConfig {
   type?: 'in-process';
   chainIdOffset?: number;
   networkOptions?: HardhatNetworkUserConfig;
+  chainwebChainIdOffset?: number;
 }
 
 export interface ChainwebInProcessConfig
@@ -41,6 +42,7 @@ export interface ChainwebExternalUserConfig {
     chainwebChainId?: string;
     spvVerify?: string;
   };
+  chainwebChainIdOffset?: number;
   networkOptions?: Omit<HttpNetworkUserConfig, 'chainId' | 'url'>;
 }
 
@@ -91,6 +93,7 @@ declare module 'hardhat/types' {
   interface HardhatUserConfig {
     chainweb: {
       hardhat?: ChainwebInProcessUserConfig;
+      localhost?: ChainwebExternalUserConfig;
       [chainwebName: string]: ChainwebUserConfig | undefined;
     };
     defaultChainweb?: string;

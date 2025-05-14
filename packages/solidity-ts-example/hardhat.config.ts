@@ -13,11 +13,9 @@ const config: HardhatUserConfig = {
   chainweb: {
     hardhat: {
       chains: 2,
+      chainwebChainIdOffset: 20,
       networkOptions: {
         allowUnlimitedContractSize: true,
-        // forking: {
-        //   url: 'https://eth.drpc.org',
-        // },
       },
     },
     devnet: {
