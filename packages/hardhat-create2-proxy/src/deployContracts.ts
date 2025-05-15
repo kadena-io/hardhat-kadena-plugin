@@ -1,5 +1,5 @@
 import { DeployUsingCreate2 } from './type';
-import { BytesLike, getBytes, Signer } from 'ethers';
+import { BytesLike, getBytes, Signer, Overrides } from 'ethers';
 import { HardhatEthersSigner } from '@nomicfoundation/hardhat-ethers/signers';
 import { getNetworkStem } from '@kadena/hardhat-chainweb';
 
@@ -39,6 +39,7 @@ export async function predictContractAddress(
 async function deployContract(
   contractBytecode: string,
   signer: Signer | HardhatEthersSigner,
+  overrides: Overrides | undefined,
   salt: BytesLike,
 ) {
   const factoryAddress = await getCreate2FactoryAddress(signer);
@@ -81,7 +82,11 @@ async function deployContract(
   }
 
   // Deploy using CREATE2
-  const tx = await create2.deploy(contractBytecode, ethers.toBigInt(salt));
+  const tx = await create2.deploy(
+    contractBytecode,
+    ethers.toBigInt(salt),
+    { value: overrides?.value || 0 }
+  );
   await tx.wait();
 
   if (!(await isContractDeployed(predictedAddress))) {
@@ -131,6 +136,7 @@ export const deployUsingCreate2: DeployUsingCreate2 = async ({
       const contractAddress = await deployContract(
         bytecode,
         contractDeployer,
+        overrides,
         salt,
       );
 
