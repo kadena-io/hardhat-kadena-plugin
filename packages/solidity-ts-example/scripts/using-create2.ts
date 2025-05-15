@@ -8,7 +8,7 @@ async function main() {
     deployFactory.map((r) => ({ chain: r.chain, address: r.address })),
   );
 
-  const deployed = await chainweb.create2.deployContractOnChainsDeterministic({
+  const deployed = await chainweb.create2.deployUsingCreate2({
     name: 'SimpleToken',
     constructorArgs: [ethers.parseUnits('1000000')],
   });

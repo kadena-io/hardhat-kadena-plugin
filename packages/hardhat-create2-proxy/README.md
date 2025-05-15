@@ -94,7 +94,7 @@ export interface Create2Helpers {
   >;
 
   // deploy your contracts using create2
-  deployContractOnChainsDeterministic: (args: {
+  deployUsingCreate2: (args: {
     name: string;
     signer?: Signer;
     factoryOptions?: FactoryOptions;
