@@ -1,0 +1,75 @@
+{
+  "name": "@kadena/hardhat-create2-proxy",
+  "version": "1.4.6",
+  "description": "Hardhat plugin for deploying deterministic create2proxy contract",
+  "author": "Javad Khalilian <javad@kadena.io>",
+  "contributors": [
+    "Lars Kuhtz <lars@kadena.io>",
+    "Javad Khalilian <javad@kadena.io>"
+  ],
+  "main": "./lib/index.js",
+  "types": "./lib/index.d.ts",
+  "scripts": {
+    "build": "eslint && tsc",
+    "compile": "solc --optimize --combined-json abi,bin ./contracts/Create2Factory.sol -o ./build/create2-factory --overwrite",
+    "dev": "eslint && tsc --watch",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/kadena-io/hardhat-kadena-plugin.git"
+  },
+  "keywords": [
+    "hardhat",
+    "kadena",
+    "chainweb",
+    "ethereum",
+    "hardhat-plugin"
+  ],
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/kadena-io/hardhat-kadena-plugin/issues"
+  },
+  "homepage": "https://github.com/kadena-io/hardhat-kadena-plugin/tree/main/packages/hardhat-kadena#readme",
+  "dependencies": {
+    "@kadena/hardhat-chainweb": "../hardhat-kadena",
+    "@nomicfoundation/ethereumjs-util": "^9.0.4",
+    "@types/node": "^22.13.1",
+    "async-lock": "^1.4.1",
+    "hardhat-switch-network": "^1.2.0",
+    "minimist": "^1.2.8",
+    "path-to-regexp": "^8.2.0",
+    "picocolors": "^1.1.1",
+    "undici": "^5.14.0",
+    "ws": "^7.4.6"
+  },
+  "peerDependencies": {
+    "@nomicfoundation/hardhat-ethers": "^3.0.8",
+    "@nomicfoundation/hardhat-toolbox": "^5.0.0",
+    "chai": "^4.2.0",
+    "ethers": "^6.1.0",
+    "hardhat": "^2.22.18",
+    "web3": "^4.16.0"
+  },
+  "devDependencies": {
+    "@nomicfoundation/hardhat-ethers": "^3.0.8",
+    "@nomicfoundation/hardhat-toolbox": "^5.0.0",
+    "@types/async-lock": "^1.4.2",
+    "@types/minimist": "^1.2.5",
+    "@types/mocha": "^10.0.10",
+    "@types/ws": "^8.5.14",
+    "chai": "^4.2.0",
+    "ethers": "^6.1.0",
+    "hardhat": "^2.22.18",
+    "mocha": "^11.1.0",
+    "typescript": "^5.7.3",
+    "web3": "^4.16.0"
+  },
+  "files": [
+    "lib",
+    "build",
+    "src",
+    "tsconfig.json",
+    "README.md"
+  ]
+}
