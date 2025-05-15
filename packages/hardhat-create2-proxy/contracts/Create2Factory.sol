@@ -7,10 +7,11 @@ contract Create2Factory {
   function deploy(
     bytes memory bytecode,
     uint256 salt
-  ) public returns (address) {
+  ) public payable returns (address) {
     address addr;
+    uint256 value = msg.value;
     assembly {
-      addr := create2(0, add(bytecode, 0x20), mload(bytecode), salt)
+      addr := create2(value, add(bytecode, 0x20), mload(bytecode), salt)
       if iszero(extcodesize(addr)) {
         revert(0, 0)
       }
