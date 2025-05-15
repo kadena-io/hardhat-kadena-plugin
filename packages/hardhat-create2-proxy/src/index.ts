@@ -27,9 +27,7 @@ extendEnvironment((hre) => {
   hre.chainweb.create2 = {
     getCreate2FactoryAddress: safeCall((api) => api.getCreate2FactoryAddress),
     deployCreate2Factory: safeCall((api) => api.deployCreate2Factory),
-    deployContractOnChainsDeterministic: safeCall(
-      (api) => api.deployContractOnChainsDeterministic,
-    ),
+    deployUsingCreate2: safeCall((api) => api.deployUsingCreate2),
     predictContractAddress: safeCall((api) => api.predictContractAddress),
     deriveSecondaryKey: safeCall((api) => api.deriveSecondaryKey),
   };

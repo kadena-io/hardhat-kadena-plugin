@@ -1,4 +1,4 @@
-import { DeployContractOnChainsDeterministic } from './type';
+import { DeployUsingCreate2 } from './type';
 import { BytesLike, getBytes, Signer } from 'ethers';
 import { HardhatEthersSigner } from '@nomicfoundation/hardhat-ethers/signers';
 import { getNetworkStem } from '@kadena/hardhat-chainweb';
@@ -98,64 +98,63 @@ async function deployContract(
 /**
  * Deploy a contract on all chains in the network using create2.
  */
-export const deployContractOnChainsDeterministic: DeployContractOnChainsDeterministic =
-  async ({
-    name,
-    signer,
-    factoryOptions,
-    constructorArgs = [],
-    overrides,
-    salt = defaultSalt,
-  }) => {
-    const deployments = await chainweb.runOverChains(async (cwId) => {
-      try {
-        const [defaultDeployer] = await ethers.getSigners();
+export const deployUsingCreate2: DeployUsingCreate2 = async ({
+  name,
+  signer,
+  factoryOptions,
+  constructorArgs = [],
+  overrides,
+  salt = defaultSalt,
+}) => {
+  const deployments = await chainweb.runOverChains(async (cwId) => {
+    try {
+      const [defaultDeployer] = await ethers.getSigners();
 
-        const contractDeployer =
-          signer ?? factoryOptions?.signer ?? defaultDeployer;
+      const contractDeployer =
+        signer ?? factoryOptions?.signer ?? defaultDeployer;
 
-        const deployerAddress = await contractDeployer.getAddress();
-        console.log(
-          `Deploying with signer: ${deployerAddress} on network ${cwId}`,
-        );
+      const deployerAddress = await contractDeployer.getAddress();
+      console.log(
+        `Deploying with signer: ${deployerAddress} on network ${cwId}`,
+      );
 
-        const factory = await ethers.getContractFactory(name, {
-          signer: contractDeployer,
-          ...factoryOptions,
-        });
-        const transaction = await factory.getDeployTransaction(
-          ...(overrides ? [...constructorArgs, overrides] : constructorArgs),
-        );
-        // Prepare the bytecode of the contract to deploy
-        const bytecode = transaction.data;
+      const factory = await ethers.getContractFactory(name, {
+        signer: contractDeployer,
+        ...factoryOptions,
+      });
+      const transaction = await factory.getDeployTransaction(
+        ...(overrides ? [...constructorArgs, overrides] : constructorArgs),
+      );
+      // Prepare the bytecode of the contract to deploy
+      const bytecode = transaction.data;
 
-        const contractAddress = await deployContract(
-          bytecode,
-          contractDeployer,
-          salt,
-        );
+      const contractAddress = await deployContract(
+        bytecode,
+        contractDeployer,
+        salt,
+      );
 
-        const contract = factory.attach(contractAddress);
+      const contract = factory.attach(contractAddress);
 
-        // Store deployment info in both formats
-        return {
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          contract: contract as any,
-          address: contractAddress,
-          chain: cwId,
-          deployer: deployerAddress,
-          network: {
-            chainId: cwId,
-            name: `${networkStem}${cwId}`,
-          },
-        };
-      } catch (error) {
-        console.error(`Failed to deploy to network ${cwId}:`, error);
-        return null;
-      }
-    });
+      // Store deployment info in both formats
+      return {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        contract: contract as any,
+        address: contractAddress,
+        chain: cwId,
+        deployer: deployerAddress,
+        network: {
+          chainId: cwId,
+          name: `${networkStem}${cwId}`,
+        },
+      };
+    } catch (error) {
+      console.error(`Failed to deploy to network ${cwId}:`, error);
+      return null;
+    }
+  });
 
-    return {
-      deployments: deployments.filter((d) => d !== null),
-    };
+  return {
+    deployments: deployments.filter((d) => d !== null),
   };
+};

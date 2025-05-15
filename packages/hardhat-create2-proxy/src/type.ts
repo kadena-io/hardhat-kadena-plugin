@@ -5,7 +5,7 @@ import {
 import { HardhatEthersSigner } from '@nomicfoundation/hardhat-ethers/signers';
 import { BaseContract, BytesLike, Signer } from 'ethers';
 
-export type DeployContractOnChainsDeterministic = <
+export type DeployUsingCreate2 = <
   T extends BaseContract = BaseContract,
   A extends unknown[] = unknown[],
 >(
@@ -19,7 +19,7 @@ export interface Create2Helpers {
     signer: Signer,
     version?: number,
   ) => Promise<string>;
-  deployContractOnChainsDeterministic: DeployContractOnChainsDeterministic;
+  deployUsingCreate2: DeployUsingCreate2;
   deployCreate2Factory: (props?: {
     signer?: string;
     version?: number;
