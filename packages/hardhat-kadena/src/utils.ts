@@ -198,12 +198,3 @@ export type DeployContractOnChains = <
 ) => Promise<{
   deployments: DeployedContractsOnChains<T>[];
 }>;
-
-export type DeployOnChainsUsingCreate2 = <
-  T extends BaseContract = BaseContract,
-  A extends unknown[] = unknown[],
->(
-  args: DeployContractProperties<A> & { userSalt?: string },
-) => Promise<{
-  deployments: DeployedContractsOnChains<T>[];
-}>;

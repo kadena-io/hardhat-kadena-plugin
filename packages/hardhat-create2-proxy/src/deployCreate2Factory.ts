@@ -6,19 +6,22 @@ import {
   Wallet,
 } from 'ethers';
 
-import create2Artifact from '../../build/create2-factory/combined.json';
-import { getNetworkStem } from '../pure-utils';
-import { runOverChains } from '../utils';
-import hre, { ethers } from 'hardhat';
+import create2Artifact from '../build/create2-factory/combined.json';
+import hre, { chainweb, ethers } from 'hardhat';
+import { getNetworkStem } from '@kadena/hardhat-chainweb';
+
+const networkStem = getNetworkStem(hre.config.defaultChainweb);
+
+function isContractDeployed(address: string): Promise<boolean> {
+  return ethers.provider.getCode(address).then((code) => code !== '0x');
+}
 
 export const create2Artifacts =
   create2Artifact.contracts['contracts/Create2Factory.sol:Create2Factory'];
 
-const networkStem = getNetworkStem(hre.config.defaultChainweb);
-
 export const getCreate2FactoryAddress = async (
   signer: Signer,
-  version: number = 1,
+  version: number | bigint = BigInt(1),
 ) => {
   const secondaryKey = await deriveSecondaryKey(signer, version);
   const factoryAddress = getCreateAddress({
@@ -29,7 +32,10 @@ export const getCreate2FactoryAddress = async (
   return factoryAddress;
 };
 
-async function deriveSecondaryKey(signer: Signer, version: number = 1) {
+export async function deriveSecondaryKey(
+  signer: Signer,
+  version: number | bigint = BigInt(1),
+) {
   const message = `create deployer key for create2 factory version: ${version}`;
   const signature = await signer.signMessage(message);
 
@@ -74,9 +80,6 @@ export const deployCreate2Factory = async (props?: {
   fundingDeployerWith?: string;
 }) => {
   const { signer, version = 1, fundingDeployerWith = '1.0' } = props ?? {};
-  function isContractDeployed(address: string): Promise<boolean> {
-    return ethers.provider.getCode(address).then((code) => code !== '0x');
-  }
 
   let secondaryPrivateKey: string | undefined = undefined;
 
@@ -90,7 +93,7 @@ export const deployCreate2Factory = async (props?: {
     return new Wallet(secondaryPrivateKey, ethers.provider);
   };
 
-  return runOverChains(async (cwId) => {
+  return chainweb.runOverChains(async (cwId) => {
     console.log(`deploying create2 factory on chain ${cwId}`);
 
     const signers = await ethers.getSigners();
@@ -201,8 +204,3 @@ export const deployCreate2Factory = async (props?: {
     };
   });
 };
-
-// return {
-//   getCreate2FactoryAddress,
-//   deployCreate2Factory,
-// };

@@ -191,7 +191,6 @@ const createExternalProvider = async (
   chainwebName: string,
 ): Promise<Omit<ChainwebPluginApi, 'initialize'>> => {
   const utils = await import('./utils.js');
-  const create2Helpers = await import('./create2/index.js');
   const networkStem = getNetworkStem(chainwebName);
   return {
     deployContractOnChains: utils.deployContractOnChains,
@@ -216,7 +215,6 @@ const createExternalProvider = async (
       utils.createTamperedProof(targetChain, origin),
     computeOriginHash: computeOriginHash,
     runOverChains: utils.runOverChains,
-    create2Helpers,
   };
 };
 
@@ -230,7 +228,6 @@ const createInternalProvider = async (
     throw new Error('Chainweb configuration not found');
   }
   const utils = await import('./utils.js');
-  const create2Helpers = await import('./create2/index.js');
   const networkStem = getNetworkStem(chainwebName);
   const chainwebNetwork = new ChainwebNetwork({
     chainweb,
@@ -326,7 +323,6 @@ const createInternalProvider = async (
       utils.createTamperedProof(targetChain, origin, chainwebNetwork),
     computeOriginHash,
     runOverChains: utils.runOverChains,
-    create2Helpers,
   };
 };
 
@@ -385,20 +381,6 @@ extendEnvironment((hre) => {
     createTamperedProof: safeCall(() => api!.createTamperedProof),
     computeOriginHash,
     runOverChains: safeCall(() => api!.runOverChains),
-    create2Helpers: {
-      getCreate2FactoryAddress: safeCall(
-        () => api!.create2Helpers.getCreate2FactoryAddress,
-      ),
-      deployCreate2Factory: safeCall(
-        () => api!.create2Helpers.deployCreate2Factory,
-      ),
-      deployOnChainsUsingCreate2: safeCall(
-        () => api!.create2Helpers.deployOnChainsUsingCreate2,
-      ),
-      predictCreate2Address: safeCall(
-        () => api!.create2Helpers.predictCreate2Address,
-      ),
-    },
   };
   if (process.env['HK_INIT_CHAINWEB'] === 'true') {
     hre.chainweb.initialize();
