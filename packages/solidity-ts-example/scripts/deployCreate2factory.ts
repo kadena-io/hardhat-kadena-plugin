@@ -1,14 +1,14 @@
 import { chainweb, ethers } from 'hardhat';
 
 async function main() {
-  const deployFactory = await chainweb.create2Helpers.deployCreate2Factory();
+  const deployFactory = await chainweb.create2.deployCreate2Factory();
 
   console.log(
     'deployCreate2Factory',
     deployFactory.map((r) => ({ chain: r.chain, address: r.address })),
   );
 
-  const deployed = await chainweb.create2Helpers.deployOnChainsUsingCreate2({
+  const deployed = await chainweb.create2.deployContractOnChainsDeterministic({
     name: 'SimpleToken',
     constructorArgs: [ethers.parseUnits('1000000')],
   });

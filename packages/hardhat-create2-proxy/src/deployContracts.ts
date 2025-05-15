@@ -10,7 +10,7 @@ import {
   getCreate2FactoryAddress,
 } from './deployCreate2Factory';
 
-const defaultSalt = getBytes('KADENA/CREATE2/SALT');
+const defaultSalt = getBytes(hre.ethers.id('KADENA/CREATE2/SALT'));
 
 const networkStem = getNetworkStem(hre.config.defaultChainweb);
 

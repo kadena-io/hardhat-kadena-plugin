@@ -97,18 +97,18 @@ interface ChainwebUserConfig {
 
 ```
 
-| Property          | Type                                                           | Description                                                                                                                                                            |
-| ----------------- | -------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `accounts`        | `HardhatNetworkAccountsConfig` (optional)                      | Defines the accounts configuration for the network (default: Hardhat network accounts).                                                                                |
-| `chains`          | `number`                                                       | Specifies the number of chains in the Chainweb network.                                                                                                                |
-| `graph`           | `{ [key: number]: number[] }` (optional)                       | Defines the graph structure of the Chainweb network where keys represent chain IDs and values are arrays of connected chain IDs (default: Pearson graph).              |
-| `type`            | `'in-process' \| 'external'` (optional)                        | Defines Chainweb type: “in-process” uses the Hardhat network, and “external” uses an external network (which you need to add to the networks—default: `'in-process'`). |
-| `externalHostUrl` | `string` (optional)                                            | Defines the base url for external networks (default: `http://localhost:8545`)                                                                                          |
-| `logging`         | `'none' \| 'info' \| 'debug'` (optional)                       | Sets the logging level for debugging purposes (default: `"info"`).                                                                                                     |
-| `chainIdOffset`   | `number` (optional)                                            | network chain id offset (default: `626000`).     
-| `chainwebChainIdOffset`   | `number` (optional)                                            | chainweb chain id offset (default: `0`).                                                                                                                      |
-| `precompiles`     | `{ chainwebChainId?: string, spvVerify?: string }` (optional)  | if you are using external networks the precompile addresses might be different from the default ones so you can set them via this config                               |
-| `networkOptions`  | `HardhatNetworkUserConfig \| HttpNetworkUserConfig` (optional) | You can override any option that hardhat adds by default for the created networks. check the examples                                                                  |
+| Property                | Type                                                           | Description                                                                                                                                                            |
+| ----------------------- | -------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `accounts`              | `HardhatNetworkAccountsConfig` (optional)                      | Defines the accounts configuration for the network (default: Hardhat network accounts).                                                                                |
+| `chains`                | `number`                                                       | Specifies the number of chains in the Chainweb network.                                                                                                                |
+| `graph`                 | `{ [key: number]: number[] }` (optional)                       | Defines the graph structure of the Chainweb network where keys represent chain IDs and values are arrays of connected chain IDs (default: Pearson graph).              |
+| `type`                  | `'in-process' \| 'external'` (optional)                        | Defines Chainweb type: “in-process” uses the Hardhat network, and “external” uses an external network (which you need to add to the networks—default: `'in-process'`). |
+| `externalHostUrl`       | `string` (optional)                                            | Defines the base url for external networks (default: `http://localhost:8545`)                                                                                          |
+| `logging`               | `'none' \| 'info' \| 'debug'` (optional)                       | Sets the logging level for debugging purposes (default: `"info"`).                                                                                                     |
+| `chainIdOffset`         | `number` (optional)                                            | network chain id offset (default: `626000`).                                                                                                                           |
+| `chainwebChainIdOffset` | `number` (optional)                                            | chainweb chain id offset (default: `0`).                                                                                                                               |
+| `precompiles`           | `{ chainwebChainId?: string, spvVerify?: string }` (optional)  | if you are using external networks the precompile addresses might be different from the default ones so you can set them via this config                               |
+| `networkOptions`        | `HardhatNetworkUserConfig \| HttpNetworkUserConfig` (optional) | You can override any option that hardhat adds by default for the created networks. check the examples                                                                  |
 
 ### Network Types
 
@@ -227,7 +227,7 @@ module.exports = {
 
 #### Override the config a specific chain of the chainweb
 
-You also can override the config for a specific chain.  You just need to add the config in networks section.
+You also can override the config for a specific chain. You just need to add the config in networks section.
 
 ```ts
 module.exports = {
