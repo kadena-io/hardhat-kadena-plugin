@@ -47,6 +47,14 @@ export async function runOverChains<T>(
   return result;
 }
 
+const getSigner = async (address?: string) => {
+  const signer = await hre.ethers.provider.getSigner(address);
+  if (!signer) {
+    throw new Error(`Signer not found for address: ${address}`);
+  }
+  return signer;
+};
+
 export const deployContractOnChains: DeployContractOnChains = async ({
   name,
   signer,
@@ -56,10 +64,11 @@ export const deployContractOnChains: DeployContractOnChains = async ({
 }) => {
   const deployments = await runOverChains(async (cwId) => {
     try {
-      const [defaultDeployer] = await hre.ethers.getSigners();
+      const signerAddress =
+        (await signer?.getAddress()) ??
+        (await factoryOptions?.signer?.getAddress());
 
-      const contractDeployer =
-        signer ?? factoryOptions?.signer ?? defaultDeployer;
+      const contractDeployer = await getSigner(signerAddress);
 
       const deployerAddress = await contractDeployer.getAddress();
       console.log(
