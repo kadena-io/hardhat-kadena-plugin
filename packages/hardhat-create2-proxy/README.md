@@ -6,7 +6,7 @@ This plugin uses [`@kadena/hardhat-kadena`](../hardhat-kadena) plugin.
 
 ## Contract addresses problem
 
-In the Ethereum the contract addresses drive form msg.sender + nonce. and since nonce chanages for each transaction that makes contract addresses unpredictable. create2 solves this issue however we still need to create2 factory have the same address on all chains.
+In the Ethereum the contract addresses derive from msg.sender + nonce. Since nonce changes for each transaction, that makes contract addresses unpredictable. create2 solves this issue. However, the create2 opcode can only be used from soldity (or Yul) code. We therefore need a create2 factory in order to have the same address on all chains.
 
 ## Solution
 
