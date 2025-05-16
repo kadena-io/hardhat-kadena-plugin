@@ -12,6 +12,27 @@ In the Ethereum the contract addresses derive from msg.sender + nonce. Since non
 
 This plugin creates a single purpose key from the deployer key and uses that key only for deploying the create2proxy, not any other type of tx. This way the nonce will always be 0 for a new create2 factory deployment. That means that the resulting create2 factory address stays the same on all chains.
 
+## Important Considerations for Deterministic Deployments
+
+### Address Consistency Requirements
+For Create2Factory to maintain the same address across all chains:
+
+1. **Never use the derived secondary key for any other transactions**
+   - The system will error if it detects the secondary key has a non-zero nonce
+   - If this happens, you must use a new version number to generate a new secondary key
+
+2. **Use the same signer and version when deploying to new chains**
+   - To deploy to additional chains later, use the same original signer wallet and version parameter
+   - Changing either will result in a different Create2Factory address, which in turn would result in a different address for the contract being deployed.
+
+3. **Keep your original signer safe**
+   - If you lose access to the original signer wallet, you can't consistently deploy to new chains
+   - Consider using a hardware wallet for the original signer
+
+4. **Version parameter**
+   - The version parameter allows you to start fresh with a new secondary key when needed
+   - Increment the version if you ever need to redeploy the Create2Factory with a clean state
+
 ## Installation
 
 ```bash
