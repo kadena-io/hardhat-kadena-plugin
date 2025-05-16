@@ -10,7 +10,7 @@ In the Ethereum the contract addresses derive from msg.sender + nonce. Since non
 
 ## Solution
 
-This plugin creates a single purpose key from the deployer key and used that key only for deploying the create2proxy not any other type of tx. This way the nonce will be always 0 for new deploying create2 proxy than meant the result address stays the same on all chains.
+This plugin creates a single purpose key from the deployer key and uses that key only for deploying the create2proxy, not any other type of tx. This way the nonce will always be 0 for a new create2 factory deployment. That means that the resulting create2 factory address stays the same on all chains.
 
 ## Installation
 
