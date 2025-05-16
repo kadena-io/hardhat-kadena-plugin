@@ -70,17 +70,10 @@ The plugin adds `create2` property to `hre.chainweb` the Hardhat Runtime Environ
 ```ts
 export interface Create2Helpers {
   // this will return the create2factory address even if its not deployed yet
-  getCreate2FactoryAddress: (
-    signer: Signer,
-    version?: number,
-  ) => Promise<string>;
+  getCreate2FactoryAddress: () => Promise<string>;
 
   // deploy create2factory on chains if its not deployed yet and returns contract instances
-  deployCreate2Factory: (props?: {
-    signer?: string;
-    version?: number;
-    fundingDeployerWith?: string;
-  }) => Promise<
+  deployCreate2Factory: () => Promise<
     {
       contract: unknown;
       address: string;
@@ -117,19 +110,32 @@ export interface Create2Helpers {
   // predict contract address
   predictContractAddress: (
     contractBytecode: string,
-    signer: Signer | HardhatEthersSigner,
     salt: BytesLike,
   ) => Promise<string>;
-
-  // drive the secondary key from a key; you don't need to use directly unless you have a good reason
-  deriveSecondaryKey(
-    signer: Signer,
-    version?: number,
-  ): Promise<{
-    publicKey: string;
-    privateKey: string;
-  }>;
 }
+```
+
+## Config
+
+The create2proxy accept two optional configs `version` and `deployerAddress` that will be used in the process of deploying create2proxy contract.
+You can use these config to redeploy create2proxy with different address.
+
+- `version` : the proxy contract version (default = `1`)
+- `deployerAddress`: the deployed key that will be used as master key for deriving secondary key (default is the first signer)
+
+```typescript
+module.exports = {
+  solidity: '0.8.20',
+  chainweb: {
+    hardhat: {
+      chains: 3, // Creates a 3-chain network
+    },
+  },
+  create2proxy: {
+    version: 1,
+    deployerAddress: '0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266',
+  },
+};
 ```
 
 ## License

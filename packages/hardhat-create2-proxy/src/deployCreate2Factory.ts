@@ -19,11 +19,8 @@ function isContractDeployed(address: string): Promise<boolean> {
 export const create2Artifacts =
   create2Artifact.contracts['contracts/Create2Factory.sol:Create2Factory'];
 
-export const getCreate2FactoryAddress = async (
-  signer: Signer,
-  version: number | bigint = BigInt(1),
-) => {
-  const secondaryKey = await deriveSecondaryKey(signer, version);
+export const getCreate2FactoryAddress = async () => {
+  const secondaryKey = await deriveSecondaryKey();
   const factoryAddress = getCreateAddress({
     from: secondaryKey.publicKey,
     nonce: 0,
@@ -32,10 +29,10 @@ export const getCreate2FactoryAddress = async (
   return factoryAddress;
 };
 
-export async function deriveSecondaryKey(
-  signer: Signer,
-  version: number | bigint = BigInt(1),
-) {
+export async function deriveSecondaryKey() {
+  const signer = await getMasterDeployer();
+  const version = hre.config.create2proxy.version;
+
   const message = `create deployer key for create2 factory version: ${version}`;
   const signature = await signer.signMessage(message);
 
@@ -51,7 +48,7 @@ export async function deriveSecondaryKey(
   };
 }
 
-async function fundDeployer(sender: Signer, receiver: Signer, amount: bigint) {
+async function fundAccount(sender: Signer, receiver: Signer, amount: bigint) {
   const receiverAddress = await receiver.getAddress();
 
   const tx = await sender.sendTransaction({
@@ -68,38 +65,48 @@ async function fundDeployer(sender: Signer, receiver: Signer, amount: bigint) {
   }
 }
 
-export const deployCreate2Factory = async (props?: {
-  signer?: string;
-  version?: number;
-}) => {
-  const { signer, version = 1 } = props ?? {};
+const getMasterDeployer = async () => {
+  const signer = hre.config.create2proxy.deployerAddress;
+  const signers = await ethers.getSigners();
+  const masterDeployer = !signer
+    ? signers[0]
+    : signers.find((account) => account.address === signer);
 
+  if (!masterDeployer) {
+    throw new Error(`cant find the account with address ${signer}`);
+  }
+  return masterDeployer;
+};
+
+export const deployCreate2Factory = async () => {
   let secondaryPrivateKey: string | undefined = undefined;
 
-  const getSecondaryWallet = async (signer: Signer, version?: number) => {
+  const getSecondaryWallet = async () => {
     if (secondaryPrivateKey) {
       return new Wallet(secondaryPrivateKey, ethers.provider);
     }
-    secondaryPrivateKey = (await deriveSecondaryKey(signer, version))
-      .privateKey;
+    secondaryPrivateKey = (await deriveSecondaryKey()).privateKey;
 
     return new Wallet(secondaryPrivateKey, ethers.provider);
   };
 
   return chainweb.runOverChains(async (cwId) => {
-    console.log(`deploying create2 factory on chain ${cwId}`);
+    const masterDeployer = await getMasterDeployer();
 
-    const signers = await ethers.getSigners();
-    const masterDeployer = !signer
-      ? signers[0]
-      : signers.find((account) => account.address === signer);
+    const masterDeployerAddress = await masterDeployer.getAddress();
 
     if (!masterDeployer) {
-      throw new Error(`cant find the account with address ${signer}`);
+      throw new Error(
+        `cant find the account with address ${masterDeployerAddress}`,
+      );
     }
 
-    const secondaryKey = await getSecondaryWallet(masterDeployer, version);
+    const secondaryKey = await getSecondaryWallet();
     const secondaryKeyAddress = await secondaryKey.getAddress();
+
+    console.log(
+      `========= master deployer address: ${masterDeployerAddress} - version: ${hre.config.create2proxy.version} ========`,
+    );
 
     const factoryAddress = ethers.getCreateAddress({
       from: secondaryKey.address,
@@ -173,7 +180,7 @@ export const deployCreate2Factory = async (props?: {
       console.log('balance:', ethers.formatEther(balance));
     } else {
       console.log('FUNDING DEPLOYER WITH', gasLimit);
-      await fundDeployer(masterDeployer, secondaryKey, requiredEther);
+      await fundAccount(masterDeployer, secondaryKey, requiredEther);
     }
 
     /* Deploy the contract */

@@ -2,8 +2,8 @@ import {
   DeployContractProperties,
   DeployedContractsOnChains,
 } from '@kadena/hardhat-chainweb';
-import { HardhatEthersSigner } from '@nomicfoundation/hardhat-ethers/signers';
-import { BaseContract, BytesLike, Signer } from 'ethers';
+import { BaseContract, BytesLike } from 'ethers';
+import { HardhatUserConfig } from 'hardhat/types';
 
 export type DeployUsingCreate2 = <
   T extends BaseContract = BaseContract,
@@ -15,15 +15,9 @@ export type DeployUsingCreate2 = <
 }>;
 
 export interface Create2Helpers {
-  getCreate2FactoryAddress: (
-    signer: Signer,
-    version?: number,
-  ) => Promise<string>;
+  getCreate2FactoryAddress: () => Promise<string>;
   deployUsingCreate2: DeployUsingCreate2;
-  deployCreate2Factory: (props?: {
-    signer?: string;
-    version?: number;
-  }) => Promise<
+  deployCreate2Factory: () => Promise<
     {
       contract: unknown;
       address: string;
@@ -37,20 +31,31 @@ export interface Create2Helpers {
   >;
   predictContractAddress: (
     contractBytecode: string,
-    signer: Signer | HardhatEthersSigner,
-    salt: BytesLike,
+    salt?: BytesLike,
   ) => Promise<string>;
-  deriveSecondaryKey(
-    signer: Signer,
-    version?: number,
-  ): Promise<{
-    publicKey: string;
-    privateKey: string;
-  }>;
+  changeConfig: (userConfig: HardhatUserConfig['create2proxy']) => void;
 }
 
 declare module '@kadena/hardhat-chainweb' {
   interface ChainwebPluginApi {
     create2: Create2Helpers;
+  }
+}
+
+declare module 'hardhat/types' {
+  interface HardhatConfig {
+    create2proxy: {
+      version: number;
+      deployerAddress: string;
+      defaultSalt: BytesLike;
+    };
+  }
+
+  interface HardhatUserConfig {
+    create2proxy?: {
+      version?: number;
+      deployerAddress?: string;
+      defaultSalt?: string;
+    };
   }
 }

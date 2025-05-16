@@ -1,5 +1,5 @@
 import { DeployUsingCreate2 } from './type';
-import { BytesLike, getBytes, Signer, Overrides } from 'ethers';
+import { BytesLike, Signer, Overrides } from 'ethers';
 import { HardhatEthersSigner } from '@nomicfoundation/hardhat-ethers/signers';
 import { getNetworkStem } from '@kadena/hardhat-chainweb';
 
@@ -10,8 +10,6 @@ import {
   getCreate2FactoryAddress,
 } from './deployCreate2Factory';
 
-const defaultSalt = getBytes(hre.ethers.id('KADENA/CREATE2/SALT'));
-
 const networkStem = getNetworkStem(hre.config.defaultChainweb);
 
 const { ethers, chainweb } = hre;
@@ -20,12 +18,19 @@ function isContractDeployed(address: string): Promise<boolean> {
   return ethers.provider.getCode(address).then((code) => code !== '0x');
 }
 
+const getSigner = async (address?: string) => {
+  const signer = await ethers.provider.getSigner(address);
+  if (!signer) {
+    throw new Error(`Signer not found for address: ${address}`);
+  }
+  return signer;
+};
+
 export async function predictContractAddress(
   contractBytecode: string,
-  signer: Signer | HardhatEthersSigner,
-  salt: BytesLike = defaultSalt,
+  salt: BytesLike = hre.config.create2proxy.defaultSalt,
 ) {
-  const factoryAddress = await getCreate2FactoryAddress(signer);
+  const factoryAddress = await getCreate2FactoryAddress();
 
   const predictedAddress = ethers.getCreate2Address(
     factoryAddress,
@@ -42,7 +47,9 @@ async function deployContract(
   overrides: Overrides | undefined,
   salt: BytesLike,
 ) {
-  const factoryAddress = await getCreate2FactoryAddress(signer);
+  const factoryAddress = await getCreate2FactoryAddress();
+
+  console.log('factoryAddress --------------> ', factoryAddress);
 
   const Factory = await hre.ethers.getContractFactory(
     create2Artifacts.abi,
@@ -107,14 +114,15 @@ export const deployUsingCreate2: DeployUsingCreate2 = async ({
   factoryOptions,
   constructorArgs = [],
   overrides,
-  salt = defaultSalt,
+  salt = hre.config.create2proxy.defaultSalt,
 }) => {
   const deployments = await chainweb.runOverChains(async (cwId) => {
     try {
-      const [defaultDeployer] = await ethers.getSigners();
+      const signerAddress =
+        (await signer?.getAddress()) ??
+        (await factoryOptions?.signer?.getAddress());
 
-      const contractDeployer =
-        signer ?? factoryOptions?.signer ?? defaultDeployer;
+      const contractDeployer = await getSigner(signerAddress);
 
       const deployerAddress = await contractDeployer.getAddress();
       console.log(

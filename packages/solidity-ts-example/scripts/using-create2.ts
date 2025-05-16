@@ -132,7 +132,7 @@ async function main() {
   // 1. Default deployment of Create2Factory
   console.log('\n1. Default Create2Factory deployment');
   const defaultFactory = await chainweb.create2.deployCreate2Factory();
-  const defaultFactoryAddresses = {};
+  const defaultFactoryAddresses: Record<string, string> = {};
   defaultFactory.forEach((f) => {
     factoryDeployments.push({
       id: `Default Factory (chain ${f.chain})`,
@@ -148,10 +148,11 @@ async function main() {
 
   // 2. Create2Factory with custom signer
   console.log('\n2. Create2Factory with alternative signer');
-  const customSignerFactory = await chainweb.create2.deployCreate2Factory({
-    signer: alternativeSigner.address,
+  chainweb.create2.changeConfig({
+    deployerAddress: alternativeSigner.address,
   });
-  const customSignerFactoryAddresses = {};
+  const customSignerFactory = await chainweb.create2.deployCreate2Factory();
+  const customSignerFactoryAddresses: Record<string, string> = {};
   customSignerFactory.forEach((f) => {
     factoryDeployments.push({
       id: `Custom Signer Factory (chain ${f.chain})`,
@@ -167,10 +168,11 @@ async function main() {
 
   // 3. Create2Factory with custom version
   console.log('\n3. Create2Factory with custom version (2)');
-  const customVersionFactory = await chainweb.create2.deployCreate2Factory({
+  chainweb.create2.changeConfig({
     version: 2,
   });
-  const customVersionFactoryAddresses = {};
+  const customVersionFactory = await chainweb.create2.deployCreate2Factory();
+  const customVersionFactoryAddresses: Record<string, string> = {};
   customVersionFactory.forEach((f) => {
     factoryDeployments.push({
       id: `Custom Version Factory (chain ${f.chain})`,
@@ -186,12 +188,12 @@ async function main() {
 
   // 4. Create2Factory with both custom signer and version
   console.log('\n4. Create2Factory with both alternative signer and version');
-  const fullCustomFactory = await chainweb.create2.deployCreate2Factory({
-    signer: alternativeSigner.address,
+  chainweb.create2.changeConfig({
+    deployerAddress: alternativeSigner.address,
     version: 3,
-    fundingDeployerWith: '0.5', // Use less funding
   });
-  const fullCustomFactoryAddresses = {};
+  const fullCustomFactory = await chainweb.create2.deployCreate2Factory();
+  const fullCustomFactoryAddresses: Record<string, string> = {};
   fullCustomFactory.forEach((f) => {
     factoryDeployments.push({
       id: `Full Custom Factory (chain ${f.chain})`,
@@ -254,7 +256,7 @@ async function main() {
     name: 'SimpleToken',
     constructorArgs: [ethers.parseUnits('1000000')],
   });
-  const defaultTokenAddresses = {};
+  const defaultTokenAddresses: Record<string, string> = {};
   if (defaultDeployment.deployments.length > 0) {
     console.log('Contract addresses:');
     defaultDeployment.deployments.forEach((deployment) => {
@@ -278,7 +280,7 @@ async function main() {
     constructorArgs: [ethers.parseUnits('2000000')],
     salt: customSalt,
   });
-  const customSaltTokenAddresses = {};
+  const customSaltTokenAddresses: Record<string, string> = {};
   if (customSaltDeployment.deployments.length > 0) {
     console.log('Contract addresses:');
     customSaltDeployment.deployments.forEach((deployment) => {
@@ -301,7 +303,7 @@ async function main() {
     signer: alternativeSigner,
     constructorArgs: [ethers.parseUnits('3000000')],
   });
-  const customSignerTokenAddresses = {};
+  const customSignerTokenAddresses: Record<string, string> = {};
   if (customSignerDeployment.deployments.length > 0) {
     console.log('Contract addresses:');
     customSignerDeployment.deployments.forEach((deployment) => {
@@ -328,7 +330,7 @@ async function main() {
     constructorArgs: [ethers.parseUnits('4000000')],
     salt: anotherSalt,
   });
-  const combinedTokenAddresses = {};
+  const combinedTokenAddresses: Record<string, string> = {};
   if (combinedCustomDeployment.deployments.length > 0) {
     console.log('Contract addresses:');
     combinedCustomDeployment.deployments.forEach((deployment) => {
