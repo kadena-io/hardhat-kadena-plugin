@@ -7,11 +7,9 @@ describe('PayableContract with Create2Factory', function () {
   let signers: HardhatEthersSigner[];
   let deployer: HardhatEthersSigner;
 
-
   before(async function () {
     signers = await ethers.getSigners();
     deployer = signers[0];
-
 
     // Deploy the Create2Factory if not already deployed
     await chainweb.create2.deployCreate2Factory();
