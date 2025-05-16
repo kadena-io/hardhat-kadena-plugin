@@ -2,60 +2,48 @@ import {
   DeployContractProperties,
   DeployedContractsOnChains,
 } from '@kadena/hardhat-chainweb';
-import { BaseContract, BytesLike } from 'ethers';
-import { HardhatUserConfig } from 'hardhat/types';
+
+import { BaseContract, Signer } from 'ethers';
 
 export type DeployUsingCreate2 = <
   T extends BaseContract = BaseContract,
   A extends unknown[] = unknown[],
 >(
-  args: DeployContractProperties<A> & { salt?: BytesLike },
+  args: DeployContractProperties<A> & {
+    salt: string;
+    create2proxy?: string;
+  },
 ) => Promise<{
   deployments: DeployedContractsOnChains<T>[];
 }>;
 
 export interface Create2Helpers {
-  getCreate2FactoryAddress: () => Promise<string>;
-  deployUsingCreate2: DeployUsingCreate2;
-  deployCreate2Factory: () => Promise<
-    {
-      contract: unknown;
-      address: string;
-      chain: number;
-      deployer: string;
-      network: {
-        chainId: number;
-        name: string;
-      };
-    }[]
+  getCreate2FactoryAddress: (signer?: Signer) => Promise<string>;
+  deployCreate2Factory: (signer?: Signer) => Promise<
+    [
+      contractAddress: string,
+      deployments: {
+        contract: unknown;
+        address: string;
+        chain: number;
+        deployer: string;
+        network: {
+          chainId: number;
+          name: string;
+        };
+      }[],
+    ]
   >;
+  deployUsingCreate2: DeployUsingCreate2;
   predictContractAddress: (
     contractBytecode: string,
-    salt?: BytesLike,
+    salt: string,
+    create2proxy?: string,
   ) => Promise<string>;
-  changeConfig: (userConfig: HardhatUserConfig['create2proxy']) => void;
 }
 
 declare module '@kadena/hardhat-chainweb' {
   interface ChainwebPluginApi {
     create2: Create2Helpers;
-  }
-}
-
-declare module 'hardhat/types' {
-  interface HardhatConfig {
-    create2proxy: {
-      version: number;
-      deployerAddress: string;
-      defaultSalt: BytesLike;
-    };
-  }
-
-  interface HardhatUserConfig {
-    create2proxy?: {
-      version?: number;
-      deployerAddress?: string;
-      defaultSalt?: string;
-    };
   }
 }

@@ -1,5 +1,5 @@
-import { DeployUsingCreate2 } from './type';
-import { BytesLike, Signer, Overrides } from 'ethers';
+import { Create2Helpers, DeployUsingCreate2 } from './type';
+import { Signer, Overrides, getBytes } from 'ethers';
 import { HardhatEthersSigner } from '@nomicfoundation/hardhat-ethers/signers';
 import { getNetworkStem } from '@kadena/hardhat-chainweb';
 
@@ -18,6 +18,30 @@ function isContractDeployed(address: string): Promise<boolean> {
   return ethers.provider.getCode(address).then((code) => code !== '0x');
 }
 
+function createSalt(sender: string, userSalt: string) {
+  const ADDRESS_LENGTH = 20;
+  const USER_SALT_LENGTH = 12;
+  // Convert the sender address and user salt to bytes
+  // The sender address is expected to be 20 bytes (Ethereum address)
+  const senderBytes = getBytes(sender);
+
+  // The user salt is expected to be 12 bytes (Kadena user salt)
+  const userSaltBytes = getBytes(
+    ethers.dataSlice(ethers.id(userSalt), 0, USER_SALT_LENGTH),
+  );
+  if (senderBytes.length !== ADDRESS_LENGTH) {
+    throw new Error(`Sender address must be ${ADDRESS_LENGTH} bytes`);
+  }
+  if (userSaltBytes.length !== USER_SALT_LENGTH) {
+    throw new Error(`User salt must be ${USER_SALT_LENGTH} bytes`);
+  }
+  // Concatenate the sender address and user salt
+  const result = new Uint8Array(USER_SALT_LENGTH + ADDRESS_LENGTH);
+  result.set(senderBytes, 0);
+  result.set(userSaltBytes, ADDRESS_LENGTH);
+  return [result, ethers.toBigInt(userSaltBytes)] as const;
+}
+
 const getSigner = async (address?: string) => {
   const signer = await ethers.provider.getSigner(address);
   if (!signer) {
@@ -26,30 +50,43 @@ const getSigner = async (address?: string) => {
   return signer;
 };
 
-export async function predictContractAddress(
-  contractBytecode: string,
-  salt: BytesLike = hre.config.create2proxy.defaultSalt,
-) {
-  const factoryAddress = await getCreate2FactoryAddress();
+export const predictContractAddress: Create2Helpers['predictContractAddress'] =
+  async (
+    contractBytecode: string,
+    salt: string,
+    create2proxy?: string,
+    signer?: Signer,
+  ) => {
+    const signer2 = await getSigner(await signer?.getAddress());
 
-  const predictedAddress = ethers.getCreate2Address(
-    factoryAddress,
-    salt,
-    ethers.keccak256(contractBytecode),
-  );
+    const factoryAddress =
+      create2proxy ?? (await getCreate2FactoryAddress(signer2));
 
-  return predictedAddress;
-}
+    const [saltBytes] = createSalt(signer2.address, salt);
 
-async function deployContract(
-  contractBytecode: string,
-  signer: Signer | HardhatEthersSigner,
-  overrides: Overrides | undefined,
-  salt: BytesLike,
-) {
-  const factoryAddress = await getCreate2FactoryAddress();
+    const predictedAddress = ethers.getCreate2Address(
+      factoryAddress,
+      saltBytes,
+      ethers.keccak256(contractBytecode),
+    );
 
-  console.log('factoryAddress --------------> ', factoryAddress);
+    return predictedAddress;
+  };
+
+async function deployContract({
+  contractBytecode,
+  signer,
+  overrides,
+  salt,
+  create2proxy,
+}: {
+  contractBytecode: string;
+  signer: Signer | HardhatEthersSigner;
+  overrides: Overrides | undefined;
+  salt: string;
+  create2proxy?: string;
+}) {
+  const factoryAddress = create2proxy ?? (await getCreate2FactoryAddress());
 
   const Factory = await hre.ethers.getContractFactory(
     create2Artifacts.abi,
@@ -61,15 +98,20 @@ async function deployContract(
 
   // Compute the predicted address
 
+  const [saltBytes, userSaltBigInt] = createSalt(
+    await signer.getAddress(),
+    salt,
+  );
+
   const predictedAddress = ethers.getCreate2Address(
     factoryAddress,
-    salt,
+    saltBytes,
     ethers.keccak256(contractBytecode),
   );
 
   const computedAddress = await create2.computeAddress(
     contractBytecode,
-    ethers.toBigInt(salt),
+    userSaltBigInt,
   );
 
   if (computedAddress !== predictedAddress) {
@@ -89,7 +131,7 @@ async function deployContract(
   }
 
   // Deploy using CREATE2
-  const tx = await create2.deploy(contractBytecode, ethers.toBigInt(salt), {
+  const tx = await create2.deploy(contractBytecode, userSaltBigInt, {
     value: overrides?.value || 0,
   });
   await tx.wait();
@@ -114,7 +156,8 @@ export const deployUsingCreate2: DeployUsingCreate2 = async ({
   factoryOptions,
   constructorArgs = [],
   overrides,
-  salt = hre.config.create2proxy.defaultSalt,
+  salt,
+  create2proxy,
 }) => {
   const deployments = await chainweb.runOverChains(async (cwId) => {
     try {
@@ -138,14 +181,15 @@ export const deployUsingCreate2: DeployUsingCreate2 = async ({
       );
 
       // Prepare the bytecode of the contract to deploy
-      const bytecode = transaction.data;
+      const contractBytecode = transaction.data;
 
-      const contractAddress = await deployContract(
-        bytecode,
-        contractDeployer,
+      const contractAddress = await deployContract({
+        contractBytecode,
+        signer: contractDeployer,
         overrides,
         salt,
-      );
+        create2proxy,
+      });
 
       const contract = factory.attach(contractAddress);
 

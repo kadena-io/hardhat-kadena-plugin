@@ -69,73 +69,54 @@ The plugin adds `create2` property to `hre.chainweb` the Hardhat Runtime Environ
 
 ```ts
 export interface Create2Helpers {
-  // this will return the create2factory address even if its not deployed yet
-  getCreate2FactoryAddress: () => Promise<string>;
-
-  // deploy create2factory on chains if its not deployed yet and returns contract instances
-  deployCreate2Factory: () => Promise<
-    {
-      contract: unknown;
-      address: string;
-      chain: number;
-      deployer: string;
-      network: {
-        chainId: number;
-        name: string;
-      };
-    }[]
+  // deploy create2proxy contract by using the signer key. the default value is the hardhat first account
+  deployCreate2Factory: (signer?: Signer) => Promise<
+    [
+      contractAddress: string,
+      deployments: {
+        contract: unknown;
+        address: string;
+        chain: number;
+        deployer: string;
+        network: {
+          chainId: number;
+          name: string;
+        };
+      }[],
+    ]
   >;
+  // returns create2proxy address by using the signer key. the default value is the hardhat first account
+  getCreate2FactoryAddress: (signer?: Signer) => Promise<string>;
 
-  // deploy your contracts using create2
+  // deploy the contract using the default create2proxy; if ypu want different proxy you can use the create2proxy property
   deployUsingCreate2: (args: {
     name: string;
     signer?: Signer;
     factoryOptions?: FactoryOptions;
-    constructorArgs?: ContractMethodArgs<A>;
+    constructorArgs?: ContractMethodArgs;
     overrides?: Overrides;
-    salt?: BytesLike;
+    salt: BytesLike;
+    create2proxy?: string;
   }) => Promise<{
-    deployments: {
-      contract: unknown;
+    deployments: Array<{
+      contract: BaseContract & {
+        deploymentTransaction(): ContractTransactionResponse;
+      };
       address: string;
       chain: number;
-      deployer: string;
       network: {
-        chainId: number;
         name: string;
       };
-    }[];
+    }>;
   }>;
 
-  // predict contract address
+  // return the contract address before deploying it.
   predictContractAddress: (
     contractBytecode: string,
     salt: BytesLike,
+    create2proxy?: string,
   ) => Promise<string>;
 }
-```
-
-## Config
-
-The create2proxy accept two optional configs `version` and `deployerAddress` that will be used in the process of deploying create2proxy contract.
-You can use these config to redeploy create2proxy with different address.
-
-- `version` : the proxy contract version (default = `1`)
-- `deployerAddress`: the deployed key that will be used as master key for deriving secondary key (default is the first signer)
-
-```typescript
-module.exports = {
-  solidity: '0.8.20',
-  chainweb: {
-    hardhat: {
-      chains: 3, // Creates a 3-chain network
-    },
-  },
-  create2proxy: {
-    version: 1,
-    deployerAddress: '0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266',
-  },
-};
 ```
 
 ## License

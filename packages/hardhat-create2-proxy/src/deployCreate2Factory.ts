@@ -9,6 +9,8 @@ import {
 import create2Artifact from '../build/create2-factory/combined.json';
 import hre, { chainweb, ethers } from 'hardhat';
 import { getNetworkStem } from '@kadena/hardhat-chainweb';
+import { HardhatEthersSigner } from '@nomicfoundation/hardhat-ethers/signers';
+import { Create2Helpers } from './type';
 
 const networkStem = getNetworkStem(hre.config.defaultChainweb);
 
@@ -19,21 +21,22 @@ function isContractDeployed(address: string): Promise<boolean> {
 export const create2Artifacts =
   create2Artifact.contracts['contracts/Create2Factory.sol:Create2Factory'];
 
-export const getCreate2FactoryAddress = async () => {
-  const secondaryKey = await deriveSecondaryKey();
-  const factoryAddress = getCreateAddress({
-    from: secondaryKey.publicKey,
-    nonce: 0,
-  });
+const contractHash = ethers.id(create2Artifacts.bin);
 
-  return factoryAddress;
-};
+export const getCreate2FactoryAddress: Create2Helpers['getCreate2FactoryAddress'] =
+  async (signer?: Signer) => {
+    const masterDeployer = await getSigner(await signer?.getAddress());
+    const secondaryKey = await deriveSecondaryKey(masterDeployer);
+    const factoryAddress = getCreateAddress({
+      from: secondaryKey.publicKey,
+      nonce: 0,
+    });
 
-export async function deriveSecondaryKey() {
-  const signer = await getMasterDeployer();
-  const version = hre.config.create2proxy.version;
+    return factoryAddress;
+  };
 
-  const message = `create deployer key for create2 factory version: ${version}`;
+export async function deriveSecondaryKey(signer: Signer) {
+  const message = `create deployer key for create2 factory contract hash "${contractHash}"`;
   const signature = await signer.signMessage(message);
 
   // Combine signature and label to get deterministic entropy
@@ -65,8 +68,7 @@ async function fundAccount(sender: Signer, receiver: Signer, amount: bigint) {
   }
 }
 
-const getMasterDeployer = async () => {
-  const signer = hre.config.create2proxy.deployerAddress;
+const getSigner = async (signer?: string) => {
   const signers = await ethers.getSigners();
   const masterDeployer = !signer
     ? signers[0]
@@ -78,58 +80,133 @@ const getMasterDeployer = async () => {
   return masterDeployer;
 };
 
-export const deployCreate2Factory = async () => {
-  let secondaryPrivateKey: string | undefined = undefined;
+export const deployCreate2Factory: Create2Helpers['deployCreate2Factory'] =
+  async (signer?: Signer) => {
+    let secondaryPrivateKey: string | undefined = undefined;
 
-  const getSecondaryWallet = async () => {
-    if (secondaryPrivateKey) {
+    const getSecondaryWallet = async (signer: HardhatEthersSigner) => {
+      if (secondaryPrivateKey) {
+        return new Wallet(secondaryPrivateKey, ethers.provider);
+      }
+      secondaryPrivateKey = (await deriveSecondaryKey(signer)).privateKey;
+
       return new Wallet(secondaryPrivateKey, ethers.provider);
-    }
-    secondaryPrivateKey = (await deriveSecondaryKey()).privateKey;
+    };
 
-    return new Wallet(secondaryPrivateKey, ethers.provider);
-  };
+    const result = await chainweb.runOverChains(async (cwId) => {
+      const masterDeployer = await getSigner(await signer?.getAddress());
 
-  return chainweb.runOverChains(async (cwId) => {
-    const masterDeployer = await getMasterDeployer();
+      const masterDeployerAddress = await masterDeployer.getAddress();
 
-    const masterDeployerAddress = await masterDeployer.getAddress();
+      if (!masterDeployer) {
+        throw new Error(
+          `cant find the account with address ${masterDeployerAddress}`,
+        );
+      }
 
-    if (!masterDeployer) {
-      throw new Error(
-        `cant find the account with address ${masterDeployerAddress}`,
-      );
-    }
+      const secondaryKey = await getSecondaryWallet(masterDeployer);
+      const secondaryKeyAddress = await secondaryKey.getAddress();
 
-    const secondaryKey = await getSecondaryWallet();
-    const secondaryKeyAddress = await secondaryKey.getAddress();
+      const factoryAddress = ethers.getCreateAddress({
+        from: secondaryKey.address,
+        nonce: 0,
+      });
 
-    console.log(
-      `========= master deployer address: ${masterDeployerAddress} - version: ${hre.config.create2proxy.version} ========`,
-    );
+      const isDeployed = await isContractDeployed(factoryAddress);
 
-    const factoryAddress = ethers.getCreateAddress({
-      from: secondaryKey.address,
-      nonce: 0,
-    });
+      if (isDeployed) {
+        console.log(
+          `the factory address ${factoryAddress} is already deployed`,
+        );
 
-    const isDeployed = await isContractDeployed(factoryAddress);
+        const Factory = await hre.ethers.getContractFactory(
+          create2Artifacts.abi,
+          create2Artifacts.bin,
+        );
+        const create2 = Factory.attach(factoryAddress);
 
-    if (isDeployed) {
-      console.log(`the factory address ${factoryAddress} is already deployed`);
+        console.log(
+          `the factory address ${factoryAddress} is already deployed on chain ${cwId}`,
+        );
 
-      const Factory = await hre.ethers.getContractFactory(
-        create2Artifacts.abi,
-        create2Artifacts.bin,
-      );
-      const create2 = Factory.attach(factoryAddress);
+        return {
+          contract: create2,
+          address: factoryAddress,
+          chain: cwId,
+          deployer: secondaryKeyAddress,
+          network: {
+            chainId: cwId,
+            name: `${networkStem}${cwId}`,
+          },
+        };
+      }
+
+      const nonce =
+        await ethers.provider.getTransactionCount(secondaryKeyAddress);
+
+      if (nonce > 0) {
+        throw new Error(
+          `This address has already been used for another type of transaction. you need a new address to deploy a create2 factory`,
+        );
+      }
 
       console.log(
-        `the factory address ${factoryAddress} is already deployed on chain ${cwId}`,
+        `the contract will be deploying with address: ${factoryAddress} and the deployer address: ${secondaryKeyAddress}`,
+      );
+
+      const balance = await ethers.provider.getBalance(secondaryKeyAddress);
+
+      const factory = await hre.ethers.getContractFactory(
+        create2Artifact.contracts['contracts/Create2Factory.sol:Create2Factory']
+          .abi,
+        create2Artifact.contracts['contracts/Create2Factory.sol:Create2Factory']
+          .bin,
+        secondaryKey,
+      );
+
+      const tx = await factory.getDeployTransaction();
+      const gasLimit = await ethers.provider.estimateGas(tx);
+      const gasPrice = (await ethers.provider.getFeeData()).gasPrice;
+
+      let requiredEther: bigint;
+      if (!gasPrice || !gasLimit) {
+        console.warn('gasPrice or gasLimit is undefined; using default values');
+        requiredEther = ethers.parseEther('0.001');
+      } else {
+        requiredEther = (gasPrice * gasLimit * BigInt(120)) / BigInt(100);
+      }
+
+      if (balance > BigInt(0)) {
+        console.log('deployer address:', secondaryKeyAddress);
+        console.log('balance:', ethers.formatEther(balance));
+      } else {
+        console.log('FUNDING DEPLOYER WITH', gasLimit);
+        await fundAccount(masterDeployer, secondaryKey, requiredEther);
+      }
+
+      /* Deploy the contract */
+
+      const contract = await factory.deploy({
+        gasLimit: gasLimit,
+        gasPrice: gasPrice,
+      });
+
+      const deploymentTx = contract.deploymentTransaction();
+      if (!deploymentTx) {
+        throw new Error('Deployment transaction failed');
+      }
+      await deploymentTx.wait();
+
+      if (factoryAddress !== (await contract.getAddress())) {
+        throw new Error('Factory address mismatch');
+      }
+
+      console.log(
+        `create2 factory deployed at ${factoryAddress} on chain ${cwId}`,
       );
 
       return {
-        contract: create2,
+        contract: contract,
         address: factoryAddress,
         chain: cwId,
         deployer: secondaryKeyAddress,
@@ -138,81 +215,9 @@ export const deployCreate2Factory = async () => {
           name: `${networkStem}${cwId}`,
         },
       };
-    }
-
-    const nonce =
-      await ethers.provider.getTransactionCount(secondaryKeyAddress);
-
-    if (nonce > 0) {
-      throw new Error(
-        `This address has already been used for another type of transaction. you need a new address to deploy a create2 factory`,
-      );
-    }
-
-    console.log(
-      `the contract will be deploying with address: ${factoryAddress} and the deployer address: ${secondaryKeyAddress}`,
-    );
-
-    const balance = await ethers.provider.getBalance(secondaryKeyAddress);
-
-    const factory = await hre.ethers.getContractFactory(
-      create2Artifact.contracts['contracts/Create2Factory.sol:Create2Factory']
-        .abi,
-      create2Artifact.contracts['contracts/Create2Factory.sol:Create2Factory']
-        .bin,
-      secondaryKey,
-    );
-
-    const tx = await factory.getDeployTransaction();
-    const gasLimit = await ethers.provider.estimateGas(tx);
-    const gasPrice = (await ethers.provider.getFeeData()).gasPrice;
-
-    let requiredEther: bigint;
-    if (!gasPrice || !gasLimit) {
-      console.warn('gasPrice or gasLimit is undefined; using default values');
-      requiredEther = ethers.parseEther('0.001');
-    } else {
-      requiredEther = (gasPrice * gasLimit * BigInt(120)) / BigInt(100);
-    }
-
-    if (balance > BigInt(0)) {
-      console.log('deployer address:', secondaryKeyAddress);
-      console.log('balance:', ethers.formatEther(balance));
-    } else {
-      console.log('FUNDING DEPLOYER WITH', gasLimit);
-      await fundAccount(masterDeployer, secondaryKey, requiredEther);
-    }
-
-    /* Deploy the contract */
-
-    const contract = await factory.deploy({
-      gasLimit: gasLimit,
-      gasPrice: gasPrice,
     });
-
-    const deploymentTx = contract.deploymentTransaction();
-    if (!deploymentTx) {
-      throw new Error('Deployment transaction failed');
+    if (result.length === 0) {
+      throw new Error('no result from deployCreate2Factory');
     }
-    await deploymentTx.wait();
-
-    if (factoryAddress !== (await contract.getAddress())) {
-      throw new Error('Factory address mismatch');
-    }
-
-    console.log(
-      `create2 factory deployed at ${factoryAddress} on chain ${cwId}`,
-    );
-
-    return {
-      contract: contract,
-      address: factoryAddress,
-      chain: cwId,
-      deployer: secondaryKeyAddress,
-      network: {
-        chainId: cwId,
-        name: `${networkStem}${cwId}`,
-      },
-    };
-  });
-};
+    return [result[0].address, result] as const;
+  };
