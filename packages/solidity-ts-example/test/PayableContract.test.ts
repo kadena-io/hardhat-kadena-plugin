@@ -1,15 +1,17 @@
 import { expect } from 'chai';
 import { ethers, chainweb } from 'hardhat';
 import { HardhatEthersSigner } from '@nomicfoundation/hardhat-ethers/signers';
+import { PayableContract__factory } from '../typechain-types';
 
 describe('PayableContract with Create2Factory', function () {
   let signers: HardhatEthersSigner[];
   let deployer: HardhatEthersSigner;
 
+
   before(async function () {
     signers = await ethers.getSigners();
     deployer = signers[0];
-    chains = await chainweb.getChainIds();
+
 
     // Deploy the Create2Factory if not already deployed
     await chainweb.create2.deployCreate2Factory();
