@@ -23,7 +23,6 @@ export interface Create2Helpers {
   deployCreate2Factory: (props?: {
     signer?: string;
     version?: number;
-    fundingDeployerWith?: string;
   }) => Promise<
     {
       contract: unknown;

@@ -51,13 +51,7 @@ export async function deriveSecondaryKey(
   };
 }
 
-async function fundDeployer(
-  sender: Signer,
-  receiver: Signer,
-  amountStr: string,
-) {
-  const amount = ethers.parseEther(amountStr); // 1 ether
-
+async function fundDeployer(sender: Signer, receiver: Signer, amount: bigint) {
   const receiverAddress = await receiver.getAddress();
 
   const tx = await sender.sendTransaction({
@@ -77,9 +71,8 @@ async function fundDeployer(
 export const deployCreate2Factory = async (props?: {
   signer?: string;
   version?: number;
-  fundingDeployerWith?: string;
 }) => {
-  const { signer, version = 1, fundingDeployerWith = '1.0' } = props ?? {};
+  const { signer, version = 1 } = props ?? {};
 
   let secondaryPrivateKey: string | undefined = undefined;
 
@@ -155,21 +148,6 @@ export const deployCreate2Factory = async (props?: {
 
     const balance = await ethers.provider.getBalance(secondaryKeyAddress);
 
-    if (balance > BigInt(0)) {
-      console.log('deployer address:', secondaryKeyAddress);
-      console.log('balance:', ethers.formatEther(balance));
-    } else {
-      if (+fundingDeployerWith < 0) {
-        throw new Error(
-          `the fundingDeployerWith amount must be greater than 0`,
-        );
-      }
-
-      console.log('FUNDING DEPLOYER WITH', fundingDeployerWith);
-      await fundDeployer(masterDeployer, secondaryKey, fundingDeployerWith);
-    }
-
-    /* Deploy the contract */
     const factory = await hre.ethers.getContractFactory(
       create2Artifact.contracts['contracts/Create2Factory.sol:Create2Factory']
         .abi,
@@ -177,7 +155,34 @@ export const deployCreate2Factory = async (props?: {
         .bin,
       secondaryKey,
     );
-    const contract = await factory.deploy();
+
+    const tx = await factory.getDeployTransaction();
+    const gasLimit = await ethers.provider.estimateGas(tx);
+    const gasPrice = (await ethers.provider.getFeeData()).gasPrice;
+
+    let requiredEther: bigint;
+    if (!gasPrice || !gasLimit) {
+      console.warn('gasPrice or gasLimit is undefined; using default values');
+      requiredEther = ethers.parseEther('0.001');
+    } else {
+      requiredEther = (gasPrice * gasLimit * BigInt(120)) / BigInt(100);
+    }
+
+    if (balance > BigInt(0)) {
+      console.log('deployer address:', secondaryKeyAddress);
+      console.log('balance:', ethers.formatEther(balance));
+    } else {
+      console.log('FUNDING DEPLOYER WITH', gasLimit);
+      await fundDeployer(masterDeployer, secondaryKey, requiredEther);
+    }
+
+    /* Deploy the contract */
+
+    const contract = await factory.deploy({
+      gasLimit: gasLimit,
+      gasPrice: gasPrice,
+    });
+
     const deploymentTx = contract.deploymentTransaction();
     if (!deploymentTx) {
       throw new Error('Deployment transaction failed');

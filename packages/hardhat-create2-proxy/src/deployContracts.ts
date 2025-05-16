@@ -128,6 +128,7 @@ export const deployUsingCreate2: DeployUsingCreate2 = async ({
       const transaction = await factory.getDeployTransaction(
         ...(overrides ? [...constructorArgs, overrides] : constructorArgs),
       );
+
       // Prepare the bytecode of the contract to deploy
       const bytecode = transaction.data;
 
