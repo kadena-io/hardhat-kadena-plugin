@@ -39,6 +39,7 @@ export interface Create2Helpers {
     contractBytecode: string,
     salt: string,
     create2proxy?: string,
+    signer?: Signer,
   ) => Promise<string>;
 }
 
