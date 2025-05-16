@@ -82,11 +82,9 @@ async function deployContract(
   }
 
   // Deploy using CREATE2
-  const tx = await create2.deploy(
-    contractBytecode,
-    ethers.toBigInt(salt),
-    { value: overrides?.value || 0 }
-  );
+  const tx = await create2.deploy(contractBytecode, ethers.toBigInt(salt), {
+    value: overrides?.value || 0,
+  });
   await tx.wait();
 
   if (!(await isContractDeployed(predictedAddress))) {
