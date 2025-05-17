@@ -1,5 +1,5 @@
 import { Create2Helpers, DeployUsingCreate2 } from './type';
-import { Signer, Overrides, getBytes } from 'ethers';
+import { Signer, Overrides, BytesLike } from 'ethers';
 import { HardhatEthersSigner } from '@nomicfoundation/hardhat-ethers/signers';
 import { getNetworkStem } from '@kadena/hardhat-chainweb';
 
@@ -18,28 +18,22 @@ function isContractDeployed(address: string): Promise<boolean> {
   return ethers.provider.getCode(address).then((code) => code !== '0x');
 }
 
-function createSalt(sender: string, userSalt: string) {
-  const ADDRESS_LENGTH = 20;
-  const USER_SALT_LENGTH = 12;
-  // Convert the sender address and user salt to bytes
-  // The sender address is expected to be 20 bytes (Ethereum address)
-  const senderBytes = getBytes(sender);
+function createSalt(sender: string, userSalt: string): [BytesLike, BytesLike] {
+  // Convert string salt to bytes32 (this is what will be passed to the contract)
+  const userSaltBytes32 = ethers.id(userSalt);
 
-  // The user salt is expected to be 12 bytes (Kadena user salt)
-  const userSaltBytes = getBytes(
-    ethers.dataSlice(ethers.id(userSalt), 0, USER_SALT_LENGTH),
+  // Calculate combined salt using the same approach as in the Solidity code:
+  // bytes32 finalSalt = keccak256(abi.encodePacked(msg.sender, userSalt));
+  const combinedSalt = ethers.solidityPackedKeccak256(
+    ['address', 'bytes32'],
+    [sender, userSaltBytes32],
   );
-  if (senderBytes.length !== ADDRESS_LENGTH) {
-    throw new Error(`Sender address must be ${ADDRESS_LENGTH} bytes`);
-  }
-  if (userSaltBytes.length !== USER_SALT_LENGTH) {
-    throw new Error(`User salt must be ${USER_SALT_LENGTH} bytes`);
-  }
-  // Concatenate the sender address and user salt
-  const result = new Uint8Array(USER_SALT_LENGTH + ADDRESS_LENGTH);
-  result.set(senderBytes, 0);
-  result.set(userSaltBytes, ADDRESS_LENGTH);
-  return [result, ethers.toBigInt(userSaltBytes)] as const;
+
+  // Convert to bytes for ethers.getCreate2Address
+  const combinedSaltBytes = ethers.getBytes(combinedSalt);
+
+  // Return the combined salt bytes and the original userSaltBytes32
+  return [combinedSaltBytes, userSaltBytes32];
 }
 
 const getSigner = async (address?: string) => {
@@ -97,8 +91,7 @@ async function deployContract({
   const create2 = Factory.attach(factoryAddress);
 
   // Compute the predicted address
-
-  const [saltBytes, userSaltBigInt] = createSalt(
+  const [saltBytes, userSaltBytes32] = createSalt(
     await signer.getAddress(),
     salt,
   );
@@ -111,7 +104,7 @@ async function deployContract({
 
   const computedAddress = await create2.computeAddress(
     contractBytecode,
-    userSaltBigInt,
+    userSaltBytes32,
   );
 
   if (computedAddress !== predictedAddress) {
@@ -133,7 +126,7 @@ async function deployContract({
   // Deploy using CREATE2
   const tx = await create2.deploy(
     contractBytecode,
-    userSaltBigInt,
+    userSaltBytes32,
     overrides || {},
   );
   await tx.wait();

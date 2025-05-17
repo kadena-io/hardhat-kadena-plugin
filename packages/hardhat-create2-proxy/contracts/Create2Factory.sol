@@ -2,33 +2,40 @@
 pragma solidity ^0.8.0;
 
 contract Create2Factory {
-  event Deployed(address addr, uint256 salt);
+  event Deployed(address addr, bytes32 salt, address sender);
 
   function deploy(
     bytes memory bytecode,
-    uint96 userSalt
+    bytes32 userSalt
   ) public payable returns (address) {
     address addr;
     uint256 value = msg.value;
-    uint256 packed = (uint256(uint160(msg.sender)) << 96) | userSalt;
+
+    bytes32 finalSalt = keccak256(abi.encodePacked(msg.sender, userSalt));
+
     assembly {
-      addr := create2(value, add(bytecode, 0x20), mload(bytecode), packed)
+      addr := create2(value, add(bytecode, 0x20), mload(bytecode), finalSalt)
       if iszero(extcodesize(addr)) {
         revert(0, 0)
       }
     }
-    emit Deployed(addr, packed);
+    emit Deployed(addr, userSalt, msg.sender);
     return addr;
   }
 
   function computeAddress(
     bytes memory bytecode,
-    uint96 userSalt
+    bytes32 userSalt
   ) public view returns (address) {
-    uint256 packed = (uint256(uint160(msg.sender)) << 96) | userSalt;
-    bytes32 salt = bytes32(packed);
+    bytes32 finalSalt = keccak256(abi.encodePacked(msg.sender, userSalt));
+
     bytes32 hash = keccak256(
-      abi.encodePacked(bytes1(0xff), address(this), salt, keccak256(bytecode))
+      abi.encodePacked(
+        bytes1(0xff),
+        address(this),
+        finalSalt,
+        keccak256(bytecode)
+      )
     );
     return address(uint160(uint(hash)));
   }
