@@ -12,8 +12,8 @@ extendEnvironment((hre) => {
   const safeCall =
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     <R, T extends (...args: any) => Promise<R>>(
-        cb: (api: Create2Helpers) => T,
-      ) =>
+      cb: (api: Create2Helpers) => T,
+    ) =>
       async (...args: Parameters<T>) => {
         if (api === undefined) {
           api = {
