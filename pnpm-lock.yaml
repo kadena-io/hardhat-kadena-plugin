@@ -24,6 +24,79 @@ importers:
         specifier: ^8.24.0
         version: 8.24.1(eslint@9.23.0)(typescript@5.7.3)
 
+  packages/hardhat-create2-proxy:
+    dependencies:
+      '@kadena/hardhat-chainweb':
+        specifier: ../hardhat-kadena
+        version: link:../hardhat-kadena
+      '@nomicfoundation/ethereumjs-util':
+        specifier: ^9.0.4
+        version: 9.0.4
+      '@types/node':
+        specifier: ^22.13.1
+        version: 22.13.4
+      async-lock:
+        specifier: ^1.4.1
+        version: 1.4.1
+      hardhat-switch-network:
+        specifier: ^1.2.0
+        version: 1.2.0(hardhat@2.22.18(ts-node@10.9.2(@types/node@22.13.4)(typescript@5.7.3))(typescript@5.7.3))
+      minimist:
+        specifier: ^1.2.8
+        version: 1.2.8
+      path-to-regexp:
+        specifier: ^8.2.0
+        version: 8.2.0
+      picocolors:
+        specifier: ^1.1.1
+        version: 1.1.1
+      undici:
+        specifier: ^5.14.0
+        version: 5.28.5
+      ws:
+        specifier: ^7.4.6
+        version: 7.5.10
+    devDependencies:
+      '@nomicfoundation/hardhat-ethers':
+        specifier: ^3.0.8
+        version: 3.0.8(ethers@6.13.5)(hardhat@2.22.18(ts-node@10.9.2(@types/node@22.13.4)(typescript@5.7.3))(typescript@5.7.3))
+      '@nomicfoundation/hardhat-toolbox':
+        specifier: ^5.0.0
+        version: 5.0.0(tenukjqugdj3ajy2vxrhn6czbq)
+      '@types/async-lock':
+        specifier: ^1.4.2
+        version: 1.4.2
+      '@types/minimist':
+        specifier: ^1.2.5
+        version: 1.2.5
+      '@types/mocha':
+        specifier: ^10.0.10
+        version: 10.0.10
+      '@types/ws':
+        specifier: ^8.5.14
+        version: 8.5.14
+      chai:
+        specifier: ^4.2.0
+        version: 4.5.0
+      ethers:
+        specifier: ^6.1.0
+        version: 6.13.5
+      hardhat:
+        specifier: ^2.22.18
+        version: 2.22.18(ts-node@10.9.2(@types/node@22.13.4)(typescript@5.7.3))(typescript@5.7.3)
+      mocha:
+        specifier: ^11.1.0
+        version: 11.1.0
+      solc:
+        specifier: 0.8.29
+        version: 0.8.29
+      typescript:
+        specifier: ^5.7.3
+        version: 5.7.3
+      web3:
+        specifier: ^4.16.0
+        version: 4.16.0(typescript@5.7.3)(zod@3.24.2)
+
   packages/hardhat-kadena:
     dependencies:
       '@nomicfoundation/ethereumjs-util':
@@ -123,6 +196,9 @@ importers:
       '@kadena/hardhat-chainweb':
         specifier: ../hardhat-kadena
         version: link:../hardhat-kadena
+      '@kadena/hardhat-create2-proxy':
+        specifier: ../hardhat-create2-proxy
+        version: link:../hardhat-create2-proxy
       '@nomicfoundation/hardhat-ethers':
         specifier: ^3.0.8
         version: 3.0.8(ethers@6.13.5)(hardhat@2.22.18(ts-node@10.9.2(@types/node@22.13.4)(typescript@5.7.3))(typescript@5.7.3))
@@ -2303,6 +2379,11 @@ packages:
   solc@0.8.26:
     resolution: {integrity: sha512-yiPQNVf5rBFHwN6SIf3TUUvVAFKcQqmSUFeq+fb6pNRCo0ZCgpYOZDi3BVoezCPIAcKrVYd/qXlBLUP9wVrZ9g==}
     engines: {node: '>=10.0.0'}
+    hasBin: true
+
+  solc@0.8.29:
+    resolution: {integrity: sha512-M1hmcsejAtT1RWC+wy45Oi8a82nSnDl65wDzA3/8uWTC7R7VcnrMVIHv6/LHqnQPZ7OM2RIeKh3zpNo4E5lYbw==}
+    engines: {node: '>=12.0.0'}
     hasBin: true
 
   solidity-coverage@0.8.14:
@@ -5357,6 +5438,18 @@ snapshots:
       is-fullwidth-code-point: 3.0.0
 
   solc@0.8.26(debug@4.4.0):
+    dependencies:
+      command-exists: 1.2.9
+      commander: 8.3.0
+      follow-redirects: 1.15.9(debug@4.4.0)
+      js-sha3: 0.8.0
+      memorystream: 0.3.1
+      semver: 5.7.2
+      tmp: 0.0.33
+    transitivePeerDependencies:
+      - debug
+
+  solc@0.8.29:
     dependencies:
       command-exists: 1.2.9
       commander: 8.3.0

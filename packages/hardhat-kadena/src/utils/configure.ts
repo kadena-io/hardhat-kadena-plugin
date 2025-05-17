@@ -24,6 +24,7 @@ interface INetworkOptions {
   loggingEnabled?: boolean | undefined;
   forking?: HardhatNetworkUserConfig['forking'];
   networkOptions?: HardhatNetworkUserConfig;
+  chainwebChainIdOffset: number;
 }
 
 // This function takes a default chains config and user chains config
@@ -93,12 +94,14 @@ export const getKadenaNetworks = ({
   loggingEnabled = false,
   forking,
   networkOptions,
+  chainwebChainIdOffset = 0,
 }: INetworkOptions): Record<string, HardhatNetworkConfig> => {
   const chainIds = new Array(numberOfChains)
     .fill(0)
     .map((_, i) => i + chainIdOffset);
   const networks = chainIds.reduce(
-    (acc, chainId, chainwebChainId) => {
+    (acc, chainId, chainwebChainIndex) => {
+      const chainwebChainId = chainwebChainIndex + chainwebChainIdOffset;
       const userNetworkConfig = availableNetworks[
         `${networkStem}${chainwebChainId}`
       ] as HardhatNetworkUserConfig | undefined;
@@ -156,6 +159,7 @@ interface IExternalNetworkOptions {
   accounts?: HttpNetworkAccountsConfig;
   baseUrl?: string;
   networkOptions?: HttpNetworkUserConfig;
+  chainwebChainIdOffset: number;
 }
 
 const toHttpNetworkAccountsConfig = (
@@ -184,15 +188,19 @@ export const getKadenaExternalNetworks = ({
   accounts = 'remote',
   baseUrl = 'http://localhost:8545',
   networkOptions = {},
+  chainwebChainIdOffset,
 }: IExternalNetworkOptions): Record<string, HttpNetworkConfig> => {
   const chainIds = new Array(numberOfChains)
     .fill(0)
     .map((_, i) => i + chainIdOffset);
   const networks = chainIds.reduce(
-    (acc, chainId, chainwebChainId) => {
+    (acc, chainId, chainwebChainIndex) => {
+      const chainwebChainId = chainwebChainIndex + chainwebChainIdOffset;
+
       const userConfig = availableNetworks[
         `${networkStem}${chainwebChainId}`
       ] as HttpNetworkUserConfig | undefined;
+
       const networkConfig: HttpNetworkConfig = {
         ...networkOptions,
         chainId: chainId,

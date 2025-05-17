@@ -7,7 +7,7 @@ import { ChainwebInProcessConfig } from '../type.js';
 import { KadenaNetworkConfig, NetworksConfig } from 'hardhat/types';
 import { Chain } from './chain.js';
 import { HardhatEthersProvider } from '@nomicfoundation/hardhat-ethers/internal/hardhat-ethers-provider.js';
-import { getNetworkStem } from '../utils.js';
+import { getNetworkStem } from '../pure-utils.js';
 
 interface INetworkOptions {
   chainweb: ChainwebInProcessConfig;
@@ -170,7 +170,7 @@ function makeChainweb(
   const graph = config.chainweb.graph;
   const networks = config.networks;
 
-  // Create Indiviual Chains
+  // Create Individual Chains
   logger.info('creating chains');
   const chains: Record<number, Chain> = {};
   for (const networkName in networks) {

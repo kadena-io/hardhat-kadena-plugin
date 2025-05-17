@@ -20,7 +20,6 @@ const {
   computeOriginHash,
   requestSpvProof,
   createTamperedProof,
-  switchChain,
 } = chainweb;
 
 describe('SimpleToken Unit Tests', async function () {
@@ -35,7 +34,9 @@ describe('SimpleToken Unit Tests', async function () {
   let token1Info: DeployedContractsOnChains<SimpleToken>;
 
   beforeEach(async function () {
-    await switchChain(0);
+    const chains = await chainweb.getChainIds();
+    await chainweb.switchChain(chains[0]);
+
     signers = await getSigners();
 
     const deployed = await deployContractOnChains<SimpleToken>({
@@ -611,11 +612,12 @@ describe('SimpleToken Unit Tests', async function () {
         // Token0 is deployed on chain 0
         // Token1 is deployed on chain 1
         // getChainwebChainId() should return the correct chain id for each token, regardless of the current network
-        expect(await token0.getChainwebChainId()).to.equal(0n);
-        expect(await token1.getChainwebChainId()).to.equal(1n);
+        const chains = await chainweb.getChainIds();
+        expect(await token0.getChainwebChainId()).to.equal(chains[0]);
+        expect(await token1.getChainwebChainId()).to.equal(chains[1]);
         await switchNetwork(token1Info.network.name);
-        expect(await token1.getChainwebChainId()).to.equal(1n);
-        expect(await token0.getChainwebChainId()).to.equal(0n);
+        expect(await token1.getChainwebChainId()).to.equal(chains[1]);
+        expect(await token0.getChainwebChainId()).to.equal(chains[0]);
       });
     }); // End of Success Test Cases
   }); // End of getChainwebChainId

@@ -81,7 +81,8 @@ interface ChainwebUserConfig {
   chains: number;                          // Number of chains (2, 3, 10, or 20 for auto-graph)
   graph?: Record<number, number[]>;        // Custom chain connection graph
   type?: 'in-process' | 'external';        // Network type (default: 'in-process')
-  chainIdOffset?: number;                  // Base chain ID (default: 626000)
+  chainIdOffset?: number;                  // Base network chain ID (default: 626000)
+  chainwebChainIdOffset?: number;          // Base chainweb chain ID (default: 0)
   logging?: 'none' | 'info' | 'debug';     // Logging level
   accounts?: HardhatNetworkAccountsConfig; // Account configuration
   externalHostUrl?: string;                // For external networks
@@ -96,17 +97,18 @@ interface ChainwebUserConfig {
 
 ```
 
-| Property          | Type                                                           | Description                                                                                                                                                            |
-| ----------------- | -------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `accounts`        | `HardhatNetworkAccountsConfig` (optional)                      | Defines the accounts configuration for the network (default: Hardhat network accounts).                                                                                |
-| `chains`          | `number`                                                       | Specifies the number of chains in the Chainweb network.                                                                                                                |
-| `graph`           | `{ [key: number]: number[] }` (optional)                       | Defines the graph structure of the Chainweb network where keys represent chain IDs and values are arrays of connected chain IDs (default: Pearson graph).              |
-| `type`            | `'in-process' \| 'external'` (optional)                        | Defines Chainweb type: “in-process” uses the Hardhat network, and “external” uses an external network (which you need to add to the networks—default: `'in-process'`). |
-| `externalHostUrl` | `string` (optional)                                            | Defines the base url for external networks (default: `http://localhost:8545`)                                                                                          |
-| `logging`         | `'none' \| 'info' \| 'debug'` (optional)                       | Sets the logging level for debugging purposes (default: `"info"`).                                                                                                     |
-| `chainIdOffset`   | `number` (optional)                                            | chain id offset to be set (default: `626000`).                                                                                                                         |
-| `precompiles`     | `{ chainwebChainId?: string, spvVerify?: string }` (optional)  | if you are using external networks the precompile addresses might be different from the default ones so you can set them via this config                               |
-| `networkOptions`  | `HardhatNetworkUserConfig \| HttpNetworkUserConfig` (optional) | You can override any option that hardhat adds by default for the created networks. check the examples                                                                  |
+| Property                | Type                                                           | Description                                                                                                                                                            |
+| ----------------------- | -------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `accounts`              | `HardhatNetworkAccountsConfig` (optional)                      | Defines the accounts configuration for the network (default: Hardhat network accounts).                                                                                |
+| `chains`                | `number`                                                       | Specifies the number of chains in the Chainweb network.                                                                                                                |
+| `graph`                 | `{ [key: number]: number[] }` (optional)                       | Defines the graph structure of the Chainweb network where keys represent chain IDs and values are arrays of connected chain IDs (default: Pearson graph).              |
+| `type`                  | `'in-process' \| 'external'` (optional)                        | Defines Chainweb type: “in-process” uses the Hardhat network, and “external” uses an external network (which you need to add to the networks—default: `'in-process'`). |
+| `externalHostUrl`       | `string` (optional)                                            | Defines the base url for external networks (default: `http://localhost:8545`)                                                                                          |
+| `logging`               | `'none' \| 'info' \| 'debug'` (optional)                       | Sets the logging level for debugging purposes (default: `"info"`).                                                                                                     |
+| `chainIdOffset`         | `number` (optional)                                            | network chain id offset (default: `626000`).                                                                                                                           |
+| `chainwebChainIdOffset` | `number` (optional)                                            | chainweb chain id offset (default: `0`).                                                                                                                               |
+| `precompiles`           | `{ chainwebChainId?: string, spvVerify?: string }` (optional)  | if you are using external networks the precompile addresses might be different from the default ones so you can set them via this config                               |
+| `networkOptions`        | `HardhatNetworkUserConfig \| HttpNetworkUserConfig` (optional) | You can override any option that hardhat adds by default for the created networks. check the examples                                                                  |
 
 ### Network Types
 
@@ -194,7 +196,7 @@ module.exports = {
 
 The plugin uses the Chainweb configuration and extends the Hardhat config by adding networks to it.
 
-- Each chain gets a unique chain ID: `chainIdOffset + chainIndex`
+- Each chain gets a unique network chain ID: `chainIdOffset + chainIndex`. This is akin to the Ethereum network chain Id of 1.
 - Default offset is 626000 (e.g., Chain 0 = 626000, Chain 1 = 626001)
 - Network names follow the pattern: `chainweb_${networkName}${chainIndex}`
 
@@ -225,13 +227,13 @@ module.exports = {
 
 #### Override the config a specific chain of the chainweb
 
-You also can override the config for spesific chain you just need to add the config in networks section
+You also can override the config for a specific chain. You just need to add the config in networks section.
 
 ```ts
 module.exports = {
   solidity: '0.8.20',
   networks:{
-    // wh you want only the chain 0 of chainweb uses the following config
+    // when you want only the chain 0 of chainweb, use the following config
     chainweb_hardhat0:{
       gasPrice: 0.1,
       allowUnlimitedContractSize: true,
@@ -487,7 +489,7 @@ module.exports = {
     hardhat: {
       chains: 2,
     },
-    // use 5 chains with a custom graph that is close to testnet
+    // use 20 chains with a custom graph that is close to testnet
     semiTestnet: {
       chains: 20,
     },
@@ -526,7 +528,7 @@ module.exports = {
 };
 ```
 
-### **How to use advance hardhat configs**
+### **How to use advanced hardhat configs**
 
 All in-process networks inherit the default hardhat network configuration so if for example you want to set `allowUnlimitedContractSize` you just need to add it to the config
 

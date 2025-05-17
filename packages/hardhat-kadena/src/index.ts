@@ -3,4 +3,6 @@ import 'hardhat-switch-network';
 import './type';
 import './plugin';
 export { Origin } from './utils/chainweb';
-export { DeployedContractsOnChains } from './utils';
+export { DeployContractProperties, DeployedContractsOnChains } from './utils';
+export { getNetworkStem } from './pure-utils';
+export { ChainwebPluginApi } from './type';

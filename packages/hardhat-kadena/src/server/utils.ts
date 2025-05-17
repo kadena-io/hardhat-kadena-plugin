@@ -1,6 +1,7 @@
-import { Origin } from '../utils';
-
 // TODO: use config for base url
+
+import { Origin } from '../pure-utils';
+
 // /chain/${trgChain}/spv/chain/${origin.chain}/height/${origin.height}/transaction/${origin.txIdx}/event/${origin.eventIdx}
 export const parseSpvProofRequest = (url: string) => {
   const parts = url.split('/');

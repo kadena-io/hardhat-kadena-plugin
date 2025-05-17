@@ -8,6 +8,7 @@
   },
   "dependencies": {
     "@kadena/hardhat-chainweb": "../hardhat-kadena",
+    "@kadena/hardhat-create2-proxy": "../hardhat-create2-proxy",
     "@nomicfoundation/hardhat-ethers": "^3.0.8",
     "@nomicfoundation/hardhat-toolbox": "^5.0.0",
     "@openzeppelin/contracts": "^5.2.0",
