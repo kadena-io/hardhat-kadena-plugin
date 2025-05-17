@@ -11,7 +11,7 @@ export type DeployUsingCreate2 = <
 >(
   args: DeployContractProperties<A> & {
     salt: string;
-    create2proxy?: string;
+    create2Factory?: string;
     bindToSender?: boolean;
   },
 ) => Promise<{
@@ -40,7 +40,7 @@ export interface Create2Helpers {
   predictContractAddress: (
     contractBytecode: string,
     salt: string,
-    create2proxy?: string,
+    create2Factory?: string,
     signer?: Signer,
     bindToSender?: boolean,
   ) => Promise<string>;

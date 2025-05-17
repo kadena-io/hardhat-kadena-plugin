@@ -1,6 +1,6 @@
 # Hardhat Kadena chainweb Plugin
 
-`@kadena/hardhat-create2-proxy` is a Hardhat plugin that allows Ethereum developers to deploy their own create2proxy on chianweb evm.
+`@kadena/hardhat-create2-proxy` is a Hardhat plugin that allows Ethereum developers to deploy their own create2Factory on chianweb evm.
 
 This plugin uses [`@kadena/hardhat-kadena`](../hardhat-kadena) plugin.
 
@@ -10,7 +10,7 @@ In the Ethereum the contract addresses derive from msg.sender + nonce. Since non
 
 ## Solution
 
-This plugin creates a single purpose key from the deployer key and uses that key only for deploying the create2proxy, not any other type of tx. This way the nonce will always be 0 for a new create2 factory deployment. That means that the resulting create2 factory address stays the same on all chains.
+This plugin creates a single purpose key from the deployer key and uses that key only for deploying the create2Factory, not any other type of tx. This way the nonce will always be 0 for a new create2 factory deployment. That means that the resulting create2 factory address stays the same on all chains.
 
 ## Important Considerations for Deterministic Deployments
 
@@ -94,7 +94,7 @@ The plugin adds `create2` property to `hre.chainweb` the Hardhat Runtime Environ
 
 ```ts
 export interface Create2Helpers {
-  // deploy create2proxy contract by using the signer key. the default value is the hardhat first account
+  // deploy create2Factory contract by using the signer key. the default value is the hardhat first account
   deployCreate2Factory: (signer?: Signer) => Promise<
     [
       contractAddress: string,
@@ -110,10 +110,10 @@ export interface Create2Helpers {
       }[],
     ]
   >;
-  // returns create2proxy address by using the signer key. the default value is the hardhat first account
+  // returns create2Factory address by using the signer key. the default value is the hardhat first account
   getCreate2FactoryAddress: (signer?: Signer) => Promise<string>;
 
-  // deploy the contract using the default create2proxy; if ypu want different proxy you can use the create2proxy property
+  // deploy the contract using the default create2Factory; if ypu want different proxy you can use the create2Factory property
   deployUsingCreate2: (args: {
     name: string;
     signer?: Signer;
@@ -121,7 +121,7 @@ export interface Create2Helpers {
     constructorArgs?: ContractMethodArgs;
     overrides?: Overrides;
     salt: BytesLike;
-    create2proxy?: string;
+    create2Factory?: string;
   }) => Promise<{
     deployments: Array<{
       contract: BaseContract & {
@@ -139,7 +139,7 @@ export interface Create2Helpers {
   predictContractAddress: (
     contractBytecode: string,
     salt: BytesLike,
-    create2proxy?: string,
+    create2Factory?: string,
   ) => Promise<string>;
 }
 ```

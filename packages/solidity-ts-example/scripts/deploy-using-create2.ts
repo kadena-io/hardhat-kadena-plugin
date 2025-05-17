@@ -11,7 +11,7 @@ async function main() {
   const deployed = await chainweb.create2.deployUsingCreate2({
     name: 'SimpleToken',
     constructorArgs: [ethers.parseUnits('1000000')],
-    create2proxy: proxyAddress,
+    create2Factory: proxyAddress,
     salt: salt,
   });
   console.log('Contracts deployed');
@@ -26,7 +26,7 @@ async function main() {
   const deployedBound = await chainweb.create2.deployUsingCreate2({
     name: 'SimpleToken',
     constructorArgs: [ethers.parseUnits('1000000')],
-    create2proxy: proxyAddress,
+    create2Factory: proxyAddress,
     salt: salt,
     bindToSender: true,
   });
