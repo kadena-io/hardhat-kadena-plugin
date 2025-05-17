@@ -1,5 +1,5 @@
 import { ethers } from 'hardhat';
-import create2Artifact from '../../hardhat-create2-proxy/build/create2-create2Factory/combined.json';
+import create2Artifact from '../..//hardhat-create2-proxy/build/create2-factory/combined.json';
 
 //Run this script against localhost
 // Start node using npx hardhat node
