@@ -13,7 +13,11 @@ import {
   getSigners,
   deployMocks,
 } from './utils/utils';
-import { SimpleToken, WrongOperationTypeToken } from '../typechain-types';
+import {
+  SimpleToken,
+  SimpleToken__factory,
+  WrongOperationTypeToken,
+} from '../typechain-types';
 
 const {
   deployContractOnChains,
@@ -654,4 +658,186 @@ describe('SimpleToken Unit Tests', async function () {
       });
     }); // End of Success Test Cases
   }); // End of getCrossChainAddress
+
+  describe('CREATE2 Deployment Tests', function () {
+    let signers: Signers;
+    let create2FactoryAddress: string;
+
+    describe('Create2 Factory Deployment', function () {
+      beforeEach(async function () {
+        const chains = await chainweb.getChainIds();
+        await chainweb.switchChain(chains[0]);
+        signers = await getSigners();
+      });
+
+      it('Should deploy the CREATE2 factory on all chains with the same address', async function () {
+        const [factoryAddress, deployments] =
+          await chainweb.create2.deployCreate2Factory();
+
+        create2FactoryAddress = factoryAddress;
+        expect(factoryAddress).to.be.a('string');
+        expect(factoryAddress).to.match(/^0x[0-9a-fA-F]{40}$/);
+
+        // Verify factory deployed on all chains
+        const allChains = await chainweb.getChainIds();
+        expect(deployments.length).to.equal(allChains.length);
+
+        // Verify all deployments have the same address
+        for (const deployment of deployments) {
+          expect(deployment.address).to.equal(factoryAddress);
+
+          // Check contract code exists at address on each chain
+          await chainweb.switchChain(deployment.chain);
+          const code = await ethers.provider.getCode(factoryAddress);
+          expect(code).to.not.equal('0x');
+        }
+      });
+    }); // End of Create2 Factory Deployment
+
+    describe('Contract deployment with CREATE2 across chains', function () {
+      before(async function () {
+        // Only deploy factory if not already deployed
+        if (!create2FactoryAddress) {
+          [create2FactoryAddress] =
+            await chainweb.create2.deployCreate2Factory();
+        }
+      });
+
+      it('Should deploy SimpleToken using CREATE2 on all chains with the same address', async function () {
+        const salt = 'SimpleToken_v1'; // Deterministic salt
+
+        const deployResult = await chainweb.create2.deployUsingCreate2({
+          name: 'SimpleToken',
+          constructorArgs: [ethers.parseUnits('1000000')],
+          salt,
+          create2Factory: create2FactoryAddress,
+          bindToSender: false,
+        });
+
+        // Check all chains have deployments
+        const allChains = await chainweb.getChainIds();
+        expect(deployResult.deployments.length).to.equal(allChains.length);
+
+        // Get first deployment address to compare with others
+        const expectedAddress = deployResult.deployments[0].address;
+
+        // Check each deployment has the same address and works correctly
+        await Promise.all(
+          deployResult.deployments.map(async (deployment) => {
+            // Verify same address on all chains
+            expect(deployment.address).to.equal(expectedAddress);
+
+            // Switch to the chain for this deployment
+            await chainweb.switchChain(deployment.chain);
+
+            // Verify contract works correctly
+            const token = deployment.contract as SimpleToken;
+            expect(await token.symbol()).to.equal('SIM');
+            expect(await token.totalSupply()).to.equal(
+              ethers.parseEther('1000000'),
+            );
+          }),
+        );
+      });
+
+      it('Should predict contract address correctly across all chains', async function () {
+        const salt = 'SimpleToken_prediction_test';
+
+        // Get the compiled bytecode
+        const factory = await ethers.getContractFactory('SimpleToken');
+        const tx = await factory.getDeployTransaction(
+          ethers.parseUnits('1000000'),
+        );
+        const bytecode = tx.data as string;
+
+        // Predict address
+        const predictedAddress = await chainweb.create2.predictContractAddress(
+          bytecode,
+          salt,
+          create2FactoryAddress,
+        );
+
+        // Test prediction across all chains
+        const results = await chainweb.runOverChains(async (chainId) => {
+          // Deploy on this chain
+          const deployOptions = {
+            name: 'SimpleToken',
+            constructorArgs: [ethers.parseUnits('1000000')],
+            salt,
+            create2Factory: create2FactoryAddress,
+          };
+
+          // Use deployUsingCreate2 with a specific chain
+          const deployed =
+            await chainweb.create2.deployUsingCreate2(deployOptions);
+          const deployedAddress = deployed.deployments[0].address;
+
+          // Verify the address matches the prediction
+          expect(deployedAddress).to.equal(predictedAddress);
+
+          // Verify contract code exists at the address
+          const code = await ethers.provider.getCode(deployedAddress);
+          expect(code).to.not.equal('0x');
+
+          return { chainId, deployedAddress };
+        });
+
+        // Verify all chains deployed to the same address
+        for (const result of results) {
+          expect(result.deployedAddress).to.equal(predictedAddress);
+        }
+      });
+
+      it('Should deploy SimpleToken using CREATE2 on all chains with the same address', async function () {
+        const salt = 'SimpleToken_v1'; // Deterministic salt
+
+        // Deploy on all chains
+        const deployResult = await chainweb.create2.deployUsingCreate2({
+          name: 'SimpleToken',
+          constructorArgs: [ethers.parseUnits('1000000')],
+          salt,
+          create2Factory: create2FactoryAddress,
+          bindToSender: false,
+        });
+
+        // Get the deployed address to compare across chains
+        const expectedAddress = deployResult.deployments[0].address;
+
+        // Using runOverChains to verify each deployment properly
+        const results = await chainweb.runOverChains(async (chainId) => {
+          // Switch to the correct chain
+          await chainweb.switchChain(chainId);
+
+          // Verify contract code exists
+          const code = await ethers.provider.getCode(expectedAddress);
+          expect(code).to.not.equal('0x');
+
+          // Connect to the contract on this chain
+          const token = SimpleToken__factory.connect(
+            expectedAddress,
+            signers.deployer,
+          );
+
+          // Verify contract functionality
+          const symbol = await token.symbol();
+          const totalSupply = await token.totalSupply();
+
+          // Return verification data
+          return {
+            chainId,
+            address: expectedAddress,
+            symbol,
+            totalSupply,
+          };
+        });
+
+        // Verify all chains have the correct contract with the same address
+        for (const result of results) {
+          expect(result.address).to.equal(expectedAddress);
+          expect(result.symbol).to.equal('SIM');
+          expect(result.totalSupply).to.equal(ethers.parseEther('1000000'));
+        }
+      });
+    }); // End of Contract deployment with CREATE2 across chains
+  }); // End of CREATE2 Deployment Tests
 }); // End of SimpleToken Unit Tests
