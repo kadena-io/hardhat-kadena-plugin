@@ -87,8 +87,8 @@ export const predictContractAddress = async (
   const contractDeployer = signer ?? defaultDeployer;
   const senderAddress = await contractDeployer.getAddress();
 
-  // Get factory address
-  const factoryAddress =
+  // Get create2 factory address
+  const create2FactoryAddress =
     create2Factory ??
     (await getCreate2FactoryAddress(signer, create2FactoryVersion));
 
@@ -99,7 +99,11 @@ export const predictContractAddress = async (
   const bytecodeHash = ethers.keccak256(contractBytecode);
 
   // Calculate predicted address
-  return ethers.getCreate2Address(factoryAddress, saltBytes, bytecodeHash);
+  return ethers.getCreate2Address(
+    create2FactoryAddress,
+    saltBytes,
+    bytecodeHash,
+  );
 };
 
 /**
@@ -342,7 +346,7 @@ export const deployUsingCreate2: DeployUsingCreate2 = async ({
 
       const deployerAddress = await contractDeployer.getAddress();
       console.log(
-        `Deploying with signer: ${deployerAddress} on network ${cwId}`,
+        `Deploying contract deterministically with signer: ${deployerAddress} on network ${cwId}`,
       );
       const factory = await ethers.getContractFactory(name, {
         signer: contractDeployer,
@@ -389,7 +393,10 @@ export const deployUsingCreate2: DeployUsingCreate2 = async ({
         },
       };
     } catch (error) {
-      console.error(`Failed to deploy to network ${cwId}:`, error);
+      console.error(
+        `Failed to deploy contract to chainweb chain ${cwId}:`,
+        error,
+      );
       return null;
     }
   });

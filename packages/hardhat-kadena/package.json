@@ -5,7 +5,8 @@
   "author": "Javad Khalilian <javad@kadena.io>",
   "contributors": [
     "Lars Kuhtz <lars@kadena.io>",
-    "Javad Khalilian <javad@kadena.io>"
+    "Javad Khalilian <javad@kadena.io>",
+    "Heather Swope <heather.swope@kadena.io>"
   ],
   "main": "./lib/index.js",
   "types": "./lib/index.d.ts",

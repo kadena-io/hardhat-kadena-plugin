@@ -52,6 +52,11 @@ export async function deriveSecondaryKey(
   // Use first 32 bytes (64 hex chars + '0x') as the private key
   const derivedPrivateKey = '0x' + hash.slice(2, 66);
   const wallet: Wallet = new Wallet(derivedPrivateKey, ethers.provider);
+
+  console.log(
+    `Derived secondary key for create2 factory version ${version}: ${derivedPrivateKey}`,
+  );
+
   return {
     publicKey: await wallet.getAddress(),
     privateKey: derivedPrivateKey,
@@ -96,27 +101,27 @@ export const deployCreate2Factory: Create2Helpers['deployCreate2Factory'] =
       const secondaryKey = await getSecondaryWallet(masterDeployer);
       const secondaryKeyAddress = await secondaryKey.getAddress();
 
-      const factoryAddress = ethers.getCreateAddress({
+      const create2FactoryAddress = ethers.getCreateAddress({
         from: secondaryKey.address,
         nonce: 0,
       });
 
-      const isDeployed = await isContractDeployed(factoryAddress);
+      const isDeployed = await isContractDeployed(create2FactoryAddress);
 
       if (isDeployed) {
         const Factory = await hre.ethers.getContractFactory(
           create2Artifacts.abi,
           create2Artifacts.bin,
         );
-        const create2 = Factory.attach(factoryAddress);
+        const create2 = Factory.attach(create2FactoryAddress);
 
         console.log(
-          `The create2 factory address ${factoryAddress} is already deployed on chain ${cwId}`,
+          `The create2 factory address ${create2FactoryAddress} is already deployed on chain ${cwId}`,
         );
 
         return {
           contract: create2,
-          address: factoryAddress,
+          address: create2FactoryAddress,
           chain: cwId,
           deployer: secondaryKeyAddress,
           network: {
@@ -131,17 +136,18 @@ export const deployCreate2Factory: Create2Helpers['deployCreate2Factory'] =
 
       if (nonce > 0) {
         throw new Error(
-          `This address has already been used for another type of transaction. you need a new address to deploy a create2 factory`,
+          `This derived deployer address ${secondaryKeyAddress} has already been used for another type of transaction. You need a new address to deploy a create2 factory.
+          Please use a different signer or version.`,
         );
       }
 
       console.log(
-        `the contract will be deploying with address: ${factoryAddress} and the deployer address: ${secondaryKeyAddress}`,
+        `The create2 factory contract will be deployed to address: ${create2FactoryAddress} with deployer address: ${secondaryKeyAddress}`,
       );
 
       const balance = await ethers.provider.getBalance(secondaryKeyAddress);
 
-      const factory = await hre.ethers.getContractFactory(
+      const CREATE2Factory = await hre.ethers.getContractFactory(
         create2Artifact.contracts['contracts/Create2Factory.sol:Create2Factory']
           .abi,
         create2Artifact.contracts['contracts/Create2Factory.sol:Create2Factory']
@@ -150,7 +156,7 @@ export const deployCreate2Factory: Create2Helpers['deployCreate2Factory'] =
       );
 
       // Get detailed fee data
-      const tx = await factory.getDeployTransaction();
+      const tx = await CREATE2Factory.getDeployTransaction();
       const gasLimit = await ethers.provider.estimateGas(tx);
       const feeData = await ethers.provider.getFeeData();
 
@@ -197,7 +203,7 @@ export const deployCreate2Factory: Create2Helpers['deployCreate2Factory'] =
           gasLimit: benchmarkGasLimit,
         };
 
-        // 0.008 KDA (slightly higher than recommended 0.00798804)
+        // 0.008 KDA (slightly higher than benchmarked 0.00798804)
         requiredEther = ethers.parseEther('0.008');
 
         console.warn(
@@ -219,32 +225,32 @@ export const deployCreate2Factory: Create2Helpers['deployCreate2Factory'] =
           `Current balance: ${ethers.formatEther(balance)} KDA, required: ${ethers.formatEther(requiredEther)} KDA`,
         );
         console.log(
-          `FUNDING DEPLOYER WITH ${ethers.formatEther(additionalFunding)} KDA`,
+          `FUNDING create2 factory derived deployer with ${ethers.formatEther(additionalFunding)} KDA`,
         );
 
         await fundAccount(masterDeployer, secondaryKey, additionalFunding);
       }
 
       // Use the appropriate gas options for deployment
-      const contract = await factory.deploy(deployOptions);
+      const contract = await CREATE2Factory.deploy(deployOptions);
 
       const deploymentTx = contract.deploymentTransaction();
       if (!deploymentTx) {
-        throw new Error('Deployment transaction failed');
+        throw new Error('Create2 factory deployment transaction failed');
       }
       await deploymentTx.wait();
 
-      if (factoryAddress !== (await contract.getAddress())) {
-        throw new Error('Factory address mismatch');
+      if (create2FactoryAddress !== (await contract.getAddress())) {
+        throw new Error('Create2 factory address mismatch');
       }
 
       console.log(
-        `create2 factory deployed at ${factoryAddress} on chain ${cwId}`,
+        `Create2 factory deployed at ${create2FactoryAddress} on chain ${cwId}`,
       );
 
       return {
         contract: contract,
-        address: factoryAddress,
+        address: create2FactoryAddress,
         chain: cwId,
         deployer: secondaryKeyAddress,
         network: {
@@ -254,7 +260,7 @@ export const deployCreate2Factory: Create2Helpers['deployCreate2Factory'] =
       };
     });
     if (result.length === 0) {
-      throw new Error('no result from deployCreate2Factory');
+      throw new Error('No result from deployCreate2Factory');
     }
     // Clear the private key from memory when done
     secondaryPrivateKey = undefined;
