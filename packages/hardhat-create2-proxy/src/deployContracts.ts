@@ -15,7 +15,7 @@ const { ethers, chainweb } = hre;
 
 /**
  * Checks if a contract is deployed at the specified address.
- * 
+ *
  * @param address - The address to check for contract deployment
  * @returns A promise that resolves to true if a contract exists at the address, false otherwise
  */
@@ -25,7 +25,7 @@ function isContractDeployed(address: string): Promise<boolean> {
 
 /**
  * Creates salt values for CREATE2 deployment with optional sender binding.
- * 
+ *
  * @param sender - The address of the deploying account
  * @param userSalt - The user-provided salt string
  * @param bindToSender - Whether to include the sender address in the salt calculation
@@ -58,10 +58,10 @@ function createSalt(
 /**
  * Predicts the address where a contract will be deployed using CREATE2.
  * This is useful for calculating addresses before actual deployment.
- * 
+ *
  * @param contractBytecode - The compiled bytecode of the contract
  * @param salt - The salt to use for address generation
- * @param create2Factory - Optional custom CREATE2 factory address. 
+ * @param create2Factory - Optional custom CREATE2 factory address.
  * Must implement:
  * - function deploy(bytes memory bytecode, bytes32 salt) public payable returns (address)
  * - function computeAddress(bytes memory bytecode, bytes32 salt) public view returns (address)
@@ -77,7 +77,7 @@ export const predictContractAddress = async (
   salt: string,
   create2Factory?: string,
   signer?: Signer,
-  bindToSender = false
+  bindToSender = false,
 ): Promise<string> => {
   // Get signer if not provided
   const [defaultDeployer] = await ethers.getSigners();
@@ -99,7 +99,7 @@ export const predictContractAddress = async (
 
 /**
  * Deploys a contract using standard CREATE2 functionality.
- * 
+ *
  * @param contractBytecode - The compiled bytecode of the contract to deploy
  * @param signer - The signer that will deploy the contract
  * @param overrides - Optional transaction overrides for the deployment
@@ -189,7 +189,7 @@ async function deployContract({
 /**
  * Deploys a contract using CREATE2 with the deployer address bound to the salt.
  * This prevents anyone else from deploying to the same address with the same salt.
- * 
+ *
  * @param contractBytecode - The compiled bytecode of the contract to deploy
  * @param signer - The signer that will deploy the contract
  * @param overrides - Optional transaction overrides for the deployment
@@ -279,14 +279,14 @@ async function deployContractBound({
 /**
  * Deploy a contract on all chains in the network using CREATE2.
  * This ensures the contract is deployed to the same address on all chains.
- * 
+ *
  * @param name - The name of the contract to deploy
  * @param signer - Optional signer for deployment (defaults to first account)
  * @param factoryOptions - Optional additional options for the contract factory
  * @param constructorArgs - Arguments to pass to the contract constructor
  * @param overrides - Optional transaction overrides for the deployment
  * @param salt - The salt to use for the CREATE2 deployment
- * @param create2Factory - Optional custom CREATE2 factory address. 
+ * @param create2Factory - Optional custom CREATE2 factory address.
  * Must implement:
  * - function deploy(bytes memory bytecode, bytes32 salt) public payable returns (address)
  * - function computeAddress(bytes memory bytecode, bytes32 salt) public view returns (address)
@@ -331,19 +331,19 @@ export const deployUsingCreate2: DeployUsingCreate2 = async ({
       // Choose create2 deployment function based on bindToSender flag
       const contractAddress = bindToSender
         ? await deployContractBound({
-          contractBytecode,
-          signer: contractDeployer,
-          overrides,
-          salt,
-          create2Factory,
-        })
+            contractBytecode,
+            signer: contractDeployer,
+            overrides,
+            salt,
+            create2Factory,
+          })
         : await deployContract({
-          contractBytecode,
-          signer: contractDeployer,
-          overrides,
-          salt,
-          create2Factory,
-        });
+            contractBytecode,
+            signer: contractDeployer,
+            overrides,
+            salt,
+            create2Factory,
+          });
 
       const contract = factory.attach(contractAddress);
 

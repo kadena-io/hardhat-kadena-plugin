@@ -13,7 +13,6 @@ import { Create2Helpers } from './type';
 
 const networkStem = getNetworkStem(hre.config.defaultChainweb);
 
-
 function isContractDeployed(address: string): Promise<boolean> {
   return ethers.provider.getCode(address).then((code) => code !== '0x');
 }
@@ -21,16 +20,14 @@ function isContractDeployed(address: string): Promise<boolean> {
 export const create2Artifacts =
   create2Artifact.contracts['contracts/Create2Factory.sol:Create2Factory'];
 
-const contractHash = ethers.id(create2Artifacts.bin);
-
 export const getCreate2FactoryAddress: Create2Helpers['getCreate2FactoryAddress'] =
-  async (signer?: Signer) => {
+  async (signer?: Signer, version: number | bigint = BigInt(1)) => {
     // Get default signer if none provided
     const signers = await ethers.getSigners();
     const masterDeployer = signer || signers[0];
 
     // Derive the secondary key directly with version parameter
-    const secondaryKey = await deriveSecondaryKey(masterDeployer);
+    const secondaryKey = await deriveSecondaryKey(masterDeployer, version);
 
     // Calculate factory address
     const factoryAddress = getCreateAddress({
@@ -41,9 +38,11 @@ export const getCreate2FactoryAddress: Create2Helpers['getCreate2FactoryAddress'
     return factoryAddress;
   };
 
-
-export async function deriveSecondaryKey(signer: Signer) {
-  const message = `create deployer key for create2 factory contract hash "${contractHash}"`;
+export async function deriveSecondaryKey(
+  signer: Signer,
+  version: number | bigint = BigInt(1),
+) {
+  const message = `create deployer key for create2 factory version: ${version}`;
   const signature = await signer.signMessage(message);
 
   // Combine signature and label to get deterministic entropy
@@ -76,14 +75,15 @@ async function fundAccount(sender: Signer, receiver: Signer, amount: bigint) {
 }
 
 export const deployCreate2Factory: Create2Helpers['deployCreate2Factory'] =
-  async (signer?: Signer) => {
+  async (signer?: Signer, version: number | bigint = BigInt(1)) => {
     let secondaryPrivateKey: string | undefined = undefined;
 
     const getSecondaryWallet = async (signer: Signer) => {
       if (secondaryPrivateKey) {
         return new Wallet(secondaryPrivateKey, ethers.provider);
       }
-      secondaryPrivateKey = (await deriveSecondaryKey(signer)).privateKey;
+      secondaryPrivateKey = (await deriveSecondaryKey(signer, version))
+        .privateKey;
 
       return new Wallet(secondaryPrivateKey, ethers.provider);
     };

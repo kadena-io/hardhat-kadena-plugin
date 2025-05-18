@@ -19,8 +19,14 @@ export type DeployUsingCreate2 = <
 }>;
 
 export interface Create2Helpers {
-  getCreate2FactoryAddress: (signer?: Signer) => Promise<string>;
-  deployCreate2Factory: (signer?: Signer) => Promise<
+  getCreate2FactoryAddress: (
+    signer?: Signer,
+    version?: number | bigint,
+  ) => Promise<string>;
+  deployCreate2Factory: (
+    signer?: Signer,
+    version?: number | bigint,
+  ) => Promise<
     [
       contractAddress: string,
       deployments: {
@@ -44,7 +50,6 @@ export interface Create2Helpers {
     signer?: Signer,
     bindToSender?: boolean,
   ) => Promise<string>;
-
 }
 
 declare module '@kadena/hardhat-chainweb' {
