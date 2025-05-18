@@ -4,6 +4,7 @@ import {
   Signer,
   toUtf8Bytes,
   Wallet,
+  TransactionRequest,
 } from 'ethers';
 
 import create2Artifact from '../build/create2-factory/combined.json';
@@ -152,32 +153,84 @@ export const deployCreate2Factory: Create2Helpers['deployCreate2Factory'] =
         secondaryKey,
       );
 
+      // Get detailed fee data
       const tx = await factory.getDeployTransaction();
       const gasLimit = await ethers.provider.estimateGas(tx);
-      const gasPrice = (await ethers.provider.getFeeData()).gasPrice;
+      const feeData = await ethers.provider.getFeeData();
 
       let requiredEther: bigint;
-      if (!gasPrice || !gasLimit) {
-        console.warn('gasPrice or gasLimit is undefined; using default values');
-        requiredEther = ethers.parseEther('0.001');
+      let deployOptions: TransactionRequest;
+
+      // Check if we can get proper EIP-1559 fee data
+      if (gasLimit && feeData.maxFeePerGas && feeData.maxPriorityFeePerGas) {
+        // Use EIP-1559 fee structure
+        const maxFeePerGas = feeData.maxFeePerGas;
+
+        // Calculate required funding with 20% buffer (base fee can change between blocks)
+        requiredEther = (maxFeePerGas * gasLimit * BigInt(120)) / BigInt(100);
+
+        deployOptions = {
+          gasLimit,
+          maxFeePerGas: feeData.maxFeePerGas,
+          maxPriorityFeePerGas: feeData.maxPriorityFeePerGas,
+        };
+
+        console.log('Using EIP-1559 fee model');
+      } else if (gasLimit && feeData.gasPrice) {
+        // Fallback to legacy fee structure
+        requiredEther =
+          (feeData.gasPrice * gasLimit * BigInt(120)) / BigInt(100);
+
+        deployOptions = {
+          gasLimit,
+          gasPrice: feeData.gasPrice,
+        };
+
+        console.warn(
+          'Network returned legacy fee data instead of EIP-1559. Using legacy fee model.',
+        );
       } else {
-        requiredEther = (gasPrice * gasLimit * BigInt(120)) / BigInt(100);
+        // Something failed in estimation, use benchmark data
+        console.warn(
+          'Fee data unavailable. Using fallback values from benchmark.',
+        );
+
+        // Use benchmark-based values (266,268 gas with buffer)
+        const benchmarkGasLimit = BigInt(300000); // Rounded up from 266,268
+        deployOptions = {
+          gasLimit: benchmarkGasLimit,
+        };
+
+        // 0.008 KDA (slightly higher than recommended 0.00798804)
+        requiredEther = ethers.parseEther('0.008');
+
+        console.warn(
+          `Using fallback gas limit of ${benchmarkGasLimit} and funding amount of ${ethers.formatEther(requiredEther)} KDA`,
+        );
       }
 
-      if (balance > BigInt(0)) {
-        console.log('deployer address:', secondaryKeyAddress);
-        console.log('balance:', ethers.formatEther(balance));
+      if (balance >= requiredEther) {
+        console.log(
+          'Existing balance:',
+          ethers.formatEther(balance),
+          'KDA',
+          '(sufficient for deployment)',
+        );
       } else {
-        console.log('FUNDING DEPLOYER WITH', gasLimit);
-        await fundAccount(masterDeployer, secondaryKey, requiredEther);
+        // Calculate how much additional funding is needed
+        const additionalFunding = requiredEther - balance;
+        console.log(
+          `Current balance: ${ethers.formatEther(balance)} KDA, required: ${ethers.formatEther(requiredEther)} KDA`,
+        );
+        console.log(
+          `FUNDING DEPLOYER WITH ${ethers.formatEther(additionalFunding)} KDA`,
+        );
+
+        await fundAccount(masterDeployer, secondaryKey, additionalFunding);
       }
 
-      /* Deploy the contract */
-
-      const contract = await factory.deploy({
-        gasLimit: gasLimit,
-        gasPrice: gasPrice,
-      });
+      // Use the appropriate gas options for deployment
+      const contract = await factory.deploy(deployOptions);
 
       const deploymentTx = contract.deploymentTransaction();
       if (!deploymentTx) {

@@ -80,7 +80,7 @@ async function main() {
   }
 
   // Recommended funding values with different safety buffers
-  console.log(`\nRecommended 'fundingDeployerWith' values:`);
+  console.log(`\nRecommended 'requiredEther' values:`);
 
   // Standard gas price with increasing safety buffers
   const standardGasPrice = 20n * BigInt(1_000_000_000); // 20 gwei
@@ -100,7 +100,7 @@ async function main() {
   );
   console.log(`\n=== RECOMMENDED VALUE ===`);
   console.log(
-    `Recommended 'fundingDeployerWith' value: '${ethers.formatEther(recommendedFunding)}' ETH`,
+    `Recommended 'requiredEther' value: '${ethers.formatEther(recommendedFunding)}' ETH`,
   );
   console.log(`This includes:`);
   console.log(`- Average gas used: ${averageGasUsed.toString()} gas units`);
