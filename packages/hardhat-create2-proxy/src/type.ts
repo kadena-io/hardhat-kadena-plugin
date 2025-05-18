@@ -49,6 +49,7 @@ export interface Create2Helpers {
     create2Factory?: string,
     signer?: Signer,
     bindToSender?: boolean,
+    create2FactoryVersion?: number | bigint,
   ) => Promise<string>;
 }
 

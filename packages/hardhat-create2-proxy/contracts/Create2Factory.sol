@@ -1,6 +1,12 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
+/**
+ * @title Create2Factory
+ * @author Kadena Team
+ * @dev A utility contract that deploys other contracts using the CREATE2 opcode
+ * @notice Provides functions for deterministic contract deployment with optional sender binding
+ */
 contract Create2Factory {
   event Deployed(
     address addr,
@@ -9,7 +15,14 @@ contract Create2Factory {
     bool boundToSender
   );
 
-  // Standard CREATE2 - matches EVM standard
+  /**
+   * @notice Deploys a contract using the CREATE2 opcode with the specified bytecode and salt
+   * @dev Uses standard CREATE2 deployment with no sender binding
+   * @param bytecode The contract bytecode to deploy
+   * @param salt A 32-byte value used to create a deterministic address
+   * @return The deployed contract address
+   * @custom:emits Deployed event with the new contract address, salt, sender and boundToSender=false
+   */
   function deploy(
     bytes memory bytecode,
     bytes32 salt
@@ -27,7 +40,16 @@ contract Create2Factory {
     return addr;
   }
 
-  // Sender-bound CREATE2 - adds msg.sender to salt for security
+  /**
+   * @notice Deploys a contract using CREATE2 with the salt bound to the sender address
+   * @dev Combines msg.sender with the userSalt to prevent front-running attacks.
+   *      This function is also provided for those who are concerned about address
+   *      squatting on new chainweb EVM chains.
+   * @param bytecode The contract bytecode to deploy
+   * @param userSalt A user-provided salt that will be combined with msg.sender
+   * @return The deployed contract address
+   * @custom:emits Deployed event with the new contract address, userSalt, sender and boundToSender=true
+   */
   function deployBound(
     bytes memory bytecode,
     bytes32 userSalt
@@ -47,7 +69,13 @@ contract Create2Factory {
     return addr;
   }
 
-  // Standard CREATE2 address calculation
+  /**
+   * @notice Calculates the address where a contract will be deployed using deploy()
+   * @dev Follows the CREATE2 address calculation formula: keccak256(0xff ++ deployerAddress ++ salt ++ keccak256(bytecode))[12:]
+   * @param bytecode The contract bytecode to deploy
+   * @param salt A 32-byte value used to create a deterministic address
+   * @return The address where the contract would be deployed
+   */
   function computeAddress(
     bytes memory bytecode,
     bytes32 salt
@@ -58,7 +86,13 @@ contract Create2Factory {
     return address(uint160(uint(hash)));
   }
 
-  // Sender-bound CREATE2 address calculation
+  /**
+   * @notice Calculates the address where a contract will be deployed using deployBound()
+   * @dev Combines msg.sender with userSalt similar to deployBound() for address calculation
+   * @param bytecode The contract bytecode to deploy
+   * @param userSalt A user-provided salt that will be combined with msg.sender
+   * @return The address where the contract would be deployed
+   */
   function computeAddressBound(
     bytes memory bytecode,
     bytes32 userSalt

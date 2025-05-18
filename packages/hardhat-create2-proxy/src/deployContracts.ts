@@ -70,6 +70,8 @@ function createSalt(
  * - function computeAddressBound(bytes memory bytecode, bytes32 userSalt) public view returns (address)
  * @param signer - Optional signer (defaults to first signer)
  * @param bindToSender - Whether to include the sender address in the salt calculation
+ * @param create2FactoryVersion - Optional version for the CREATE2 factory that will be used.
+ * Note: This parameter is only used when create2Factory is not provided.
  * @returns The predicted contract address
  */
 export const predictContractAddress = async (
@@ -78,6 +80,7 @@ export const predictContractAddress = async (
   create2Factory?: string,
   signer?: Signer,
   bindToSender = false,
+  create2FactoryVersion: number | bigint = BigInt(1),
 ): Promise<string> => {
   // Get signer if not provided
   const [defaultDeployer] = await ethers.getSigners();
@@ -85,7 +88,9 @@ export const predictContractAddress = async (
   const senderAddress = await contractDeployer.getAddress();
 
   // Get factory address
-  const factoryAddress = create2Factory ?? (await getCreate2FactoryAddress());
+  const factoryAddress =
+    create2Factory ??
+    (await getCreate2FactoryAddress(signer, create2FactoryVersion));
 
   // Create salt bytes with or without sender binding
   const [saltBytes] = createSalt(senderAddress, salt, bindToSender);
@@ -104,7 +109,15 @@ export const predictContractAddress = async (
  * @param signer - The signer that will deploy the contract
  * @param overrides - Optional transaction overrides for the deployment
  * @param salt - The salt to use for the CREATE2 deployment
- * @param create2Factory - Optional custom CREATE2 factory address with compatible interface
+ * @param create2Factory - Optional custom CREATE2 factory address.
+ * Must implement:
+ * - function deploy(bytes memory bytecode, bytes32 salt) public payable returns (address)
+ * - function computeAddress(bytes memory bytecode, bytes32 salt) public view returns (address)
+ * For sender-bound deployments, must also implement:
+ * - function deployBound(bytes memory bytecode, bytes32 userSalt) public payable returns (address)
+ * - function computeAddressBound(bytes memory bytecode, bytes32 userSalt) public view returns (address)
+ * @param create2FactoryVersion - Optional version for the CREATE2 factory that will be used.
+ * Note: This parameter is only used when create2Factory is not provided.
  * @returns The deployed contract address
  */
 async function deployContract({
@@ -113,15 +126,18 @@ async function deployContract({
   overrides,
   salt,
   create2Factory,
+  create2FactoryVersion = BigInt(1),
 }: {
   contractBytecode: string;
   signer: Signer;
   overrides: Overrides | undefined;
   salt: string;
   create2Factory?: string;
+  create2FactoryVersion?: number | bigint;
 }) {
   const create2FactoryAddress =
-    create2Factory ?? (await getCreate2FactoryAddress());
+    create2Factory ??
+    (await getCreate2FactoryAddress(signer, create2FactoryVersion));
 
   const CREATE2Factory = await hre.ethers.getContractFactory(
     create2Artifacts.abi,
@@ -194,7 +210,15 @@ async function deployContract({
  * @param signer - The signer that will deploy the contract
  * @param overrides - Optional transaction overrides for the deployment
  * @param salt - The salt to use for the CREATE2 deployment
- * @param create2Factory - Optional custom CREATE2 factory address (must implement deployBound and computeAddressBound functions)
+ * @param create2Factory - Optional custom CREATE2 factory address.
+ * Must implement:
+ * - function deploy(bytes memory bytecode, bytes32 salt) public payable returns (address)
+ * - function computeAddress(bytes memory bytecode, bytes32 salt) public view returns (address)
+ * For sender-bound deployments, must also implement:
+ * - function deployBound(bytes memory bytecode, bytes32 userSalt) public payable returns (address)
+ * - function computeAddressBound(bytes memory bytecode, bytes32 userSalt) public view returns (address)
+ * @param create2FactoryVersion - Optional version for the CREATE2 factory that will be used.
+ * Note: This parameter is only used when create2Factory is not provided.
  * @returns The deployed contract address
  */
 async function deployContractBound({
@@ -203,15 +227,18 @@ async function deployContractBound({
   overrides,
   salt,
   create2Factory,
+  create2FactoryVersion = BigInt(1),
 }: {
   contractBytecode: string;
   signer: Signer;
   overrides: Overrides | undefined;
   salt: string;
   create2Factory?: string;
+  create2FactoryVersion?: number | bigint;
 }) {
   const create2FactoryAddress =
-    create2Factory ?? (await getCreate2FactoryAddress());
+    create2Factory ??
+    (await getCreate2FactoryAddress(signer, create2FactoryVersion));
 
   const CREATE2Factory = await hre.ethers.getContractFactory(
     create2Artifacts.abi,
@@ -348,6 +375,8 @@ export const deployUsingCreate2: DeployUsingCreate2 = async ({
       const contract = factory.attach(contractAddress);
 
       // Store deployment info in both formats
+      // Note: 'chain' and 'network.chainId' represent the Chainweb chain ID (0, 1, etc.)
+      // not the EVM chainId. The EVM chainId can be accessed via hre.network.config.chainId
       return {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         contract: contract as any,

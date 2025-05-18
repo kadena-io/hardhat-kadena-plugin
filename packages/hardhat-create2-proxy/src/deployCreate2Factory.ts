@@ -68,9 +68,9 @@ async function fundAccount(sender: Signer, receiver: Signer, amount: bigint) {
   await tx.wait();
 
   const receiverBalance = await ethers.provider.getBalance(receiverAddress);
-  if (receiverBalance !== amount) {
+  if (receiverBalance < amount) {
     throw new Error(
-      `funding deployer failed. receiver balance: ${receiverBalance} is not equal to funding amount: ${amount}`,
+      `Funding deployer failed. Receiver balance: ${receiverBalance} is less than funding amount: ${amount}`,
     );
   }
 }
@@ -104,10 +104,6 @@ export const deployCreate2Factory: Create2Helpers['deployCreate2Factory'] =
       const isDeployed = await isContractDeployed(factoryAddress);
 
       if (isDeployed) {
-        console.log(
-          `the factory address ${factoryAddress} is already deployed`,
-        );
-
         const Factory = await hre.ethers.getContractFactory(
           create2Artifacts.abi,
           create2Artifacts.bin,
@@ -115,7 +111,7 @@ export const deployCreate2Factory: Create2Helpers['deployCreate2Factory'] =
         const create2 = Factory.attach(factoryAddress);
 
         console.log(
-          `the factory address ${factoryAddress} is already deployed on chain ${cwId}`,
+          `The create2 factory address ${factoryAddress} is already deployed on chain ${cwId}`,
         );
 
         return {
@@ -260,5 +256,8 @@ export const deployCreate2Factory: Create2Helpers['deployCreate2Factory'] =
     if (result.length === 0) {
       throw new Error('no result from deployCreate2Factory');
     }
+    // Clear the private key from memory when done
+    secondaryPrivateKey = undefined;
+
     return [result[0].address, result] as const;
   };
