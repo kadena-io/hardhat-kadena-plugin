@@ -1,6 +1,5 @@
 import { DeployUsingCreate2 } from './type';
 import { Signer, Overrides, BytesLike } from 'ethers';
-import { HardhatEthersSigner } from '@nomicfoundation/hardhat-ethers/signers';
 import { getNetworkStem } from '@kadena/hardhat-chainweb';
 
 import hre from 'hardhat';
@@ -116,7 +115,7 @@ async function deployContract({
   create2Factory,
 }: {
   contractBytecode: string;
-  signer: Signer | HardhatEthersSigner;
+  signer: Signer;
   overrides: Overrides | undefined;
   salt: string;
   create2Factory?: string;
@@ -206,7 +205,7 @@ async function deployContractBound({
   create2Factory,
 }: {
   contractBytecode: string;
-  signer: Signer | HardhatEthersSigner;
+  signer: Signer;
   overrides: Overrides | undefined;
   salt: string;
   create2Factory?: string;

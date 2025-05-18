@@ -9,7 +9,6 @@ import {
 import create2Artifact from '../build/create2-factory/combined.json';
 import hre, { chainweb, ethers } from 'hardhat';
 import { getNetworkStem } from '@kadena/hardhat-chainweb';
-import { HardhatEthersSigner } from '@nomicfoundation/hardhat-ethers/signers';
 import { Create2Helpers } from './type';
 
 const networkStem = getNetworkStem(hre.config.defaultChainweb);
@@ -26,8 +25,14 @@ const contractHash = ethers.id(create2Artifacts.bin);
 
 export const getCreate2FactoryAddress: Create2Helpers['getCreate2FactoryAddress'] =
   async (signer?: Signer) => {
-    const masterDeployer = await getSigner(await signer?.getAddress());
+    // Get default signer if none provided
+    const signers = await ethers.getSigners();
+    const masterDeployer = signer || signers[0];
+
+    // Derive the secondary key directly with version parameter
     const secondaryKey = await deriveSecondaryKey(masterDeployer);
+
+    // Calculate factory address
     const factoryAddress = getCreateAddress({
       from: secondaryKey.publicKey,
       nonce: 0,
@@ -35,6 +40,7 @@ export const getCreate2FactoryAddress: Create2Helpers['getCreate2FactoryAddress'
 
     return factoryAddress;
   };
+
 
 export async function deriveSecondaryKey(signer: Signer) {
   const message = `create deployer key for create2 factory contract hash "${contractHash}"`;
@@ -69,23 +75,11 @@ async function fundAccount(sender: Signer, receiver: Signer, amount: bigint) {
   }
 }
 
-const getSigner = async (signer?: string) => {
-  const signers = await ethers.getSigners();
-  const masterDeployer = !signer
-    ? signers[0]
-    : signers.find((account) => account.address === signer);
-
-  if (!masterDeployer) {
-    throw new Error(`cant find the account with address ${signer}`);
-  }
-  return masterDeployer;
-};
-
 export const deployCreate2Factory: Create2Helpers['deployCreate2Factory'] =
   async (signer?: Signer) => {
     let secondaryPrivateKey: string | undefined = undefined;
 
-    const getSecondaryWallet = async (signer: HardhatEthersSigner) => {
+    const getSecondaryWallet = async (signer: Signer) => {
       if (secondaryPrivateKey) {
         return new Wallet(secondaryPrivateKey, ethers.provider);
       }
@@ -95,15 +89,8 @@ export const deployCreate2Factory: Create2Helpers['deployCreate2Factory'] =
     };
 
     const result = await chainweb.runOverChains(async (cwId) => {
-      const masterDeployer = await getSigner(await signer?.getAddress());
-
-      const masterDeployerAddress = await masterDeployer.getAddress();
-
-      if (!masterDeployer) {
-        throw new Error(
-          `cant find the account with address ${masterDeployerAddress}`,
-        );
-      }
+      const signers = await ethers.getSigners();
+      const masterDeployer = signer || signers[0];
 
       const secondaryKey = await getSecondaryWallet(masterDeployer);
       const secondaryKeyAddress = await secondaryKey.getAddress();
