@@ -4,7 +4,7 @@ import { HardhatEthersHelpers } from 'hardhat/types';
 import { switchNetwork, chainweb, ethers } from 'hardhat';
 import { SimpleToken } from '../../typechain-types';
 
-const { requestSpvProof, switchChain, deployContractOnChains } = chainweb;
+const { requestSpvProof, deployContractOnChains } = chainweb;
 
 // hash of CrossChainInitialized(uint32,address,uint64,bytes)
 const EVENT_SIG_HASH =
@@ -128,7 +128,6 @@ export const CrossChainOperation = {
 };
 
 export async function getSigners() {
-  await switchChain(0);
   const [deployer, alice, bob, carol] = await ethers.getSigners();
   return {
     deployer,

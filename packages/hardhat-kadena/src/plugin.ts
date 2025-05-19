@@ -13,13 +13,13 @@ import {
   getKadenaNetworks,
 } from './utils/configure.js';
 import { createGraph } from './utils/chainweb-graph.js';
-import { getNetworkStem, getUtils } from './utils.js';
 import { HardhatEthersProvider } from '@nomicfoundation/hardhat-ethers/internal/hardhat-ethers-provider.js';
 import Web3 from 'web3';
 import { runRPCNode } from './server/runRPCNode.js';
 import { CHAIN_ID_ADDRESS, VERIFY_ADDRESS } from './utils/network-contracts.js';
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
 import picocolors from 'picocolors';
+import { computeOriginHash, getNetworkStem } from './pure-utils.js';
 
 extendConfig((config, userConfig) => {
   if (!userConfig.chainweb) {
@@ -38,22 +38,28 @@ extendConfig((config, userConfig) => {
     userConfig.defaultChainweb ??
     'hardhat';
 
-  const hardhatConfig = {
+  const defaultChainwebChainIdOffset = 0;
+
+  const hardhatConfig: ChainwebInProcessUserConfig = {
     chains: 2,
+    chainwebChainIdOffset: defaultChainwebChainIdOffset,
     ...userConfig.chainweb.hardhat,
     type: 'in-process',
+  };
+
+  const localhostConfig: ChainwebExternalUserConfig = {
+    chains: hardhatConfig.chains,
+    chainIdOffset: hardhatConfig.chainIdOffset ?? 626000,
+    externalHostUrl: 'http://localhost:8545',
+    chainwebChainIdOffset: hardhatConfig.chainwebChainIdOffset,
+    ...userConfig.chainweb['localhost'],
+    type: 'external',
   };
 
   const userConfigWithLocalhost = {
     ...userConfig.chainweb,
     hardhat: hardhatConfig,
-    localhost: {
-      chains: hardhatConfig.chains,
-      chainIdOffset: hardhatConfig.chainIdOffset ?? 626000,
-      externalHostUrl: 'http://localhost:8545',
-      ...userConfig.chainweb['localhost'],
-      type: 'external',
-    },
+    localhost: localhostConfig,
   };
 
   if (!(config.defaultChainweb in userConfigWithLocalhost)) {
@@ -93,12 +99,23 @@ extendConfig((config, userConfig) => {
             );
           }
         }
+
+        const offset = chainwebInProcessUserConfig.chainwebChainIdOffset ?? 0;
+
+        const graphWithOffset = createGraph(
+          chainwebInProcessUserConfig.chains,
+        ).reduce(
+          (acc, targets, source) => ({
+            ...acc,
+            [source + offset]: targets.map((target) => target + offset),
+          }),
+          {},
+        );
+
         // add networks to hardhat
 
         const chainwebConfig: ChainwebInProcessConfig = {
-          graph:
-            chainwebInProcessUserConfig.graph ??
-            createGraph(chainwebInProcessUserConfig.chains),
+          graph: chainwebInProcessUserConfig.graph ?? graphWithOffset,
           logging: 'info',
           type: 'in-process',
           chainIdOffset: 626000,
@@ -107,6 +124,7 @@ extendConfig((config, userConfig) => {
             chainwebChainId: CHAIN_ID_ADDRESS,
             spvVerify: VERIFY_ADDRESS,
           },
+          chainwebChainIdOffset: defaultChainwebChainIdOffset,
           ...chainwebInProcessUserConfig,
         };
 
@@ -126,6 +144,7 @@ extendConfig((config, userConfig) => {
               : undefined,
             networkOptions: chainwebConfig.networkOptions,
             chainIdOffset: chainwebConfig.chainIdOffset,
+            chainwebChainIdOffset: chainwebConfig.chainwebChainIdOffset,
           }),
         };
         config.chainweb[name] = chainwebConfig;
@@ -137,6 +156,7 @@ extendConfig((config, userConfig) => {
           chainIdOffset: 626000,
           externalHostUrl: 'http://localhost:8545',
           accounts: 'remote',
+          chainwebChainIdOffset: defaultChainwebChainIdOffset,
           ...externalUserConfig,
           precompiles: {
             chainwebChainId:
@@ -157,6 +177,7 @@ extendConfig((config, userConfig) => {
             baseUrl: chainwebConfig.externalHostUrl,
             networkOptions: chainwebConfig.networkOptions,
             chainIdOffset: chainwebConfig.chainIdOffset,
+            chainwebChainIdOffset: chainwebConfig.chainwebChainIdOffset,
           }),
         };
         config.chainweb[name] = chainwebConfig;
@@ -165,44 +186,48 @@ extendConfig((config, userConfig) => {
   );
 });
 
-const createExternalProvider = (
+const createExternalProvider = async (
   hre: HardhatRuntimeEnvironment,
   chainwebName: string,
-): Omit<ChainwebPluginApi, 'initialize'> => {
-  const chainweb = hre.config.chainweb[chainwebName];
+): Promise<Omit<ChainwebPluginApi, 'initialize'>> => {
+  const utils = await import('./utils.js');
   const networkStem = getNetworkStem(chainwebName);
-  const utils = getUtils(hre);
   return {
     deployContractOnChains: utils.deployContractOnChains,
     getProvider: (cid: number) => {
       const name = `${networkStem}${cid}`;
       return createProvider(hre.config, name, hre.artifacts);
     },
-    requestSpvProof: utils.requestSpvProof,
+    requestSpvProof: (targetChain, origin) =>
+      utils.requestSpvProof(targetChain, origin),
     switchChain: async (cid: number | string) => {
       if (typeof cid === 'string') {
         await hre.switchNetwork(cid);
+        console.log(`Switched to ${cid}`);
       } else {
+        console.log(`Switched to ${networkStem}${cid}`);
         await hre.switchNetwork(`${networkStem}${cid}`);
       }
     },
-    getChainIds: () => new Array(chainweb.chains).fill(0).map((_, i) => i),
+    getChainIds: utils.getChainIds,
     callChainIdContract: utils.callChainIdContract,
-    createTamperedProof: utils.createTamperedProof,
-    computeOriginHash: utils.computeOriginHash,
+    createTamperedProof: (targetChain, origin) =>
+      utils.createTamperedProof(targetChain, origin),
+    computeOriginHash: computeOriginHash,
     runOverChains: utils.runOverChains,
   };
 };
 
-const createInternalProvider = (
+const createInternalProvider = async (
   hre: HardhatRuntimeEnvironment,
   chainwebName: string,
   overrideForking?: { url: string; blockNumber?: number },
-): Omit<ChainwebPluginApi, 'initialize'> => {
+): Promise<Omit<ChainwebPluginApi, 'initialize'>> => {
   const chainweb = hre.config.chainweb[chainwebName];
   if (!chainweb || chainweb.type !== 'in-process') {
     throw new Error('Chainweb configuration not found');
   }
+  const utils = await import('./utils.js');
   const networkStem = getNetworkStem(chainwebName);
   const chainwebNetwork = new ChainwebNetwork({
     chainweb,
@@ -267,13 +292,11 @@ const createInternalProvider = (
       if ('web3' in hre) {
         hre.web3 = new Web3(provider);
       }
-      console.log(`Switched to chain ${cid}`);
+      console.log(`Switched to ${cid}`);
       return;
     }
     originalSwitchNetwork(networkName);
   };
-
-  const utils = getUtils(hre, chainwebNetwork);
 
   spinupChainweb();
 
@@ -284,7 +307,8 @@ const createInternalProvider = (
       const provider = chainwebNetwork.getProvider(cid);
       return provider;
     },
-    requestSpvProof: utils.requestSpvProof,
+    requestSpvProof: (targetChain, origin) =>
+      utils.requestSpvProof(targetChain, origin, chainwebNetwork),
     switchChain: async (cid: number | string) => {
       await isNetworkReadyPromise;
       if (typeof cid === 'string') {
@@ -293,10 +317,11 @@ const createInternalProvider = (
         await hre.switchNetwork(`${networkStem}${cid}`);
       }
     },
-    getChainIds: () => new Array(chainweb.chains).fill(0).map((_, i) => i),
+    getChainIds: utils.getChainIds,
     callChainIdContract: utils.callChainIdContract,
-    createTamperedProof: utils.createTamperedProof,
-    computeOriginHash: utils.computeOriginHash,
+    createTamperedProof: (targetChain, origin) =>
+      utils.createTamperedProof(targetChain, origin, chainwebNetwork),
+    computeOriginHash,
     runOverChains: utils.runOverChains,
   };
 };
@@ -304,11 +329,16 @@ const createInternalProvider = (
 // const spinupChainweb = () =>
 extendEnvironment((hre) => {
   let api: Omit<ChainwebPluginApi, 'initialize'> | undefined = undefined;
+  let initDone = () => {};
+  const init = new Promise<void>((resolve) => {
+    initDone = resolve;
+  });
 
   const safeCall =
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     <T extends () => (...args: any) => any>(cb: T) =>
-      (...args: Parameters<T>) => {
+      async (...args: Parameters<T>) => {
+        await init;
         if (api !== undefined) {
           return cb()(...args);
         }
@@ -332,14 +362,15 @@ extendEnvironment((hre) => {
       );
 
       if (chainweb.type === 'external') {
-        api = createExternalProvider(hre, hre.config.defaultChainweb);
+        api = await createExternalProvider(hre, hre.config.defaultChainweb);
       } else {
-        api = createInternalProvider(
+        api = await createInternalProvider(
           hre,
           hre.config.defaultChainweb,
           args?.forking,
         );
       }
+      initDone();
     },
     getProvider: safeCall(() => api!.getProvider),
     requestSpvProof: safeCall(() => api!.requestSpvProof),
@@ -348,7 +379,7 @@ extendEnvironment((hre) => {
     callChainIdContract: safeCall(() => api!.callChainIdContract),
     deployContractOnChains: safeCall(() => api!.deployContractOnChains),
     createTamperedProof: safeCall(() => api!.createTamperedProof),
-    computeOriginHash: safeCall(() => api!.computeOriginHash),
+    computeOriginHash,
     runOverChains: safeCall(() => api!.runOverChains),
   };
   if (process.env['HK_INIT_CHAINWEB'] === 'true') {
@@ -421,7 +452,8 @@ task('test', `Run mocha tests; Supports Chainweb`)
     hre.chainweb.initialize();
 
     if (!process.argv.includes('--network')) {
-      await hre.chainweb.switchChain(0);
+      const [first] = await hre.chainweb.getChainIds();
+      await hre.chainweb.switchChain(first);
     }
 
     return runSuper(taskArgs);

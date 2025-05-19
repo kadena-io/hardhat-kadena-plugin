@@ -2,6 +2,7 @@ import { HardhatUserConfig } from 'hardhat/config';
 import '@nomicfoundation/hardhat-toolbox';
 import '@nomicfoundation/hardhat-verify';
 import '@kadena/hardhat-chainweb';
+import '@kadena/hardhat-create2-proxy';
 import { readFileSync } from 'fs';
 
 const devnetAccounts: {
@@ -13,11 +14,9 @@ const config: HardhatUserConfig = {
   chainweb: {
     hardhat: {
       chains: 2,
+      chainwebChainIdOffset: 20,
       networkOptions: {
         allowUnlimitedContractSize: true,
-        // forking: {
-        //   url: 'https://eth.drpc.org',
-        // },
       },
     },
     devnet: {

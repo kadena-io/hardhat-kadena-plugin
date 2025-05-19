@@ -1,7 +1,7 @@
 {
-  "name": "@kadena/hardhat-chainweb",
-  "version": "1.4.6",
-  "description": "Hardhat plugin for Kadena's Chainweb network",
+  "name": "@kadena/hardhat-create2-proxy",
+  "version": "1.0.0",
+  "description": "Hardhat plugin for deploying deterministic create2Factory contract",
   "author": "Javad Khalilian <javad@kadena.io>",
   "contributors": [
     "Lars Kuhtz <lars@kadena.io>",
@@ -11,7 +11,8 @@
   "main": "./lib/index.js",
   "types": "./lib/index.d.ts",
   "scripts": {
-    "build": "eslint && tsc",
+    "build": "pnpm run compile && eslint && tsc",
+    "compile": "node scripts/compile-factory.js",
     "dev": "eslint && tsc --watch",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
@@ -32,6 +33,7 @@
   },
   "homepage": "https://github.com/kadena-io/hardhat-kadena-plugin/tree/main/packages/hardhat-kadena#readme",
   "dependencies": {
+    "@kadena/hardhat-chainweb": "../hardhat-kadena",
     "@nomicfoundation/ethereumjs-util": "^9.0.4",
     "@types/node": "^22.13.1",
     "async-lock": "^1.4.1",
@@ -61,6 +63,7 @@
     "ethers": "^6.1.0",
     "hardhat": "^2.22.18",
     "mocha": "^11.1.0",
+    "solc": "0.8.29",
     "typescript": "^5.7.3",
     "web3": "^4.16.0"
   },

@@ -19,6 +19,7 @@ export interface ChainwebInProcessUserConfig {
   type?: 'in-process';
   chainIdOffset?: number;
   networkOptions?: HardhatNetworkUserConfig;
+  chainwebChainIdOffset?: number;
 }
 
 export interface ChainwebInProcessConfig
@@ -40,6 +41,7 @@ export interface ChainwebExternalUserConfig {
     chainwebChainId?: string;
     spvVerify?: string;
   };
+  chainwebChainIdOffset?: number;
   networkOptions?: Omit<HttpNetworkUserConfig, 'chainId' | 'url'>;
 }
 
@@ -68,7 +70,7 @@ export interface ChainwebPluginApi {
     origin: Omit<Origin, 'originContractAddress'>,
   ) => Promise<string>;
   switchChain: (cid: number) => Promise<void>;
-  getChainIds: () => number[];
+  getChainIds: () => Promise<number[]>;
   callChainIdContract: () => Promise<number>;
   deployContractOnChains: DeployContractOnChains;
   createTamperedProof: (targetChain: number, origin: Origin) => Promise<string>;
@@ -89,6 +91,7 @@ declare module 'hardhat/types' {
   interface HardhatUserConfig {
     chainweb: {
       hardhat?: ChainwebInProcessUserConfig;
+      localhost?: ChainwebExternalUserConfig;
       [chainwebName: string]: ChainwebUserConfig | undefined;
     };
     defaultChainweb?: string;

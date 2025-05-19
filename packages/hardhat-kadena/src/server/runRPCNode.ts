@@ -17,7 +17,7 @@ import {
   toChecksumAddress,
 } from '@nomicfoundation/ethereumjs-util';
 import { mapChainIdToRoute } from './utils';
-import { getNetworkStem } from '../utils.js';
+import { getNetworkStem } from '../pure-utils.js';
 
 export async function runRPCNode(
   taskArgs: any,
@@ -39,14 +39,11 @@ export async function runRPCNode(
   const chainweb = hre.config.chainweb[hre.config.defaultChainweb];
 
   if (chainweb) {
-    // TODO: run my network
     const providers: [chainId: number, provider: EIP1193Provider][] =
       await Promise.all(
-        hre.chainweb
-          .getChainIds()
-          .map(
-            async (cid) => [cid, await hre.chainweb.getProvider(cid)] as const,
-          ),
+        (await hre.chainweb.getChainIds()).map(
+          async (cid) => [cid, await hre.chainweb.getProvider(cid)] as const,
+        ),
       );
     const server = new ChainwebJsonRpcServer({
       port,
