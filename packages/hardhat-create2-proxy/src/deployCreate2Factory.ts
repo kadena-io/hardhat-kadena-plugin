@@ -43,7 +43,7 @@ export async function deriveSecondaryKey(
   signer: Signer,
   version: number | bigint = BigInt(1),
 ) {
-  const message = `create deployer key for create2 factory version: ${version}`;
+  const message = `DeployerKey:v1:create2:${version}`;
   const signature = await signer.signMessage(message);
 
   // Combine signature and label to get deterministic entropy
@@ -51,7 +51,7 @@ export async function deriveSecondaryKey(
 
   // Use first 32 bytes (64 hex chars + '0x') as the private key
   const derivedPrivateKey = '0x' + hash.slice(2, 66);
-  const wallet: Wallet = new Wallet(derivedPrivateKey, ethers.provider);
+  const wallet: Wallet = new Wallet(derivedPrivateKey, signer.provider);
 
   console.log(
     `Derived secondary key for create2 factory version ${version}: ${derivedPrivateKey}`,
