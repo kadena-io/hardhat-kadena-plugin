@@ -18,14 +18,14 @@ export type DeployUsingCreate2 = <
 }>;
 
 export interface Create2Helpers {
-  getCreate2FactoryAddress: (
-    signer?: Signer,
-    version?: number | bigint,
-  ) => Promise<string>;
-  deployCreate2Factory: (
-    signer?: Signer,
-    version?: number | bigint,
-  ) => Promise<
+  getCreate2FactoryAddress: (props?: {
+    signer?: Signer;
+    version?: number | bigint;
+  }) => Promise<string>;
+  deployCreate2Factory: (props?: {
+    signer?: Signer;
+    version?: number | bigint;
+  }) => Promise<
     [
       contractAddress: string,
       deployments: {

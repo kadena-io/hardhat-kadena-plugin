@@ -22,7 +22,7 @@ export const create2Artifacts =
   create2Artifact.contracts['contracts/Create2Factory.sol:Create2Factory'];
 
 export const getCreate2FactoryAddress: Create2Helpers['getCreate2FactoryAddress'] =
-  async (signer?: Signer, version: number | bigint = BigInt(1)) => {
+  async ({ signer, version = BigInt(1) } = {}) => {
     // Get default signer if none provided
     const signers = await ethers.getSigners();
     const masterDeployer = signer || signers[0];
@@ -81,7 +81,7 @@ async function fundAccount(sender: Signer, receiver: Signer, amount: bigint) {
 }
 
 export const deployCreate2Factory: Create2Helpers['deployCreate2Factory'] =
-  async (signer?: Signer, version: number | bigint = BigInt(1)) => {
+  async ({ signer, version = BigInt(1) } = {}) => {
     let secondaryPrivateKey: string | undefined = undefined;
 
     const getSecondaryWallet = async (signer: Signer) => {
