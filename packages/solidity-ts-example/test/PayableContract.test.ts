@@ -109,4 +109,92 @@ describe('PayableContract with Create2Factory', function () {
       }
     });
   });
+
+  describe('Deployment with different admin addresses', function () {
+    let deployer1: HardhatEthersSigner;
+    let deployer2: HardhatEthersSigner;
+    let valueToSend: bigint;
+    let create2FactoryAddress: string;
+
+    beforeEach(async function () {
+      const [first, second] = await ethers.getSigners();
+      deployer1 = first;
+      deployer2 = second;
+      valueToSend = ethers.parseEther('0.1');
+
+      // Deploy a fresh factory for each test
+      [create2FactoryAddress] = await chainweb.create2.deployCreate2Factory();
+    });
+
+    it('Should produce different addresses when deployed with different admin addresses using the same salt', async function () {
+      const salt = ethers.id('same-salt-different-admins');
+
+      // Deploy first contract with deployer1 as admin
+      const deployedContracts1 = await chainweb.create2.deployUsingCreate2({
+        name: 'PayableContract',
+        constructorArgs: [deployer1.address],
+        overrides: { value: valueToSend },
+        salt: salt,
+        create2Factory: create2FactoryAddress,
+        signer: deployer1,
+      });
+
+      // Deploy second contract with deployer2 as admin
+      const deployedContracts2 = await chainweb.create2.deployUsingCreate2({
+        name: 'PayableContract',
+        constructorArgs: [deployer2.address],
+        overrides: { value: valueToSend },
+        salt: salt,
+        create2Factory: create2FactoryAddress,
+        signer: deployer2,
+      });
+
+      // Verify the addresses are different
+      expect(deployedContracts1.deployments.length).to.be.greaterThan(0);
+      expect(deployedContracts2.deployments.length).to.be.greaterThan(0);
+
+      for (let i = 0; i < deployedContracts1.deployments.length; i++) {
+        const chain = deployedContracts1.deployments[i].chain;
+        const address1 = deployedContracts1.deployments[i].address;
+
+        // Find the matching chain in the second deployment
+        const matchingDeployment = deployedContracts2.deployments.find(
+          d => d.chain === chain
+        );
+
+        if (matchingDeployment) {
+          const address2 = matchingDeployment.address;
+
+          console.log(`Chain ${chain}: Deployer1 contract address: ${address1}`);
+          console.log(`Chain ${chain}: Deployer2 contract address: ${address2}`);
+
+          // Check that addresses are different
+          expect(address1).to.not.equal(address2,
+            `Contract addresses should be different when deployed with different admin addresses`);
+
+          // Switch to the correct chain
+          await chainweb.switchChain(chain);
+
+          // Verify admin roles are correctly assigned
+          const contract1 = PayableContract__factory.connect(
+            address1,
+            deployer1
+          );
+          expect(await contract1.hasRole(
+            await contract1.DEFAULT_ADMIN_ROLE(),
+            deployer1.address
+          )).to.be.true;
+
+          const contract2 = PayableContract__factory.connect(
+            address2,
+            deployer2
+          );
+          expect(await contract2.hasRole(
+            await contract2.DEFAULT_ADMIN_ROLE(),
+            deployer2.address
+          )).to.be.true;
+        }
+      }
+    });
+  });
 });
