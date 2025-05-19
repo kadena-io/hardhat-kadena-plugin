@@ -1,8 +1,8 @@
 import { chainweb, ethers } from 'hardhat';
 
 async function main() {
-  const [proxyAddress] = await chainweb.create2.deployCreate2Factory();
-  console.log(`Create2 proxy deployed at: ${proxyAddress}`);
+  const [factoryAddress] = await chainweb.create2.deployCreate2Factory();
+  console.log(`Create2 factory deployed at: ${factoryAddress}`);
 
   const salt = ethers.id('mySalt'); // This creates a bytes32 hash of the string
 
@@ -11,7 +11,7 @@ async function main() {
   const deployed = await chainweb.create2.deployUsingCreate2({
     name: 'SimpleToken',
     constructorArgs: [ethers.parseUnits('1000000')],
-    create2Factory: proxyAddress,
+    create2Factory: factoryAddress,
     salt: salt,
   });
   console.log('Contracts deployed');
