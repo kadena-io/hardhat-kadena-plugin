@@ -676,7 +676,7 @@ describe('SimpleToken Unit Tests', async function () {
 
           create2FactoryAddress = factoryAddress;
           expect(factoryAddress).to.be.a('string');
-          expect(factoryAddress).to.match(/^0x[0-9a-fA-F]{40}$/);
+          expect(ethers.isAddress(factoryAddress)).to.equal(true);
 
           // Verify factory deployed on all chains
           const allChains = await chainweb.getChainIds();
@@ -705,7 +705,7 @@ describe('SimpleToken Unit Tests', async function () {
 
           // Addresses should be different due to different versions
           expect(versionedFactoryAddress).to.not.equal(defaultFactoryAddress);
-          expect(versionedFactoryAddress).to.match(/^0x[0-9a-fA-F]{40}$/);
+          expect(ethers.isAddress(versionedFactoryAddress)).to.equal(true);
 
           // Verify factory deployed on all chains
           const allChains = await chainweb.getChainIds();
@@ -735,7 +735,7 @@ describe('SimpleToken Unit Tests', async function () {
 
           // Addresses should be different due to different signers
           expect(aliceFactoryAddress).to.not.equal(defaultFactoryAddress);
-          expect(aliceFactoryAddress).to.match(/^0x[0-9a-fA-F]{40}$/);
+          expect(ethers.isAddress(aliceFactoryAddress)).to.equal(true);
 
           // Verify factory deployed on all chains
           const allChains = await chainweb.getChainIds();
@@ -761,7 +761,7 @@ describe('SimpleToken Unit Tests', async function () {
               version,
             });
 
-          expect(customFactoryAddress).to.match(/^0x[0-9a-fA-F]{40}$/);
+          expect(ethers.isAddress(customFactoryAddress)).to.equal(true);
 
           // Verify factory deployed on all chains
           const allChains = await chainweb.getChainIds();
