@@ -190,14 +190,19 @@ describe('PayableContract with Create2Factory', function () {
             await contract1.hasRole(
               await contract1.DEFAULT_ADMIN_ROLE(),
               deployer1.address,
-            )
+            ),
           ).to.equal(true);
+
+          const contract2 = PayableContract__factory.connect(
+            address2,
+            deployer2,
+          );
 
           expect(
             await contract2.hasRole(
               await contract2.DEFAULT_ADMIN_ROLE(),
               deployer2.address,
-            )
+            ),
           ).to.equal(true);
         }
       }

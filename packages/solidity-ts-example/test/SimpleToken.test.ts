@@ -992,8 +992,8 @@ describe('SimpleToken Unit Tests', async function () {
 
           // Addresses should be different due to different salts
           expect(address1).to.not.equal(address2);
-          expect(address1).to.match(/^0x[0-9a-fA-F]{40}$/);
-          expect(address2).to.match(/^0x[0-9a-fA-F]{40}$/);
+          expect(ethers.isAddress(address1)).to.equal(true);
+          expect(ethers.isAddress(address2)).to.equal(true);
 
           // Verify both contracts are deployed and working correctly on all chains
           const allChains = await chainweb.getChainIds();
@@ -1061,6 +1061,69 @@ describe('SimpleToken Unit Tests', async function () {
             // Check Alice's contract
             const code2 = await ethers.provider.getCode(aliceAddress);
             expect(code2).to.not.equal('0x');
+          }
+        });
+
+        it('Should deploy using a factory address from a specific version', async function () {
+          // Get factory addresses for two different versions
+          const factoryAddressV1 =
+            await chainweb.create2.getCreate2FactoryAddress();
+          const factoryAddressV2 =
+            await chainweb.create2.getCreate2FactoryAddress({ version: 2 });
+
+          // Ensure they're different addresses due to version difference
+          expect(factoryAddressV1).to.not.equal(factoryAddressV2);
+
+          // Deploy the factory for version 2 if not already deployed
+          await chainweb.create2.deployCreate2Factory({ version: 2 });
+
+          // Create a consistent salt for both deployments
+          const salt = 'SimpleToken_factory_version_test';
+
+          // Deploy using factory V1 (default)
+          const deployResultV1 = await chainweb.create2.deployUsingCreate2({
+            name: 'SimpleToken',
+            constructorArgs: [ethers.parseUnits('1000000')],
+            salt,
+            create2Factory: factoryAddressV1,
+          });
+          const addressV1 = deployResultV1.deployments[0].address;
+
+          // Deploy using factory V2 (specific version)
+          const deployResultV2 = await chainweb.create2.deployUsingCreate2({
+            name: 'SimpleToken',
+            constructorArgs: [ethers.parseUnits('1000000')],
+            salt,
+            create2Factory: factoryAddressV2, // Using the factory address from version 2
+          });
+          const addressV2 = deployResultV2.deployments[0].address;
+
+          // Addresses should be different because different factories were used
+          expect(addressV1).to.not.equal(addressV2);
+
+          // Verify both contracts are deployed and working correctly on all chains
+          const allChains = await chainweb.getChainIds();
+
+          for (const chain of allChains) {
+            await chainweb.switchChain(chain);
+
+            // Check V1 contract
+            const codeV1 = await ethers.provider.getCode(addressV1);
+            expect(codeV1).to.not.equal('0x');
+            const tokenV1 = SimpleToken__factory.connect(
+              addressV1,
+              signers.deployer,
+            );
+            expect(await tokenV1.symbol()).to.equal('SIM');
+
+            // Check V2 contract
+            const codeV2 = await ethers.provider.getCode(addressV2);
+            expect(codeV2).to.not.equal('0x');
+            const tokenV2 = SimpleToken__factory.connect(
+              addressV2,
+              signers.deployer,
+            );
+            expect(await tokenV2.symbol()).to.equal('SIM');
           }
         });
       }); // End of Success Test Cases
