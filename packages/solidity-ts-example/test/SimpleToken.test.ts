@@ -788,8 +788,7 @@ describe('SimpleToken Unit Tests', async function () {
 
         it('Should reuse existing factory if already deployed with same parameters', async function () {
           // Deploy factory first time
-          const [firstAddress,] =
-            await chainweb.create2.deployCreate2Factory();
+          const [firstAddress] = await chainweb.create2.deployCreate2Factory();
 
           // Deploy "again" with same parameters
           const [secondAddress, secondDeployments] =
@@ -962,6 +961,105 @@ describe('SimpleToken Unit Tests', async function () {
             expect(result.totalSupply).to.equal(ethers.parseEther('1000000'));
           }
         });
+
+        it('Should deploy contracts to different addresses when using different salts', async function () {
+          // Deploy with first salt
+          const salt1 = 'SimpleToken_salt_1';
+          const deployResult1 = await chainweb.create2.deployUsingCreate2({
+            name: 'SimpleToken',
+            constructorArgs: [ethers.parseUnits('1000000')],
+            salt: salt1,
+            create2Factory: create2FactoryAddress,
+            bindToSender: false,
+          });
+          const address1 = deployResult1.deployments[0].address;
+
+          // Deploy with second salt
+          const salt2 = 'SimpleToken_salt_2';
+          const deployResult2 = await chainweb.create2.deployUsingCreate2({
+            name: 'SimpleToken',
+            constructorArgs: [ethers.parseUnits('1000000')],
+            salt: salt2,
+            create2Factory: create2FactoryAddress,
+            bindToSender: false,
+          });
+          const address2 = deployResult2.deployments[0].address;
+
+          // Addresses should be different due to different salts
+          expect(address1).to.not.equal(address2);
+          expect(address1).to.match(/^0x[0-9a-fA-F]{40}$/);
+          expect(address2).to.match(/^0x[0-9a-fA-F]{40}$/);
+
+          // Verify both contracts are deployed and working correctly on all chains
+          const allChains = await chainweb.getChainIds();
+
+          for (const chain of allChains) {
+            await chainweb.switchChain(chain);
+
+            // Check first contract
+            const code1 = await ethers.provider.getCode(address1);
+            expect(code1).to.not.equal('0x');
+            const token1 = SimpleToken__factory.connect(
+              address1,
+              signers.deployer,
+            );
+            expect(await token1.symbol()).to.equal('SIM');
+
+            // Check second contract
+            const code2 = await ethers.provider.getCode(address2);
+            expect(code2).to.not.equal('0x');
+            const token2 = SimpleToken__factory.connect(
+              address2,
+              signers.deployer,
+            );
+            expect(await token2.symbol()).to.equal('SIM');
+          }
+        });
+
+        it('Should deploy contracts to the same address when using same salt but different signer', async function () {
+          const salt = 'SimpleToken_different_signers_test';
+
+          // Deploy with deployer
+          const deployerResult = await chainweb.create2.deployUsingCreate2({
+            name: 'SimpleToken',
+            signer: signers.deployer,
+            constructorArgs: [ethers.parseUnits('1000000')],
+            salt,
+            create2Factory: create2FactoryAddress,
+            bindToSender: false,
+          });
+          const deployerAddress = deployerResult.deployments[0].address;
+
+          // Deploy with Alice
+          const aliceResult = await chainweb.create2.deployUsingCreate2({
+            name: 'SimpleToken',
+            signer: signers.alice,
+            constructorArgs: [ethers.parseUnits('1000000')],
+            salt,
+            create2Factory: create2FactoryAddress,
+            bindToSender: false,
+          });
+          const aliceAddress = aliceResult.deployments[0].address;
+
+          // Addresses should be the same despite different signers.
+          // The Create2Factory is the deployer in both cases.
+          expect(deployerAddress).to.be.equal(aliceAddress);
+
+          // Verify both contracts are deployed correctly on all chains
+          const allChains = await chainweb.getChainIds();
+
+          for (const chain of allChains) {
+            await chainweb.switchChain(chain);
+
+            // Check deployer's contract
+            const code1 = await ethers.provider.getCode(deployerAddress);
+            expect(code1).to.not.equal('0x');
+
+            // Check Alice's contract
+            const code2 = await ethers.provider.getCode(aliceAddress);
+            expect(code2).to.not.equal('0x');
+          }
+        });
       }); // End of Success Test Cases
     }); // End of Contract deployment with CREATE2 across chains
 
@@ -1118,6 +1216,116 @@ describe('SimpleToken Unit Tests', async function () {
             expect(result.address).to.equal(expectedAddress);
             expect(result.symbol).to.equal('SIM');
             expect(result.totalSupply).to.equal(ethers.parseEther('1000000'));
+          }
+        });
+
+        it('Should deploy contracts to different addresses when using different salts', async function () {
+          // Deploy with first salt
+          const salt1 = 'SimpleToken_bound_salt_1';
+          const deployResult1 = await chainweb.create2.deployUsingCreate2({
+            name: 'SimpleToken',
+            constructorArgs: [ethers.parseUnits('1000000')],
+            salt: salt1,
+            create2Factory: create2FactoryAddress,
+            bindToSender: true,
+          });
+          const address1 = deployResult1.deployments[0].address;
+
+          // Deploy with second salt
+          const salt2 = 'SimpleToken_bound_salt_2';
+          const deployResult2 = await chainweb.create2.deployUsingCreate2({
+            name: 'SimpleToken',
+            constructorArgs: [ethers.parseUnits('1000000')],
+            salt: salt2,
+            create2Factory: create2FactoryAddress,
+            bindToSender: true,
+          });
+          const address2 = deployResult2.deployments[0].address;
+
+          // Addresses should be different due to different salts
+          expect(address1).to.not.equal(address2);
+          expect(address1).to.match(/^0x[0-9a-fA-F]{40}$/);
+          expect(address2).to.match(/^0x[0-9a-fA-F]{40}$/);
+
+          // Verify both contracts are deployed and working correctly on all chains
+          const allChains = await chainweb.getChainIds();
+
+          for (const chain of allChains) {
+            await chainweb.switchChain(chain);
+
+            // Check first contract
+            const code1 = await ethers.provider.getCode(address1);
+            expect(code1).to.not.equal('0x');
+            const token1 = SimpleToken__factory.connect(
+              address1,
+              signers.deployer,
+            );
+            expect(await token1.symbol()).to.equal('SIM');
+
+            // Check second contract
+            const code2 = await ethers.provider.getCode(address2);
+            expect(code2).to.not.equal('0x');
+            const token2 = SimpleToken__factory.connect(
+              address2,
+              signers.deployer,
+            );
+            expect(await token2.symbol()).to.equal('SIM');
+          }
+        });
+
+        it('Should deploy contracts to different addresses when using different signers', async function () {
+          const salt = 'SimpleToken_bound_different_signers_test';
+
+          // Deploy with deployer
+          const deployResult1 = await chainweb.create2.deployUsingCreate2({
+            name: 'SimpleToken',
+            signer: signers.deployer,
+            constructorArgs: [ethers.parseUnits('1000000')],
+            salt,
+            create2Factory: create2FactoryAddress,
+            bindToSender: true,
+          });
+          const address1 = deployResult1.deployments[0].address;
+
+          // Deploy with Alice
+          const deployResult2 = await chainweb.create2.deployUsingCreate2({
+            name: 'SimpleToken',
+            signer: signers.alice,
+            constructorArgs: [ethers.parseUnits('1000000')],
+            salt,
+            create2Factory: create2FactoryAddress,
+            bindToSender: true,
+          });
+          const address2 = deployResult2.deployments[0].address;
+
+          // Addresses should be different due to different signers when bindToSender=true
+          expect(address1).to.not.equal(address2);
+          expect(address1).to.match(/^0x[0-9a-fA-F]{40}$/);
+          expect(address2).to.match(/^0x[0-9a-fA-F]{40}$/);
+
+          // Verify both contracts are deployed and working correctly on all chains
+          const allChains = await chainweb.getChainIds();
+
+          for (const chain of allChains) {
+            await chainweb.switchChain(chain);
+
+            // Check deployer's contract
+            const code1 = await ethers.provider.getCode(address1);
+            expect(code1).to.not.equal('0x');
+            const token1 = SimpleToken__factory.connect(
+              address1,
+              signers.deployer,
+            );
+            expect(await token1.symbol()).to.equal('SIM');
+
+            // Check Alice's contract
+            const code2 = await ethers.provider.getCode(address2);
+            expect(code2).to.not.equal('0x');
+            const token2 = SimpleToken__factory.connect(
+              address2,
+              signers.alice,
+            );
+            expect(await token2.symbol()).to.equal('SIM');
           }
         });
       }); // End of Success Test Cases
