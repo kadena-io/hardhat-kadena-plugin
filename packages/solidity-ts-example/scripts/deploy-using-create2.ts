@@ -19,21 +19,7 @@ async function main() {
     console.log(`${deployment.address} on ${deployment.chain}`);
   });
 
-  // Deploy the contract using  Create2 with address bound to deployer
-  console.log(
-    'Deploying contract using Create2 with address bound to deployer...',
-  );
-  const deployedBound = await chainweb.create2.deployUsingCreate2({
-    name: 'SimpleToken',
-    constructorArgs: [ethers.parseUnits('1000000')],
-    create2Factory: proxyAddress,
-    salt: salt,
-    bindToSender: true,
-  });
   console.log('Contracts deployed');
-  deployedBound.deployments.forEach(async (deployment) => {
-    console.log(`${deployment.address} on ${deployment.chain}`);
-  });
 }
 
 main()
