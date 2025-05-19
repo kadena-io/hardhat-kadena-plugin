@@ -121,7 +121,7 @@ async function deployContract({
 }
 
 /**
- * Deploy a contract on all chains in the network using CREATE2.
+ * Deploy a contract on all configured chainweb chains using CREATE2.
  * This ensures the contract is deployed to the same address on all chains.
  *
  * @param name - The name of the contract to deploy
@@ -184,7 +184,7 @@ export const deployUsingCreate2: DeployUsingCreate2 = async ({
 
       const deployerAddress = await contractDeployer.getAddress();
       console.log(
-        `Deploying contract deterministically with signer: ${deployerAddress} on network ${cwId}`,
+        `Deploying contract deterministically with signer: ${deployerAddress} on chain ${cwId}`,
       );
       const factory = await ethers.getContractFactory(name, {
         signer: contractDeployer,
