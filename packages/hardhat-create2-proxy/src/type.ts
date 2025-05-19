@@ -12,7 +12,6 @@ export type DeployUsingCreate2 = <
   args: DeployContractProperties<A> & {
     salt: string;
     create2Factory?: string;
-    bindToSender?: boolean;
   },
 ) => Promise<{
   deployments: DeployedContractsOnChains<T>[];
@@ -42,15 +41,6 @@ export interface Create2Helpers {
     ]
   >;
   deployUsingCreate2: DeployUsingCreate2;
-
-  predictContractAddress: (
-    contractBytecode: string,
-    salt: string,
-    create2Factory?: string,
-    signer?: Signer,
-    bindToSender?: boolean,
-    create2FactoryVersion?: number | bigint,
-  ) => Promise<string>;
 }
 
 declare module '@kadena/hardhat-chainweb' {

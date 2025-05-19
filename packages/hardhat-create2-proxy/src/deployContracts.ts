@@ -28,83 +28,12 @@ function isContractDeployed(address: string): Promise<boolean> {
  *
  * @param sender - The address of the deploying account
  * @param userSalt - The user-provided salt string
- * @param bindToSender - Whether to include the sender address in the salt calculation
  * @returns A tuple containing [saltBytes for ethers.getCreate2Address, userSaltBytes32 for contract call]
  */
-function createSalt(
-  sender: string,
-  userSalt: string,
-  bindToSender: boolean,
-): [BytesLike, BytesLike] {
-  // Convert string salt to bytes32
+function convertToByte(userSalt: string): BytesLike {
   const userSaltBytes32 = ethers.id(userSalt);
-
-  if (bindToSender) {
-    // Calculate combined salt including sender
-    const combinedSalt = ethers.solidityPackedKeccak256(
-      ['address', 'bytes32'],
-      [sender, userSaltBytes32],
-    );
-
-    // Return [salt for ethers.getCreate2Address, salt for contract call]
-    return [ethers.getBytes(combinedSalt), userSaltBytes32];
-  } else {
-    // Standard CREATE2 - use salt directly
-    // Return [salt for ethers.getCreate2Address, salt for contract call]
-    return [ethers.getBytes(userSaltBytes32), userSaltBytes32];
-  }
+  return ethers.getBytes(userSaltBytes32);
 }
-
-/**
- * Predicts the address where a contract will be deployed using CREATE2.
- * This is useful for calculating addresses before actual deployment.
- *
- * @param contractBytecode - The compiled bytecode of the contract
- * @param salt - The salt to use for address generation
- * @param create2Factory - Optional custom CREATE2 factory address.
- * Must implement:
- * - function deploy(bytes memory bytecode, bytes32 salt) public payable returns (address)
- * - function computeAddress(bytes memory bytecode, bytes32 salt) public view returns (address)
- * For sender-bound deployments, must also implement:
- * - function deployBound(bytes memory bytecode, bytes32 userSalt) public payable returns (address)
- * - function computeAddressBound(bytes memory bytecode, bytes32 userSalt) public view returns (address)
- * @param signer - Optional signer (defaults to first signer)
- * @param bindToSender - Whether to include the sender address in the salt calculation
- * @param create2FactoryVersion - Optional version for the CREATE2 factory that will be used.
- * Note: This parameter is only used when create2Factory is not provided.
- * @returns The predicted contract address
- */
-export const predictContractAddress = async (
-  contractBytecode: string,
-  salt: string,
-  create2Factory?: string,
-  signer?: Signer,
-  bindToSender = false,
-  create2FactoryVersion: number | bigint = BigInt(1),
-): Promise<string> => {
-  // Get signer if not provided
-  const [defaultDeployer] = await ethers.getSigners();
-  const contractDeployer = signer ?? defaultDeployer;
-  const senderAddress = await contractDeployer.getAddress();
-
-  // Get create2 factory address
-  const create2FactoryAddress =
-    create2Factory ??
-    (await getCreate2FactoryAddress(signer, create2FactoryVersion));
-
-  // Create salt bytes with or without sender binding
-  const [saltBytes] = createSalt(senderAddress, salt, bindToSender);
-
-  // Hash bytecode
-  const bytecodeHash = ethers.keccak256(contractBytecode);
-
-  // Calculate predicted address
-  return ethers.getCreate2Address(
-    create2FactoryAddress,
-    saltBytes,
-    bytecodeHash,
-  );
-};
 
 /**
  * Deploys a contract using standard CREATE2 functionality.
@@ -117,31 +46,24 @@ export const predictContractAddress = async (
  * Must implement:
  * - function deploy(bytes memory bytecode, bytes32 salt) public payable returns (address)
  * - function computeAddress(bytes memory bytecode, bytes32 salt) public view returns (address)
- * For sender-bound deployments, must also implement:
- * - function deployBound(bytes memory bytecode, bytes32 userSalt) public payable returns (address)
- * - function computeAddressBound(bytes memory bytecode, bytes32 userSalt) public view returns (address)
- * @param create2FactoryVersion - Optional version for the CREATE2 factory that will be used.
- * Note: This parameter is only used when create2Factory is not provided.
  * @returns The deployed contract address
- */
+ **/
+
 async function deployContract({
   contractBytecode,
   signer,
   overrides,
   salt,
   create2Factory,
-  create2FactoryVersion = BigInt(1),
 }: {
   contractBytecode: string;
   signer: Signer;
   overrides: Overrides | undefined;
   salt: string;
   create2Factory?: string;
-  create2FactoryVersion?: number | bigint;
 }) {
   const create2FactoryAddress =
-    create2Factory ??
-    (await getCreate2FactoryAddress(signer, create2FactoryVersion));
+    create2Factory ?? (await getCreate2FactoryAddress());
 
   const CREATE2Factory = await hre.ethers.getContractFactory(
     create2Artifacts.abi,
@@ -152,11 +74,7 @@ async function deployContract({
   const create2 = CREATE2Factory.attach(create2FactoryAddress);
 
   // Standard CREATE2 - don't include sender in salt
-  const [saltBytes, userSaltBytes32] = createSalt(
-    await signer.getAddress(),
-    salt,
-    false, // bindToSender = false
-  );
+  const saltBytes = convertToByte(salt);
 
   const bytecodeHash = ethers.keccak256(contractBytecode);
 
@@ -168,7 +86,7 @@ async function deployContract({
 
   const computedAddress = await create2.computeAddress(
     contractBytecode,
-    userSaltBytes32,
+    saltBytes,
   );
 
   if (computedAddress !== predictedAddress) {
@@ -188,11 +106,7 @@ async function deployContract({
   }
 
   // Deploy using CREATE2,
-  const tx = await create2.deploy(
-    contractBytecode,
-    userSaltBytes32,
-    overrides || {},
-  );
+  const tx = await create2.deploy(contractBytecode, saltBytes, overrides || {});
   await tx.wait();
 
   if (!(await isContractDeployed(predictedAddress))) {
@@ -201,107 +115,6 @@ async function deployContract({
     );
     throw new Error(
       `CREATE2 failed:  No contract at predicted address ${predictedAddress}`,
-    );
-  }
-  return predictedAddress;
-}
-
-/**
- * Deploys a contract using CREATE2 with the deployer address bound to the salt.
- * This prevents anyone else from deploying to the same address with the same salt.
- *
- * @param contractBytecode - The compiled bytecode of the contract to deploy
- * @param signer - The signer that will deploy the contract
- * @param overrides - Optional transaction overrides for the deployment
- * @param salt - The salt to use for the CREATE2 deployment
- * @param create2Factory - Optional custom CREATE2 factory address.
- * Must implement:
- * - function deploy(bytes memory bytecode, bytes32 salt) public payable returns (address)
- * - function computeAddress(bytes memory bytecode, bytes32 salt) public view returns (address)
- * For sender-bound deployments, must also implement:
- * - function deployBound(bytes memory bytecode, bytes32 userSalt) public payable returns (address)
- * - function computeAddressBound(bytes memory bytecode, bytes32 userSalt) public view returns (address)
- * @param create2FactoryVersion - Optional version for the CREATE2 factory that will be used.
- * Note: This parameter is only used when create2Factory is not provided.
- * @returns The deployed contract address
- */
-async function deployContractBound({
-  contractBytecode,
-  signer,
-  overrides,
-  salt,
-  create2Factory,
-  create2FactoryVersion = BigInt(1),
-}: {
-  contractBytecode: string;
-  signer: Signer;
-  overrides: Overrides | undefined;
-  salt: string;
-  create2Factory?: string;
-  create2FactoryVersion?: number | bigint;
-}) {
-  const create2FactoryAddress =
-    create2Factory ??
-    (await getCreate2FactoryAddress(signer, create2FactoryVersion));
-
-  const CREATE2Factory = await hre.ethers.getContractFactory(
-    create2Artifacts.abi,
-    create2Artifacts.bin,
-    signer,
-  );
-
-  const create2 = CREATE2Factory.attach(create2FactoryAddress);
-
-  // Compute the predicted address
-  const [saltBytes, userSaltBytes32] = createSalt(
-    await signer.getAddress(),
-    salt,
-    true, // bindToSender = true
-  );
-
-  const bytecodeHash = ethers.keccak256(contractBytecode);
-
-  const predictedAddress = ethers.getCreate2Address(
-    create2FactoryAddress,
-    saltBytes,
-    bytecodeHash,
-  );
-
-  const computedAddress = await create2.computeAddressBound(
-    contractBytecode,
-    userSaltBytes32,
-  );
-
-  if (computedAddress !== predictedAddress) {
-    console.log(
-      `ADDRESS MISMATCH: computed address (${computedAddress}) != predicted address (${predictedAddress})`,
-    );
-    throw new Error(
-      `ADDRESS MISMATCH: computed address (${computedAddress}) != predicted address (${predictedAddress})`,
-    );
-  }
-
-  if (await isContractDeployed(predictedAddress)) {
-    console.log(
-      `Contract already deployed at ${predictedAddress}. Skipping deployment.`,
-    );
-    return predictedAddress;
-  }
-
-  // Deploy using CREATE2, bound to the sender
-  const tx = await create2.deployBound(
-    contractBytecode,
-    userSaltBytes32,
-    overrides || {},
-  );
-  await tx.wait();
-
-  if (!(await isContractDeployed(predictedAddress))) {
-    console.log(
-      `CREATE2 failed: No contract at predicted address ${predictedAddress}`,
-    );
-    throw new Error(
-      `CREATE2 failed: No contract at predicted address ${predictedAddress}`,
     );
   }
   return predictedAddress;
@@ -321,10 +134,6 @@ async function deployContractBound({
  * Must implement:
  * - function deploy(bytes memory bytecode, bytes32 salt) public payable returns (address)
  * - function computeAddress(bytes memory bytecode, bytes32 salt) public view returns (address)
- * For sender-bound deployments, must also implement:
- * - function deployBound(bytes memory bytecode, bytes32 userSalt) public payable returns (address)
- * - function computeAddressBound(bytes memory bytecode, bytes32 userSalt) public view returns (address)
- * @param bindToSender - Whether to bind the deployment to the sender address (prevents address front-running)
  * @returns Object containing deployment information for each chain
  */
 export const deployUsingCreate2: DeployUsingCreate2 = async ({
@@ -335,7 +144,6 @@ export const deployUsingCreate2: DeployUsingCreate2 = async ({
   overrides,
   salt,
   create2Factory,
-  bindToSender = false,
 }) => {
   const deployments = await chainweb.runOverChains(async (cwId) => {
     try {
@@ -390,21 +198,13 @@ export const deployUsingCreate2: DeployUsingCreate2 = async ({
       const contractBytecode = transaction.data;
 
       // Choose create2 deployment function based on bindToSender flag
-      const contractAddress = bindToSender
-        ? await deployContractBound({
-            contractBytecode,
-            signer: contractDeployer,
-            overrides,
-            salt,
-            create2Factory,
-          })
-        : await deployContract({
-            contractBytecode,
-            signer: contractDeployer,
-            overrides,
-            salt,
-            create2Factory,
-          });
+      const contractAddress = await deployContract({
+        contractBytecode,
+        signer: contractDeployer,
+        overrides,
+        salt,
+        create2Factory,
+      });
 
       const contract = factory.attach(contractAddress);
 

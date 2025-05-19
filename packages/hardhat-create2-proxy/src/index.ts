@@ -29,6 +29,5 @@ extendEnvironment((hre) => {
     getCreate2FactoryAddress: safeCall((api) => api.getCreate2FactoryAddress),
     deployCreate2Factory: safeCall((api) => api.deployCreate2Factory),
     deployUsingCreate2: safeCall((api) => api.deployUsingCreate2),
-    predictContractAddress: safeCall((api) => api.predictContractAddress),
   };
 });
