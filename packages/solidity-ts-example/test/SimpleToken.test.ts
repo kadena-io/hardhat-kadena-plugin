@@ -729,7 +729,9 @@ describe('SimpleToken Unit Tests', async function () {
 
           // Use Alice from the signers object that was set up in beforeEach
           const [aliceFactoryAddress, deployments] =
-            await chainweb.create2.deployCreate2Factory({ signer: signers.alice });
+            await chainweb.create2.deployCreate2Factory({
+              signer: signers.alice,
+            });
 
           // Addresses should be different due to different signers
           expect(aliceFactoryAddress).to.not.equal(defaultFactoryAddress);
@@ -754,7 +756,10 @@ describe('SimpleToken Unit Tests', async function () {
           // Deploy with custom signer and version
           const version = 999;
           const [customFactoryAddress, deployments] =
-            await chainweb.create2.deployCreate2Factory({ signer: signers.bob, version });
+            await chainweb.create2.deployCreate2Factory({
+              signer: signers.bob,
+              version,
+            });
 
           expect(customFactoryAddress).to.match(/^0x[0-9a-fA-F]{40}$/);
 
@@ -831,7 +836,7 @@ describe('SimpleToken Unit Tests', async function () {
             name: 'SimpleToken',
             constructorArgs: [ethers.parseUnits('1000000')],
             salt,
-            create2Factory: create2FactoryAddress
+            create2Factory: create2FactoryAddress,
           });
 
           // Check all chains have deployments
@@ -879,9 +884,8 @@ describe('SimpleToken Unit Tests', async function () {
           const predictedAddress = ethers.getCreate2Address(
             create2FactoryAddress,
             saltBytes,
-            bytecodeHash
+            bytecodeHash,
           );
-
 
           // Test prediction across all chains
           const results = await chainweb.runOverChains(async (chainId) => {

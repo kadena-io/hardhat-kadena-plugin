@@ -159,18 +159,24 @@ describe('PayableContract with Create2Factory', function () {
 
         // Find the matching chain in the second deployment
         const matchingDeployment = deployedContracts2.deployments.find(
-          d => d.chain === chain
+          (d) => d.chain === chain,
         );
 
         if (matchingDeployment) {
           const address2 = matchingDeployment.address;
 
-          console.log(`Chain ${chain}: Deployer1 contract address: ${address1}`);
-          console.log(`Chain ${chain}: Deployer2 contract address: ${address2}`);
+          console.log(
+            `Chain ${chain}: Deployer1 contract address: ${address1}`,
+          );
+          console.log(
+            `Chain ${chain}: Deployer2 contract address: ${address2}`,
+          );
 
           // Check that addresses are different
-          expect(address1).to.not.equal(address2,
-            `Contract addresses should be different when deployed with different admin addresses`);
+          expect(address1).to.not.equal(
+            address2,
+            `Contract addresses should be different when deployed with different admin addresses`,
+          );
 
           // Switch to the correct chain
           await chainweb.switchChain(chain);
@@ -178,21 +184,21 @@ describe('PayableContract with Create2Factory', function () {
           // Verify admin roles are correctly assigned
           const contract1 = PayableContract__factory.connect(
             address1,
-            deployer1
+            deployer1,
           );
-          expect(await contract1.hasRole(
-            await contract1.DEFAULT_ADMIN_ROLE(),
-            deployer1.address
-          )).to.be.true;
+          expect(
+            await contract1.hasRole(
+              await contract1.DEFAULT_ADMIN_ROLE(),
+              deployer1.address,
+            )
+          ).to.equal(true);
 
-          const contract2 = PayableContract__factory.connect(
-            address2,
-            deployer2
-          );
-          expect(await contract2.hasRole(
-            await contract2.DEFAULT_ADMIN_ROLE(),
-            deployer2.address
-          )).to.be.true;
+          expect(
+            await contract2.hasRole(
+              await contract2.DEFAULT_ADMIN_ROLE(),
+              deployer2.address,
+            )
+          ).to.equal(true);
         }
       }
     });
