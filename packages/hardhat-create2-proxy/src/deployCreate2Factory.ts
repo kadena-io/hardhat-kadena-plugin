@@ -96,7 +96,35 @@ export const deployCreate2Factory: Create2Helpers['deployCreate2Factory'] =
 
     const result = await chainweb.runOverChains(async (cwId) => {
       const signers = await ethers.getSigners();
-      const masterDeployer = signer || signers[0];
+
+      let masterDeployer;
+      if (!signer) {
+        masterDeployer = signers[0];
+      } else {
+        // Get the address of the passed-in signer
+        const signerAddress = await signer.getAddress();
+
+        // Find the matching signer from the current chain's signers
+        masterDeployer = signers.find(
+          (account) => account.address === signerAddress,
+        );
+
+        if (!masterDeployer) {
+          throw new Error(`Can't find account with address ${signerAddress}`);
+        }
+      }
+
+      console.log('masterDeployer in deployCreate2Factory', masterDeployer);
+      if (masterDeployer) {
+        const address = await masterDeployer.getAddress();
+        console.log('masterDeployer address in deployCreate2Factory', address);
+        const balance = await ethers.provider.getBalance(address);
+        console.log(
+          'masterDeployer balance in deployCreate2Factory',
+          ethers.formatEther(balance),
+          'ETH',
+        );
+      }
 
       const secondaryKey = await getSecondaryWallet(masterDeployer);
       const secondaryKeyAddress = await secondaryKey.getAddress();

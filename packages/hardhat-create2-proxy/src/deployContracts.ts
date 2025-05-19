@@ -339,10 +339,40 @@ export const deployUsingCreate2: DeployUsingCreate2 = async ({
 }) => {
   const deployments = await chainweb.runOverChains(async (cwId) => {
     try {
-      const [defaultDeployer] = await ethers.getSigners();
+      // Get chain-specific signers (this is the key part)
+      const signers = await ethers.getSigners();
 
-      const contractDeployer =
-        signer ?? factoryOptions?.signer ?? defaultDeployer;
+      // Determine the appropriate signer for this chain
+      let contractDeployer;
+
+      // First check if custom signer was provided
+      if (signer) {
+        const signerAddress = await signer.getAddress();
+        contractDeployer = signers.find(
+          (account) => account.address === signerAddress,
+        );
+        if (!contractDeployer) {
+          throw new Error(
+            `Can't find signer with address ${signerAddress} on chain ${cwId}`,
+          );
+        }
+      }
+      // Then check factory options signer
+      else if (factoryOptions?.signer) {
+        const optionsSignerAddress = await factoryOptions.signer.getAddress();
+        contractDeployer = signers.find(
+          (account) => account.address === optionsSignerAddress,
+        );
+        if (!contractDeployer) {
+          throw new Error(
+            `Can't find factory options signer with address ${optionsSignerAddress} on chain ${cwId}`,
+          );
+        }
+      }
+      // Finally use default
+      else {
+        contractDeployer = signers[0];
+      }
 
       const deployerAddress = await contractDeployer.getAddress();
       console.log(
