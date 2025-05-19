@@ -8,7 +8,7 @@ Accepted
 
 ## Context
 
-Initially, the considered to deploy a single, shared `create2Proxy` contract on each chain, centrally deployed and managed by Kadena. This would allow all users to utilize the same proxy address for deterministic contract deployments via `CREATE2`.
+Initially, we considered to deploy a single, shared `create2Proxy` contract on each chain, centrally deployed and managed by Kadena. This would allow all users to utilize the same proxy address for deterministic contract deployments via `CREATE2`.
 
 However, we reconsidered this model in favor of letting **each user deploy their own instance of the `create2Proxy`**. This decision was driven by architectural and strategic considerations:
 
