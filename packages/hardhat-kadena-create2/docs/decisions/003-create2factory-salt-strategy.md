@@ -8,7 +8,7 @@ Accepted
 
 ## Context
 
-`CREATE2` allows contracts to be deployed at deterministic addresses based on four inputs: the factory address, the salt, the bytecode hash, and the initialization code. This enables predictable contract addresses, which is useful for many deployment patterns.
+`CREATE2` allows contracts to be deployed at deterministic addresses based on three inputs: a constant the factory address, the salt, and the initialization code.The EVM addes the constant 0xFF to the beginning of the address. This enables predictable contract addresses, which is useful for many deployment patterns.
 
 When designing a factory contract for deterministic deployments (`CREATE2Factory`), we need to decide how to generate or handle the salt value passed to the `CREATE2` opcode.
 
