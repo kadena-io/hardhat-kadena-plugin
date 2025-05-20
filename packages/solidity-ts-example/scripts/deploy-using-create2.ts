@@ -1,17 +1,17 @@
 import { chainweb, ethers } from 'hardhat';
 
 async function main() {
-  const [proxyAddress] = await chainweb.create2.deployCreate2Factory();
-  console.log(`Create2 proxy deployed at: ${proxyAddress}`);
+  const [factoryAddress] = await chainweb.create2.deployCreate2Factory();
+  console.log(`Create2 factory deployed at: ${factoryAddress}`);
 
   const salt = ethers.id('mySalt'); // This creates a bytes32 hash of the string
 
   // Deploy the contract using standard Create2 factory functionality
   console.log('Deploying contract using Create2...');
-  const deployed = await chainweb.create2.deployUsingCreate2({
+  const deployed = await chainweb.create2.deployOnChainsUsingCreate2({
     name: 'SimpleToken',
     constructorArgs: [ethers.parseUnits('1000000')],
-    create2Factory: proxyAddress,
+    create2Factory: factoryAddress,
     salt: salt,
   });
   console.log('Contracts deployed');
@@ -19,21 +19,7 @@ async function main() {
     console.log(`${deployment.address} on ${deployment.chain}`);
   });
 
-  // Deploy the contract using  Create2 with address bound to deployer
-  console.log(
-    'Deploying contract using Create2 with address bound to deployer...',
-  );
-  const deployedBound = await chainweb.create2.deployUsingCreate2({
-    name: 'SimpleToken',
-    constructorArgs: [ethers.parseUnits('1000000')],
-    create2Factory: proxyAddress,
-    salt: salt,
-    bindToSender: true,
-  });
   console.log('Contracts deployed');
-  deployedBound.deployments.forEach(async (deployment) => {
-    console.log(`${deployment.address} on ${deployment.chain}`);
-  });
 }
 
 main()

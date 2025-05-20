@@ -17,8 +17,8 @@ extendEnvironment((hre) => {
       async (...args: Parameters<T>) => {
         if (api === undefined) {
           api = {
-            ...(await import('./deployCreate2Factory')),
-            ...(await import('./deployContracts')),
+            ...(await import('./deploy-create2-factory')),
+            ...(await import('./deploy-on-chains-using-create2')),
           };
         }
         const result = cb(api)(...args);
@@ -28,7 +28,8 @@ extendEnvironment((hre) => {
   hre.chainweb.create2 = {
     getCreate2FactoryAddress: safeCall((api) => api.getCreate2FactoryAddress),
     deployCreate2Factory: safeCall((api) => api.deployCreate2Factory),
-    deployUsingCreate2: safeCall((api) => api.deployUsingCreate2),
-    predictContractAddress: safeCall((api) => api.predictContractAddress),
+    deployOnChainsUsingCreate2: safeCall(
+      (api) => api.deployOnChainsUsingCreate2,
+    ),
   };
 });

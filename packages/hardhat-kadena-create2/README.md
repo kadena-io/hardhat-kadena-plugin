@@ -37,22 +37,6 @@ For Create2Factory to maintain the same address across all chains:
    - The version parameter allows you to start fresh with a new secondary key when needed
    - Increment the version if you ever need to redeploy the Create2Factory with a clean state
 
-## Sender-Bound vs Standard Deployments
-
-This package supports two CREATE2 deployment modes:
-
-### Standard CREATE2 (`bindToSender: false`)
-
-- Contract address depends only on: bytecode, salt, and factory address
-- Anyone can deploy to the predetermined address if they know the salt
-- Multiple signers using the same salt will target the same address
-
-### Sender-Bound CREATE2 (`bindToSender: true`)
-
-- Contract address depends on: bytecode, salt, factory address, AND deployer address
-- Prevents address front-running - only the specific deployer can use that address
-- Different signers using the same salt will deploy to different addresses
-
 ## Installation
 
 ```bash
@@ -95,7 +79,7 @@ const create2Factories = await chainweb.create2.deployCreate2Factory();
 // create2Factory[2].contract // factory deployed on the second chain
 
 // deploy your contract on all chains
-const { deployments } = await chainweb.create2.deployContractOnChainsDeterministic({
+const { deployments } = await chainweb.create2.deployOnChainsUsingCreate2({
   name: 'SimpleToken',
   constructorArgs: [ethers.parseUnits('1000000')],
 });
@@ -111,7 +95,11 @@ The plugin adds `create2` property to `hre.chainweb` the Hardhat Runtime Environ
 ```ts
 export interface Create2Helpers {
   // deploy create2Factory contract by using the signer key. the default value is the hardhat first account
-  deployCreate2Factory: (signer?: Signer) => Promise<
+  // use version if you want to deploy a fresh create2factory
+  deployCreate2Factory: (props?: {
+    signer?: Signer;
+    version?: number | bigint;
+  }) => Promise<
     [
       contractAddress: string,
       deployments: {
@@ -127,10 +115,14 @@ export interface Create2Helpers {
     ]
   >;
   // returns create2Factory address by using the signer key. the default value is the hardhat first account
-  getCreate2FactoryAddress: (signer?: Signer) => Promise<string>;
+  // version default value is 1 you can set something else if you deployed different version
+  getCreate2FactoryAddress: (props?: {
+    signer?: Signer;
+    version?: number | bigint;
+  }) => Promise<string>;
 
   // deploy the contract using the default create2Factory; if ypu want different proxy you can use the create2Factory property
-  deployUsingCreate2: (args: {
+  deployOnChainsUsingCreate2: (args: {
     name: string;
     signer?: Signer;
     factoryOptions?: FactoryOptions;
@@ -138,7 +130,6 @@ export interface Create2Helpers {
     overrides?: Overrides;
     salt: BytesLike;
     create2Factory?: string;
-    bindToSender?: boolean; // Whether to include sender address in salt calculation
   }) => Promise<{
     deployments: Array<{
       contract: BaseContract & {
@@ -151,16 +142,6 @@ export interface Create2Helpers {
       };
     }>;
   }>;
-
-  // return the contract address before deploying it.
-  predictContractAddress: (
-    contractBytecode: string,
-    salt: BytesLike,
-    create2Factory?: string,
-    signer?: Signer,
-    bindToSender?: boolean, // Whether to include sender address in salt calculation
-    create2FactoryVersion?: number | bigint,
-  ) => Promise<string>;
 }
 ```
 
@@ -170,44 +151,43 @@ export interface Create2Helpers {
 
 ```ts
 // Deploy with standard CREATE2 (not bound to sender)
-const { deployments } = await chainweb.create2.deployUsingCreate2({
+const { deployments } = await chainweb.create2.deployOnChainsUsingCreate2({
   name: 'SimpleToken',
   constructorArgs: [ethers.parseUnits('1000000')],
-  salt: 'my_unique_salt',
-  bindToSender: false, // Default is false
+  salt: 'my_salt',
 });
-```
 
-### Sender-Bound CREATE2 Deployment
+// calculate create2 address in front end side
+const predictedAddress = ethers.getCreate2Address(
+  await getCreate2FactoryAddress(),
+  salt,
+  initCode,
+);
 
-```ts
-// Deploy with sender-bound CREATE2 (only this signer can deploy to this address)
-const { deployments } = await chainweb.create2.deployUsingCreate2({
-  name: 'SimpleToken',
-  signer: mySpecificSigner,
-  constructorArgs: [ethers.parseUnits('1000000')],
-  salt: 'my_unique_salt',
-  bindToSender: true,
-});
+// deployments[0].address === predictedAddress
 ```
 
 ### Using Version Parameter
 
 ```ts
 // Deploy factory with a specific version
-const [factoryAddress] = await chainweb.create2.deployCreate2Factory(
-  undefined, // Use default signer
-  2, // Version number
-);
+const [create2factoryAddress] = await chainweb.create2.deployCreate2Factory({
+  version: 2,
+});
 
-// Predict address with specific version
-const predictedAddress = await chainweb.create2.predictContractAddress(
-  bytecode,
-  'my_unique_salt',
-  undefined, // Use default factory
-  undefined, // Use default signer
-  false, // Not bound to sender
-  2, // Same version number
+// deploy the contract using the create2factory
+const { deployments } = await chainweb.create2.deployOnChainsUsingCreate2({
+  name: 'SimpleToken',
+  constructorArgs: [ethers.parseUnits('1000000')],
+  salt: 'my_salt',
+  create2Factory: create2factoryAddress,
+});
+
+// get create2 address for version 2 factory
+const predictedAddress = ethers.getCreate2Address(
+  await getCreate2FactoryAddress({ version: 2 }),
+  salt,
+  initCode,
 );
 ```
 

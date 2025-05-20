@@ -7,7 +7,7 @@ on:
 
 jobs:
   checks:
-    name: Run Lint, Format Check, and Build
+    name: Run Lint, Format Check, Build and Tests
     runs-on: ubuntu-latest
 
     steps:
@@ -28,3 +28,9 @@ jobs:
 
       - name: Build the project
         run: pnpm build
+
+      - name: Run JavaScript example tests
+        run: pnpm test
+
+      - name: Run TypeScript example tests
+        run: pnpm test-ts

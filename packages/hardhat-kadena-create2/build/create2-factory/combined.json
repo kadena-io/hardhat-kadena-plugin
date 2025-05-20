@@ -1,0 +1,77 @@
+{
+  "contracts": {
+    "contracts/Create2Factory.sol:Create2Factory": {
+      "abi": [
+        {
+          "anonymous": false,
+          "inputs": [
+            {
+              "indexed": false,
+              "internalType": "address",
+              "name": "addr",
+              "type": "address"
+            },
+            {
+              "indexed": false,
+              "internalType": "bytes32",
+              "name": "salt",
+              "type": "bytes32"
+            }
+          ],
+          "name": "Deployed",
+          "type": "event"
+        },
+        {
+          "inputs": [
+            {
+              "internalType": "bytes",
+              "name": "bytecode",
+              "type": "bytes"
+            },
+            {
+              "internalType": "bytes32",
+              "name": "salt",
+              "type": "bytes32"
+            }
+          ],
+          "name": "computeAddress",
+          "outputs": [
+            {
+              "internalType": "address",
+              "name": "",
+              "type": "address"
+            }
+          ],
+          "stateMutability": "view",
+          "type": "function"
+        },
+        {
+          "inputs": [
+            {
+              "internalType": "bytes",
+              "name": "bytecode",
+              "type": "bytes"
+            },
+            {
+              "internalType": "bytes32",
+              "name": "salt",
+              "type": "bytes32"
+            }
+          ],
+          "name": "deploy",
+          "outputs": [
+            {
+              "internalType": "address",
+              "name": "",
+              "type": "address"
+            }
+          ],
+          "stateMutability": "payable",
+          "type": "function"
+        }
+      ],
+      "bin": "6080604052348015600e575f5ffd5b506102308061001c5f395ff3fe608060405260043610610028575f3560e01c80633e4b9f7a1461002c5780634af63f02146100be575b5f5ffd5b348015610037575f5ffd5b506100a2610046366004610145565b8151602092830120604080516001600160f81b0319818601523060601b6bffffffffffffffffffffffff191660218201526035810193909352605580840192909252805180840390920182526075909201909152805191012090565b6040516001600160a01b03909116815260200160405180910390f35b6100a26100cc366004610145565b5f5f5f3490508385516020870183f59150813b6100e7575f5ffd5b604080516001600160a01b0384168152602081018690527f94bfd9af14ef450884c8a7ddb5734e2e1e14e70a1c84f0801cc5a29e34d26428910160405180910390a1509392505050565b634e487b7160e01b5f52604160045260245ffd5b5f5f60408385031215610156575f5ffd5b823567ffffffffffffffff81111561016c575f5ffd5b8301601f8101851361017c575f5ffd5b803567ffffffffffffffff81111561019657610196610131565b604051601f8201601f19908116603f0116810167ffffffffffffffff811182821017156101c5576101c5610131565b6040528181528282016020018710156101dc575f5ffd5b816020840160208301375f602092820183015296940135945050505056fea2646970667358221220ce7245ddc86615724a8bb1290fc3fed2238b9bc7c87bc8f7cac995e8b39d830664736f6c634300081d0033"
+    }
+  },
+  "version": "0.8.29+commit.ab55807c.Emscripten.clang"
+}

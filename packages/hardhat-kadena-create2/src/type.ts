@@ -5,28 +5,27 @@ import {
 
 import { BaseContract, Signer } from 'ethers';
 
-export type DeployUsingCreate2 = <
+export type DeployOnChainsUsingCreate2 = <
   T extends BaseContract = BaseContract,
   A extends unknown[] = unknown[],
 >(
   args: DeployContractProperties<A> & {
     salt: string;
     create2Factory?: string;
-    bindToSender?: boolean;
   },
 ) => Promise<{
   deployments: DeployedContractsOnChains<T>[];
 }>;
 
 export interface Create2Helpers {
-  getCreate2FactoryAddress: (
-    signer?: Signer,
-    version?: number | bigint,
-  ) => Promise<string>;
-  deployCreate2Factory: (
-    signer?: Signer,
-    version?: number | bigint,
-  ) => Promise<
+  getCreate2FactoryAddress: (props?: {
+    signer?: Signer;
+    version?: number | bigint;
+  }) => Promise<string>;
+  deployCreate2Factory: (props?: {
+    signer?: Signer;
+    version?: number | bigint;
+  }) => Promise<
     [
       contractAddress: string,
       deployments: {
@@ -41,16 +40,7 @@ export interface Create2Helpers {
       }[],
     ]
   >;
-  deployUsingCreate2: DeployUsingCreate2;
-
-  predictContractAddress: (
-    contractBytecode: string,
-    salt: string,
-    create2Factory?: string,
-    signer?: Signer,
-    bindToSender?: boolean,
-    create2FactoryVersion?: number | bigint,
-  ) => Promise<string>;
+  deployOnChainsUsingCreate2: DeployOnChainsUsingCreate2;
 }
 
 declare module '@kadena/hardhat-chainweb' {
