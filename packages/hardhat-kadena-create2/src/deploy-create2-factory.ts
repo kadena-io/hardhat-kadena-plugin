@@ -114,7 +114,10 @@ export const deployCreate2Factory: Create2Helpers['deployCreate2Factory'] =
         }
       }
 
-      console.log('masterDeployer in deployCreate2Factory', masterDeployer);
+      console.log(
+        'masterDeployer in deployCreate2Factory',
+        await masterDeployer.getAddress(),
+      );
       if (masterDeployer) {
         const address = await masterDeployer.getAddress();
         console.log('masterDeployer address in deployCreate2Factory', address);

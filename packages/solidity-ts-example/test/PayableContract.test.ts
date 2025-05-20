@@ -21,12 +21,13 @@ describe('PayableContract with Create2Factory', function () {
       const valueToSend = ethers.parseEther('1.0');
 
       // Deploy the contract using Create2Factory with value in overrides
-      const deployedContracts = await chainweb.create2.deployUsingCreate2({
-        name: 'PayableContract',
-        constructorArgs: [],
-        salt: ethers.id('test-deployment-with-value'),
-        overrides: { value: valueToSend },
-      });
+      const deployedContracts =
+        await chainweb.create2.deployOnChainsUsingCreate2({
+          name: 'PayableContract',
+          constructorArgs: [],
+          salt: ethers.id('test-deployment-with-value'),
+          overrides: { value: valueToSend },
+        });
 
       // Test the contract on each chain
       for (const deployment of deployedContracts.deployments) {
@@ -58,20 +59,22 @@ describe('PayableContract with Create2Factory', function () {
       const value2 = ethers.parseEther('0.5');
 
       // First deployment with value1
-      const deployedContracts1 = await chainweb.create2.deployUsingCreate2({
-        name: 'PayableContract',
-        constructorArgs: [],
-        salt: ethers.id('test-deployment-1'),
-        overrides: { value: value1 },
-      });
+      const deployedContracts1 =
+        await chainweb.create2.deployOnChainsUsingCreate2({
+          name: 'PayableContract',
+          constructorArgs: [],
+          salt: ethers.id('test-deployment-1'),
+          overrides: { value: value1 },
+        });
 
       // Second deployment with value2
-      const deployedContracts2 = await chainweb.create2.deployUsingCreate2({
-        name: 'PayableContract',
-        constructorArgs: [],
-        salt: ethers.id('test-deployment-2'),
-        overrides: { value: value2 },
-      });
+      const deployedContracts2 =
+        await chainweb.create2.deployOnChainsUsingCreate2({
+          name: 'PayableContract',
+          constructorArgs: [],
+          salt: ethers.id('test-deployment-2'),
+          overrides: { value: value2 },
+        });
 
       // Test the contract on each chain
       for (const deployment of deployedContracts1.deployments) {
@@ -130,24 +133,26 @@ describe('PayableContract with Create2Factory', function () {
       const salt = ethers.id('same-salt-different-admins');
 
       // Deploy first contract with deployer1 as admin
-      const deployedContracts1 = await chainweb.create2.deployUsingCreate2({
-        name: 'PayableContract',
-        constructorArgs: [deployer1.address],
-        overrides: { value: valueToSend },
-        salt: salt,
-        create2Factory: create2FactoryAddress,
-        signer: deployer1,
-      });
+      const deployedContracts1 =
+        await chainweb.create2.deployOnChainsUsingCreate2({
+          name: 'PayableContract',
+          constructorArgs: [deployer1.address],
+          overrides: { value: valueToSend },
+          salt: salt,
+          create2Factory: create2FactoryAddress,
+          signer: deployer1,
+        });
 
       // Deploy second contract with deployer2 as admin
-      const deployedContracts2 = await chainweb.create2.deployUsingCreate2({
-        name: 'PayableContract',
-        constructorArgs: [deployer2.address],
-        overrides: { value: valueToSend },
-        salt: salt,
-        create2Factory: create2FactoryAddress,
-        signer: deployer2,
-      });
+      const deployedContracts2 =
+        await chainweb.create2.deployOnChainsUsingCreate2({
+          name: 'PayableContract',
+          constructorArgs: [deployer2.address],
+          overrides: { value: valueToSend },
+          salt: salt,
+          create2Factory: create2FactoryAddress,
+          signer: deployer2,
+        });
 
       // Verify the addresses are different
       expect(deployedContracts1.deployments.length).to.be.greaterThan(0);

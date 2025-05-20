@@ -8,7 +8,7 @@ async function main() {
 
   // Deploy the contract using standard Create2 factory functionality
   console.log('Deploying contract using Create2...');
-  const deployed = await chainweb.create2.deployUsingCreate2({
+  const deployed = await chainweb.create2.deployOnChainsUsingCreate2({
     name: 'SimpleToken',
     constructorArgs: [ethers.parseUnits('1000000')],
     create2Factory: factoryAddress,

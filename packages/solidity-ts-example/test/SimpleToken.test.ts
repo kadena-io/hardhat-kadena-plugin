@@ -781,9 +781,11 @@ describe('SimpleToken Unit Tests', async function () {
           const [defaultFactoryAddress] =
             await chainweb.create2.deployCreate2Factory();
           const [versionedFactoryAddress] =
-            await chainweb.create2.deployCreate2Factory(undefined, version);
+            await chainweb.create2.deployCreate2Factory({ version });
           const [signerFactoryAddress] =
-            await chainweb.create2.deployCreate2Factory(signers.bob);
+            await chainweb.create2.deployCreate2Factory({
+              signer: signers.bob,
+            });
 
           // All addresses should be different
           expect(customFactoryAddress).to.not.equal(defaultFactoryAddress);
@@ -832,12 +834,13 @@ describe('SimpleToken Unit Tests', async function () {
         it('Should deploy SimpleToken using CREATE2 on all chains with the same address', async function () {
           const salt = 'SimpleToken_v1'; // Deterministic salt
 
-          const deployResult = await chainweb.create2.deployUsingCreate2({
-            name: 'SimpleToken',
-            constructorArgs: [ethers.parseUnits('1000000')],
-            salt,
-            create2Factory: create2FactoryAddress,
-          });
+          const deployResult =
+            await chainweb.create2.deployOnChainsUsingCreate2({
+              name: 'SimpleToken',
+              constructorArgs: [ethers.parseUnits('1000000')],
+              salt,
+              create2Factory: create2FactoryAddress,
+            });
 
           // Check all chains have deployments
           const allChains = await chainweb.getChainIds();
@@ -898,9 +901,9 @@ describe('SimpleToken Unit Tests', async function () {
               bindToSender: false,
             };
 
-            // Use deployUsingCreate2 with a specific chain
+            // Use deployOnChainsUsingCreate2 with a specific chain
             const deployed =
-              await chainweb.create2.deployUsingCreate2(deployOptions);
+              await chainweb.create2.deployOnChainsUsingCreate2(deployOptions);
             const deployedAddress = deployed.deployments[0].address;
 
             // Verify the address matches the prediction
@@ -923,12 +926,13 @@ describe('SimpleToken Unit Tests', async function () {
           const salt = 'SimpleToken_runOverChains_test'; // Different salt
 
           // Deploy on all chains
-          const deployResult = await chainweb.create2.deployUsingCreate2({
-            name: 'SimpleToken',
-            constructorArgs: [ethers.parseUnits('1000000')],
-            salt,
-            create2Factory: create2FactoryAddress,
-          });
+          const deployResult =
+            await chainweb.create2.deployOnChainsUsingCreate2({
+              name: 'SimpleToken',
+              constructorArgs: [ethers.parseUnits('1000000')],
+              salt,
+              create2Factory: create2FactoryAddress,
+            });
 
           // Get the deployed address to compare across chains
           const expectedAddress = deployResult.deployments[0].address;
@@ -972,22 +976,24 @@ describe('SimpleToken Unit Tests', async function () {
         it('Should deploy contracts to different addresses when using different salts', async function () {
           // Deploy with first salt
           const salt1 = 'SimpleToken_salt_1';
-          const deployResult1 = await chainweb.create2.deployUsingCreate2({
-            name: 'SimpleToken',
-            constructorArgs: [ethers.parseUnits('1000000')],
-            salt: salt1,
-            create2Factory: create2FactoryAddress,
-          });
+          const deployResult1 =
+            await chainweb.create2.deployOnChainsUsingCreate2({
+              name: 'SimpleToken',
+              constructorArgs: [ethers.parseUnits('1000000')],
+              salt: salt1,
+              create2Factory: create2FactoryAddress,
+            });
           const address1 = deployResult1.deployments[0].address;
 
           // Deploy with second salt
           const salt2 = 'SimpleToken_salt_2';
-          const deployResult2 = await chainweb.create2.deployUsingCreate2({
-            name: 'SimpleToken',
-            constructorArgs: [ethers.parseUnits('1000000')],
-            salt: salt2,
-            create2Factory: create2FactoryAddress,
-          });
+          const deployResult2 =
+            await chainweb.create2.deployOnChainsUsingCreate2({
+              name: 'SimpleToken',
+              constructorArgs: [ethers.parseUnits('1000000')],
+              salt: salt2,
+              create2Factory: create2FactoryAddress,
+            });
           const address2 = deployResult2.deployments[0].address;
 
           // Addresses should be different due to different salts
@@ -1025,23 +1031,26 @@ describe('SimpleToken Unit Tests', async function () {
           const salt = 'SimpleToken_different_signers_test';
 
           // Deploy with deployer
-          const deployerResult = await chainweb.create2.deployUsingCreate2({
-            name: 'SimpleToken',
-            signer: signers.deployer,
-            constructorArgs: [ethers.parseUnits('1000000')],
-            salt,
-            create2Factory: create2FactoryAddress,
-          });
+          const deployerResult =
+            await chainweb.create2.deployOnChainsUsingCreate2({
+              name: 'SimpleToken',
+              signer: signers.deployer,
+              constructorArgs: [ethers.parseUnits('1000000')],
+              salt,
+              create2Factory: create2FactoryAddress,
+            });
           const deployerAddress = deployerResult.deployments[0].address;
 
           // Deploy with Alice
-          const aliceResult = await chainweb.create2.deployUsingCreate2({
-            name: 'SimpleToken',
-            signer: signers.alice,
-            constructorArgs: [ethers.parseUnits('1000000')],
-            salt,
-            create2Factory: create2FactoryAddress,
-          });
+          const aliceResult = await chainweb.create2.deployOnChainsUsingCreate2(
+            {
+              name: 'SimpleToken',
+              signer: signers.alice,
+              constructorArgs: [ethers.parseUnits('1000000')],
+              salt,
+              create2Factory: create2FactoryAddress,
+            },
+          );
           const aliceAddress = aliceResult.deployments[0].address;
 
           // Addresses should be the same despite different signers.
@@ -1081,21 +1090,23 @@ describe('SimpleToken Unit Tests', async function () {
           const salt = 'SimpleToken_factory_version_test';
 
           // Deploy using factory V1 (default)
-          const deployResultV1 = await chainweb.create2.deployUsingCreate2({
-            name: 'SimpleToken',
-            constructorArgs: [ethers.parseUnits('1000000')],
-            salt,
-            create2Factory: factoryAddressV1,
-          });
+          const deployResultV1 =
+            await chainweb.create2.deployOnChainsUsingCreate2({
+              name: 'SimpleToken',
+              constructorArgs: [ethers.parseUnits('1000000')],
+              salt,
+              create2Factory: factoryAddressV1,
+            });
           const addressV1 = deployResultV1.deployments[0].address;
 
           // Deploy using factory V2 (specific version)
-          const deployResultV2 = await chainweb.create2.deployUsingCreate2({
-            name: 'SimpleToken',
-            constructorArgs: [ethers.parseUnits('1000000')],
-            salt,
-            create2Factory: factoryAddressV2, // Using the factory address from version 2
-          });
+          const deployResultV2 =
+            await chainweb.create2.deployOnChainsUsingCreate2({
+              name: 'SimpleToken',
+              constructorArgs: [ethers.parseUnits('1000000')],
+              salt,
+              create2Factory: factoryAddressV2, // Using the factory address from version 2
+            });
           const addressV2 = deployResultV2.deployments[0].address;
 
           // Addresses should be different because different factories were used
