@@ -1,4 +1,4 @@
-import { DeployUsingCreate2 } from './type';
+import { DeployOnChainsUsingCreate2 } from './type';
 import { Signer, Overrides, BytesLike } from 'ethers';
 import { getNetworkStem } from '@kadena/hardhat-chainweb';
 
@@ -136,7 +136,7 @@ async function deployContract({
  * - function computeAddress(bytes memory bytecode, bytes32 salt) public view returns (address)
  * @returns Object containing deployment information for each chain
  */
-export const deployUsingCreate2: DeployUsingCreate2 = async ({
+export const deployOnChainsUsingCreate2: DeployOnChainsUsingCreate2 = async ({
   name,
   signer,
   factoryOptions,

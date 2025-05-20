@@ -5,7 +5,7 @@ import {
 
 import { BaseContract, Signer } from 'ethers';
 
-export type DeployUsingCreate2 = <
+export type DeployOnChainsUsingCreate2 = <
   T extends BaseContract = BaseContract,
   A extends unknown[] = unknown[],
 >(
@@ -40,7 +40,7 @@ export interface Create2Helpers {
       }[],
     ]
   >;
-  deployUsingCreate2: DeployUsingCreate2;
+  deployOnChainsUsingCreate2: DeployOnChainsUsingCreate2;
 }
 
 declare module '@kadena/hardhat-chainweb' {

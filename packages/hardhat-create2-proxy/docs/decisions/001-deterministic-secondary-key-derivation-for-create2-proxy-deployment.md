@@ -1,4 +1,4 @@
-# ADR: Deterministic Secondary Key Derivation for CREATE2 Proxy Deployment
+# ADR: Deterministic Secondary Key Derivation for CREATE2 Factory Deployment
 
 ## Status
 

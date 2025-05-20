@@ -28,6 +28,8 @@ extendEnvironment((hre) => {
   hre.chainweb.create2 = {
     getCreate2FactoryAddress: safeCall((api) => api.getCreate2FactoryAddress),
     deployCreate2Factory: safeCall((api) => api.deployCreate2Factory),
-    deployUsingCreate2: safeCall((api) => api.deployUsingCreate2),
+    deployOnChainsUsingCreate2: safeCall(
+      (api) => api.deployOnChainsUsingCreate2,
+    ),
   };
 });
