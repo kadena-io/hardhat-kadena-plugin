@@ -17,8 +17,8 @@ extendEnvironment((hre) => {
       async (...args: Parameters<T>) => {
         if (api === undefined) {
           api = {
-            ...(await import('./deployCreate2Factory')),
-            ...(await import('./deployContracts')),
+            ...(await import('./deploy-create2-factory')),
+            ...(await import('./deploy-on-chains-using-create2')),
           };
         }
         const result = cb(api)(...args);

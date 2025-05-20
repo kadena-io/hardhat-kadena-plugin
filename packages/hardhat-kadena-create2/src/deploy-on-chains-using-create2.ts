@@ -7,7 +7,7 @@ import hre from 'hardhat';
 import {
   create2Artifacts,
   getCreate2FactoryAddress,
-} from './deployCreate2Factory';
+} from './deploy-create2-factory';
 
 const networkStem = getNetworkStem(hre.config.defaultChainweb);
 
