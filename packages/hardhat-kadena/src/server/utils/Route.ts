@@ -66,6 +66,7 @@ export class Router<CTX, PROXY_ARG> {
     url: string | undefined,
     next: RouteNext<PROXY_ARG>,
     context: CTX,
+    tag: string,
   ) {
     if (url === undefined) {
       next.failure('No route found', 404);
@@ -75,7 +76,7 @@ export class Router<CTX, PROXY_ARG> {
       const matchRoute = match(route);
       const matched = matchRoute(url);
       if (matched && validate(matched.params)) {
-        console.log(`request:`, matched.path);
+        console.log(`[${tag}]`, matched.path);
         try {
           const result = await handler(
             matched.params as Record<string, string>,
@@ -104,7 +105,6 @@ export class Router<CTX, PROXY_ARG> {
               return next.failure(result.error.msg, result.error.code);
 
             case 'proxy':
-              console.log('proxying to handler');
               return next.proxy(result.handler);
             default:
               console.error(
