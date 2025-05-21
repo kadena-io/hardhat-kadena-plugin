@@ -1,5 +1,6 @@
 {
   "name": "solidity-example",
+  "private": true,
   "scripts": {
     "test": "hardhat test",
     "node": "hardhat node",
