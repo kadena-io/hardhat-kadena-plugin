@@ -94,7 +94,7 @@ importers:
   packages/hardhat-kadena-create2:
     dependencies:
       '@kadena/hardhat-chainweb':
-        specifier: ../hardhat-kadena
+        specifier: workspace:*
         version: link:../hardhat-kadena
       '@nomicfoundation/ethereumjs-util':
         specifier: ^9.0.4
@@ -167,7 +167,7 @@ importers:
   packages/solidity-example:
     dependencies:
       '@kadena/hardhat-chainweb':
-        specifier: ../hardhat-kadena
+        specifier: workspace:*
         version: link:../hardhat-kadena
       '@nomicfoundation/hardhat-ethers':
         specifier: ^3.0.8
@@ -194,10 +194,10 @@ importers:
   packages/solidity-ts-example:
     dependencies:
       '@kadena/hardhat-chainweb':
-        specifier: ../hardhat-kadena
+        specifier: workspace:*
         version: link:../hardhat-kadena
       '@kadena/hardhat-kadena-create2':
-        specifier: ../hardhat-kadena-create2
+        specifier: workspace:*
         version: link:../hardhat-kadena-create2
       '@nomicfoundation/hardhat-ethers':
         specifier: ^3.0.8

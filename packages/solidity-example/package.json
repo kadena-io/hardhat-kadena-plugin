@@ -11,7 +11,7 @@
     "@nomicfoundation/hardhat-ethers": "^3.0.8",
     "@nomicfoundation/hardhat-verify": "^2.0.12",
     "hardhat": "^2.22.18",
-    "@kadena/hardhat-chainweb": "../hardhat-kadena",
+    "@kadena/hardhat-chainweb": "workspace:*",
     "ethers": "^6.1.0",
     "chai": "^4.2.0"
   }

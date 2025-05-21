@@ -1,6 +1,6 @@
 {
   "name": "@kadena/hardhat-kadena-create2",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Hardhat plugin for deploying deterministic create2Factory contract",
   "author": "Javad Khalilian <javad@kadena.io>",
   "contributors": [
@@ -33,7 +33,7 @@
   },
   "homepage": "https://github.com/kadena-io/hardhat-kadena-plugin/tree/main/packages/hardhat-kadena#readme",
   "dependencies": {
-    "@kadena/hardhat-chainweb": "../hardhat-kadena",
+    "@kadena/hardhat-chainweb": "workspace:*",
     "@nomicfoundation/ethereumjs-util": "^9.0.4",
     "@types/node": "^22.13.1",
     "async-lock": "^1.4.1",
