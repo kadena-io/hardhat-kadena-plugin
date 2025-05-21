@@ -1,10 +1,9 @@
 {
-  "name": "@kadena/hardhat-kadena-create2",
+  "name": "@kadena/hardhat-create2",
   "version": "1.0.0",
   "description": "Hardhat plugin for deploying deterministic create2Factory contract",
   "author": "Javad Khalilian <javad@kadena.io>",
   "contributors": [
-    "Lars Kuhtz <lars@kadena.io>",
     "Javad Khalilian <javad@kadena.io>",
     "Heather Swope <heather.swope@kadena.io>"
   ],
