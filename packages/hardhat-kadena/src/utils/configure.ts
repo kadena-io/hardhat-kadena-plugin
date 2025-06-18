@@ -1,4 +1,5 @@
 import {
+  HardhatConfig,
   HardhatNetworkAccountsConfig,
   HardhatNetworkAccountsUserConfig,
   HardhatNetworkChainConfig,
@@ -25,6 +26,11 @@ interface INetworkOptions {
   forking?: HardhatNetworkUserConfig['forking'];
   networkOptions?: HardhatNetworkUserConfig;
   chainwebChainIdOffset: number;
+  etherscan?: {
+    apiKey: string;
+    apiURLTemplate: string;
+    browserURLTemplate: string;
+  };
 }
 
 // This function takes a default chains config and user chains config
@@ -84,6 +90,29 @@ const getAccounts = (
   return accounts;
 };
 
+const mapToEtherscan = ({
+  networkStem,
+  chainId,
+  chainwebChainId,
+  apiURLTemplate,
+  browserURLTemplate,
+}: {
+  networkStem: string;
+  chainId: number;
+  chainwebChainId: number;
+  apiURLTemplate: string;
+  browserURLTemplate: string;
+}): HardhatConfig['etherscan']['customChains'][number] => {
+  return {
+    chainId,
+    network: `${networkStem}${chainwebChainId}`,
+    urls: {
+      apiURL: apiURLTemplate.replace('{cid}', String(chainwebChainId)),
+      browserURL: browserURLTemplate.replace('{cid}', String(chainwebChainId)),
+    },
+  };
+};
+
 export const getKadenaNetworks = ({
   availableNetworks = {},
   hardhatNetwork,
@@ -95,10 +124,17 @@ export const getKadenaNetworks = ({
   forking,
   networkOptions,
   chainwebChainIdOffset = 0,
-}: INetworkOptions): Record<string, HardhatNetworkConfig> => {
+  etherscan,
+}: INetworkOptions): [
+  Record<string, HardhatNetworkConfig>,
+  HardhatConfig['etherscan']['customChains'],
+  Record<string, string>,
+] => {
   const chainIds = new Array(numberOfChains)
     .fill(0)
     .map((_, i) => i + chainIdOffset);
+  const etherscanCustomChains: HardhatConfig['etherscan']['customChains'] = [];
+  const etherscanApiKeys: Record<string, string> = {};
   const networks = chainIds.reduce(
     (acc, chainId, chainwebChainIndex) => {
       const chainwebChainId = chainwebChainIndex + chainwebChainIdOffset;
@@ -143,12 +179,25 @@ export const getKadenaNetworks = ({
         ),
       };
       acc[`${networkStem}${chainwebChainId}`] = networkConfig;
+      if (etherscan) {
+        etherscanCustomChains.push(
+          mapToEtherscan({
+            networkStem,
+            chainId,
+            chainwebChainId,
+            apiURLTemplate: etherscan.apiURLTemplate,
+            browserURLTemplate: etherscan.browserURLTemplate,
+          }),
+        );
+        etherscanApiKeys[`${networkStem}${chainwebChainId}`] =
+          etherscan?.apiKey;
+      }
       return acc;
     },
     {} as Record<string, KadenaNetworkConfig>,
   );
 
-  return networks;
+  return [networks, etherscanCustomChains, etherscanApiKeys];
 };
 
 interface IExternalNetworkOptions {
@@ -160,6 +209,11 @@ interface IExternalNetworkOptions {
   baseUrl?: string;
   networkOptions?: HttpNetworkUserConfig;
   chainwebChainIdOffset: number;
+  etherscan?: {
+    apiKey: string;
+    apiURLTemplate: string;
+    browserURLTemplate: string;
+  };
 }
 
 const toHttpNetworkAccountsConfig = (
@@ -189,10 +243,18 @@ export const getKadenaExternalNetworks = ({
   baseUrl = 'http://localhost:8545',
   networkOptions = {},
   chainwebChainIdOffset,
-}: IExternalNetworkOptions): Record<string, HttpNetworkConfig> => {
+  etherscan,
+}: IExternalNetworkOptions): [
+  Record<string, HttpNetworkConfig>,
+  HardhatConfig['etherscan']['customChains'],
+  Record<string, string>,
+] => {
+  const etherscanCustomChains: HardhatConfig['etherscan']['customChains'] = [];
+  const etherscanApiKeys: Record<string, string> = {};
   const chainIds = new Array(numberOfChains)
     .fill(0)
     .map((_, i) => i + chainIdOffset);
+  const basePath = baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl;
   const networks = chainIds.reduce(
     (acc, chainId, chainwebChainIndex) => {
       const chainwebChainId = chainwebChainIndex + chainwebChainIdOffset;
@@ -211,17 +273,37 @@ export const getKadenaExternalNetworks = ({
         gasMultiplier: 1,
         timeout: 20000,
         httpHeaders: {},
-        url: `${baseUrl}${mapChainIdToRoute(chainwebChainId)}`,
+        url: `${basePath}${mapChainIdToRoute(chainwebChainId)}`,
         ...userConfig,
         accounts: userConfig?.accounts
           ? toHttpNetworkAccountsConfig(userConfig.accounts)
           : accounts,
+        ignition: {
+          maxFeePerGasLimit: userConfig?.ignition?.maxFeePerGasLimit,
+          maxPriorityFeePerGas: userConfig?.ignition?.maxPriorityFeePerGas,
+          gasPrice: userConfig?.ignition?.gasPrice,
+          disableFeeBumping: userConfig?.ignition?.disableFeeBumping,
+          explorerUrl: userConfig?.ignition?.explorerUrl,
+        },
       };
       acc[`${networkStem}${chainwebChainId}`] = networkConfig;
+      if (etherscan) {
+        etherscanCustomChains.push(
+          mapToEtherscan({
+            networkStem,
+            chainId,
+            chainwebChainId,
+            apiURLTemplate: etherscan.apiURLTemplate,
+            browserURLTemplate: etherscan.browserURLTemplate,
+          }),
+        );
+        etherscanApiKeys[`${networkStem}${chainwebChainId}`] =
+          etherscan?.apiKey;
+      }
       return acc;
     },
     {} as Record<string, HttpNetworkConfig>,
   );
 
-  return networks;
+  return [networks, etherscanCustomChains, etherscanApiKeys];
 };

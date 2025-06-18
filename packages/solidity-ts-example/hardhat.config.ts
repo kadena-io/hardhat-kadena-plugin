@@ -1,6 +1,5 @@
 import { HardhatUserConfig } from 'hardhat/config';
 import '@nomicfoundation/hardhat-toolbox';
-import '@nomicfoundation/hardhat-verify';
 import '@kadena/hardhat-chainweb';
 import '@kadena/hardhat-kadena-create2';
 import { readFileSync } from 'fs';
@@ -14,18 +13,25 @@ const config: HardhatUserConfig = {
   chainweb: {
     hardhat: {
       chains: 2,
-      chainwebChainIdOffset: 20,
       networkOptions: {
         allowUnlimitedContractSize: true,
       },
     },
     devnet: {
-      chains: 2,
+      chains: 5,
       type: 'external',
-      chainIdOffset: 1789,
+      chainIdOffset: 5920,
+      chainwebChainIdOffset: 20,
       accounts: devnetAccounts.accounts.map((account) => account.privateKey),
       externalHostUrl:
-        'https://evm-devnet.kadena.network/chainweb/0.0/evm-development',
+        'https://evm-testnet.chainweb.com/chainweb/0.0/evm-testnet',
+      etherscan: {
+        apiKey: 'abc', // Any non-empty string works for Blockscout
+        apiURLTemplate:
+          'http://chain-{cid}.evm-testnet-blockscout.chainweb.com/api/',
+        browserURLTemplate:
+          'http://chain-{cid}.evm-testnet-blockscout.chainweb.com/',
+      },
     },
   },
 };

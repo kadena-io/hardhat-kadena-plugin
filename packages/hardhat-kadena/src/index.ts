@@ -1,4 +1,5 @@
 import '@nomicfoundation/hardhat-ethers';
+import '@nomicfoundation/hardhat-toolbox';
 import 'hardhat-switch-network';
 import './type';
 import './plugin';

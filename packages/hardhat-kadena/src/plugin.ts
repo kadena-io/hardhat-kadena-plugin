@@ -20,6 +20,7 @@ import { CHAIN_ID_ADDRESS, VERIFY_ADDRESS } from './utils/network-contracts.js';
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
 import picocolors from 'picocolors';
 import { computeOriginHash, getNetworkStem } from './pure-utils.js';
+import minimist from 'minimist';
 
 extendConfig((config, userConfig) => {
   if (!userConfig.chainweb) {
@@ -33,7 +34,10 @@ extendConfig((config, userConfig) => {
     );
   }
 
+  const argv = minimist(process.argv.slice(2));
+
   config.defaultChainweb =
+    argv['chainweb'] ??
     process.env['HK_ACTIVE_CHAINWEB_NAME'] ??
     userConfig.defaultChainweb ??
     'hardhat';
@@ -84,6 +88,8 @@ extendConfig((config, userConfig) => {
         type = 'external';
       }
 
+      const isDefaultChainweb = name === config.defaultChainweb;
+
       if (type === 'in-process') {
         const chainwebInProcessUserConfig =
           chainwebUserConfig as ChainwebInProcessUserConfig;
@@ -128,9 +134,8 @@ extendConfig((config, userConfig) => {
           ...chainwebInProcessUserConfig,
         };
 
-        config.networks = {
-          ...config.networks,
-          ...getKadenaNetworks({
+        const [networkConfig, etherscanCustomChains, etherscanApiKeys] =
+          getKadenaNetworks({
             availableNetworks: userConfig.networks,
             hardhatNetwork: config.networks.hardhat,
             networkStem: getNetworkStem(name),
@@ -145,8 +150,20 @@ extendConfig((config, userConfig) => {
             networkOptions: chainwebConfig.networkOptions,
             chainIdOffset: chainwebConfig.chainIdOffset,
             chainwebChainIdOffset: chainwebConfig.chainwebChainIdOffset,
-          }),
+            etherscan: isDefaultChainweb ? chainwebConfig.etherscan : undefined,
+          });
+
+        config.networks = {
+          ...config.networks,
+          ...networkConfig,
         };
+        if (isDefaultChainweb && chainwebConfig.etherscan) {
+          config.etherscan = {
+            apiKey: etherscanApiKeys,
+            customChains: etherscanCustomChains,
+            enabled: true,
+          };
+        }
         config.chainweb[name] = chainwebConfig;
       } else {
         const externalUserConfig =
@@ -166,10 +183,9 @@ extendConfig((config, userConfig) => {
               externalUserConfig.precompiles?.spvVerify ?? VERIFY_ADDRESS,
           },
         };
-        // add networks to hardhat
-        config.networks = {
-          ...config.networks,
-          ...getKadenaExternalNetworks({
+
+        const [networkConfig, etherscanCustomChains, etherscanApiKeys] =
+          getKadenaExternalNetworks({
             availableNetworks: userConfig.networks,
             networkStem: getNetworkStem(name),
             numberOfChains: chainwebConfig.chains,
@@ -178,9 +194,22 @@ extendConfig((config, userConfig) => {
             networkOptions: chainwebConfig.networkOptions,
             chainIdOffset: chainwebConfig.chainIdOffset,
             chainwebChainIdOffset: chainwebConfig.chainwebChainIdOffset,
-          }),
+            etherscan: isDefaultChainweb ? chainwebConfig.etherscan : undefined,
+          });
+        // add networks to hardhat
+        config.networks = {
+          ...config.networks,
+          ...networkConfig,
         };
         config.chainweb[name] = chainwebConfig;
+
+        if (isDefaultChainweb && chainwebConfig.etherscan) {
+          config.etherscan = {
+            apiKey: etherscanApiKeys,
+            customChains: etherscanCustomChains,
+            enabled: true,
+          };
+        }
       }
     },
   );
@@ -474,8 +503,8 @@ task(
     return runSuper(taskArgs);
   });
 
-task('print-config', 'print the final configuration').setAction(
-  async (_taskArgs, hre) => {
+task('print-config', 'print the final configuration')
+  .addOptionalParam(...chainwebSwitch)
+  .setAction(async (_taskArgs, hre) => {
     console.dir(hre.config, { depth: null, colors: true });
-  },
-);
+  });
