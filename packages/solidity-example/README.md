@@ -16,13 +16,13 @@ npx hardhat node
 To deploy the example to hardhat, run
 
 ```
-npm run deploy:hardhat
+pnpm run deploy:hardhat
 ```
 
 To deploy using CREATE2, run
 
 ```
-npm run deploy-create2:hardhat
+pnpm run deploy-create2:hardhat
 ```
 
 # Deploy to the sandbox (local devnet)
@@ -32,11 +32,11 @@ To deploy to the Kadena sandbox, first clone the sandbox [repo](https://github.c
 To deploy to the sandbox and verify the contract (verification does not run against hardhat), run
 
 ```
-npm run deploy sandbox
+pnpm run deploy sandbox
 ```
 
 To deploy using CREATE2, run
 
 ```
-npm run deploy-create2 sandbox
+pnpm run deploy-create2 sandbox
 ```
