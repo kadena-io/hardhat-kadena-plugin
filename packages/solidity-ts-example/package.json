@@ -5,7 +5,11 @@
     "test": "hardhat test",
     "node": "hardhat node",
     "types": "hardhat typechain",
-    "postinstall": "hardhat compile && hardhat typechain"
+    "postinstall": "hardhat compile && hardhat typechain",
+    "deploy:hardhat": "hardhat compile && npx hardhat run scripts/deploy.ts",
+    "deploy-create2:hardhat": "hardhat compile && npx hardhat run scripts/deploy-using-create2.ts",
+    "deploy": "hardhat compile && npx hardhat run scripts/deploy.ts --chainweb",
+    "deploy-create2": "hardhat compile && npx hardhat run scripts/deploy.ts --chainweb"
   },
   "dependencies": {
     "@kadena/hardhat-chainweb": "workspace:*",
