@@ -20,15 +20,27 @@ export interface ChainwebInProcessUserConfig {
   chainIdOffset?: number;
   networkOptions?: HardhatNetworkUserConfig;
   chainwebChainIdOffset?: number;
+  etherscan?: {
+    apiKey: string;
+    apiURLTemplate: string;
+    browserURLTemplate: string;
+  };
 }
 
 export interface ChainwebInProcessConfig
-  extends Required<Omit<ChainwebInProcessUserConfig, 'networkOptions'>> {
+  extends Required<
+    Omit<ChainwebInProcessUserConfig, 'networkOptions' | 'etherscan'>
+  > {
   precompiles: {
     chainwebChainId: string;
     spvVerify: string;
   };
   networkOptions?: Omit<HardhatNetworkUserConfig, 'chainId'>;
+  etherscan?: {
+    apiKey: string;
+    apiURLTemplate: string;
+    browserURLTemplate: string;
+  };
 }
 
 export interface ChainwebExternalUserConfig {
@@ -43,15 +55,27 @@ export interface ChainwebExternalUserConfig {
   };
   chainwebChainIdOffset?: number;
   networkOptions?: Omit<HttpNetworkUserConfig, 'chainId' | 'url'>;
+  etherscan?: {
+    apiKey: string;
+    apiURLTemplate: string;
+    browserURLTemplate: string;
+  };
 }
 
 export interface ChainwebExternalConfig
-  extends Required<Omit<ChainwebExternalUserConfig, 'networkOptions'>> {
+  extends Required<
+    Omit<ChainwebExternalUserConfig, 'networkOptions' | 'etherscan'>
+  > {
   precompiles: {
     chainwebChainId: string;
     spvVerify: string;
   };
   networkOptions?: Omit<HttpNetworkUserConfig, 'chainId' | 'url'>;
+  etherscan?: {
+    apiKey: string;
+    apiURLTemplate: string;
+    browserURLTemplate: string;
+  };
 }
 
 export type ChainwebUserConfig =
