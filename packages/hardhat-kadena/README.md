@@ -93,22 +93,30 @@ interface ChainwebUserConfig {
   networkOptions?:                         // override default values that created networks use
     | HardhatNetworkUserConfig
     | HttpNetworkUserConfig
+  etherscan?: {                            // configure etherscan in one place for all chains in the chainweb
+    apiKey: string;
+    apiURLTemplate: string;
+    browserURLTemplate: string;
+  };
 }
+
+
 
 ```
 
-| Property                | Type                                                           | Description                                                                                                                                                            |
-| ----------------------- | -------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `accounts`              | `HardhatNetworkAccountsConfig` (optional)                      | Defines the accounts configuration for the network (default: Hardhat network accounts).                                                                                |
-| `chains`                | `number`                                                       | Specifies the number of chains in the Chainweb network.                                                                                                                |
-| `graph`                 | `{ [key: number]: number[] }` (optional)                       | Defines the graph structure of the Chainweb network where keys represent chain IDs and values are arrays of connected chain IDs (default: Pearson graph).              |
-| `type`                  | `'in-process' \| 'external'` (optional)                        | Defines Chainweb type: “in-process” uses the Hardhat network, and “external” uses an external network (which you need to add to the networks—default: `'in-process'`). |
-| `externalHostUrl`       | `string` (optional)                                            | Defines the base url for external networks (default: `http://localhost:8545`)                                                                                          |
-| `logging`               | `'none' \| 'info' \| 'debug'` (optional)                       | Sets the logging level for debugging purposes (default: `"info"`).                                                                                                     |
-| `chainIdOffset`         | `number` (optional)                                            | network chain id offset (default: `626000`).                                                                                                                           |
-| `chainwebChainIdOffset` | `number` (optional)                                            | chainweb chain id offset (default: `0`).                                                                                                                               |
-| `precompiles`           | `{ chainwebChainId?: string, spvVerify?: string }` (optional)  | if you are using external networks the precompile addresses might be different from the default ones so you can set them via this config                               |
-| `networkOptions`        | `HardhatNetworkUserConfig \| HttpNetworkUserConfig` (optional) | You can override any option that hardhat adds by default for the created networks. check the examples                                                                  |
+| Property                | Type                                                                                 | Description                                                                                                                                                                                          |
+| ----------------------- | ------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `accounts`              | `HardhatNetworkAccountsConfig` (optional)                                            | Defines the accounts configuration for the network (default: Hardhat network accounts).                                                                                                              |
+| `chains`                | `number`                                                                             | Specifies the number of chains in the Chainweb network.                                                                                                                                              |
+| `graph`                 | `{ [key: number]: number[] }` (optional)                                             | Defines the graph structure of the Chainweb network where keys represent chain IDs and values are arrays of connected chain IDs (default: Pearson graph).                                            |
+| `type`                  | `'in-process' \| 'external'` (optional)                                              | Defines Chainweb type: “in-process” uses the Hardhat network, and “external” uses an external network (which you need to add to the networks—default: `'in-process'`).                               |
+| `externalHostUrl`       | `string` (optional)                                                                  | Defines the base url for external networks (default: `http://localhost:8545`)                                                                                                                        |
+| `logging`               | `'none' \| 'info' \| 'debug'` (optional)                                             | Sets the logging level for debugging purposes (default: `"info"`).                                                                                                                                   |
+| `chainIdOffset`         | `number` (optional)                                                                  | network chain id offset (default: `626000`).                                                                                                                                                         |
+| `chainwebChainIdOffset` | `number` (optional)                                                                  | chainweb chain id offset (default: `0`).                                                                                                                                                             |
+| `precompiles`           | `{ chainwebChainId?: string, spvVerify?: string }` (optional)                        | if you are using external networks the precompile addresses might be different from the default ones so you can set them via this config                                                             |
+| `networkOptions`        | `HardhatNetworkUserConfig \| HttpNetworkUserConfig` (optional)                       | You can override any option that hardhat adds by default for the created networks. check the examples                                                                                                |
+| `etherscan`             | `{ apiKey: string; apiURLTemplate: string; browserURLTemplate: string; }` (optional) | By setting the config the plugin adds all required etherscan configs to the final hardhat config, this also avoid conflicts in case you use same ids for differnt networks (e.g. devnet or testnet ) |
 
 ### Network Types
 
@@ -199,6 +207,28 @@ The plugin uses the Chainweb configuration and extends the Hardhat config by add
 - Each chain gets a unique network chain ID: `chainIdOffset + chainIndex`. This is akin to the Ethereum network chain Id of 1.
 - Default offset is 626000 (e.g., Chain 0 = 626000, Chain 1 = 626001)
 - Network names follow the pattern: `chainweb_${networkName}${chainIndex}`
+
+### Etherscan configuration
+
+Since Chainweb is a network of multiple chains, manually adding Etherscan configurations for each chain can make the config file cluttered. It may also introduce conflicts related to chainIds. To simplify this process and avoid potential conflicts, you can let the plugin automatically inject the necessary Etherscan settings.
+
+```ts
+module.exports = {
+  solidity: '0.8.20',
+  chainweb: {
+    devnet: {
+      type: 'external',
+      chains: 5,
+      externalHostUrl: 'http://testnet.your-domain.org',
+      etherscan: {
+        apiKey: 'abc',
+        apiURLTemplate: 'http://chain-{cid}.evm.kadena.local:8000/api/', // {cid} will be replaced with the chainwebChainId
+        browserURLTemplate: 'http://chain-{cid}.evm.kadena.local:8000/',
+      },
+    },
+  },
+};
+```
 
 ### Override Network Configurations
 
@@ -662,6 +692,10 @@ chainweb: {
 ## License
 
 This project is licensed under the MIT License.
+
+```
+
+```
 
 ```
 
