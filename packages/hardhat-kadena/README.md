@@ -222,8 +222,8 @@ module.exports = {
       externalHostUrl: 'http://testnet.your-domain.org',
       etherscan: {
         apiKey: 'abc',
-        apiURLTemplate: 'http://chain-{cid}.evm.kadena.local:8000/api/', // {cid} will be replaced with the chainwebChainId
-        browserURLTemplate: 'http://chain-{cid}.evm.kadena.local:8000/',
+        apiURLTemplate: 'http://chain-{cid}.evm.kadena.internal:8000/api/', // {cid} will be replaced with the chainwebChainId
+        browserURLTemplate: 'http://chain-{cid}.evm.kadena.internal:8000/',
       },
     },
   },
