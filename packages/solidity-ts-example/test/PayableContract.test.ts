@@ -4,7 +4,7 @@ import { HardhatEthersSigner } from '@nomicfoundation/hardhat-ethers/signers';
 import { PayableContract__factory } from '../typechain-types';
 import { getSigners } from './utils/utils';
 
-describe.only('PayableContract with Create2Factory', function () {
+describe('PayableContract with Create2Factory', function () {
   let signers: HardhatEthersSigner[];
   let chains: number[];
 
@@ -78,12 +78,9 @@ describe.only('PayableContract with Create2Factory', function () {
         });
 
       // Test the contract on each chain
-      for (const deployment of deployedContracts1.deployments) {
-        const chain = deployment.chain;
+      await chainweb.runOverChains(async (chainId) => {
+        const deployment = deployedContracts1.deployments.find(d => d.chain === chainId);
         const contractAddress = deployment.address;
-
-        // Switch to the correct chain
-        await chainweb.switchChain(chain);
 
         // Create a contract instance
         const contract = PayableContract__factory.connect(
@@ -93,14 +90,11 @@ describe.only('PayableContract with Create2Factory', function () {
 
         expect(await contract.getBalance()).to.equal(value1);
         expect(await contract.constructorValue()).to.equal(value1);
-      }
+      });
 
-      for (const deployment of deployedContracts2.deployments) {
-        const chain = deployment.chain;
+      await chainweb.runOverChains(async (chainId) => {
+        const deployment = deployedContracts2.deployments.find(d => d.chain === chainId);
         const contractAddress = deployment.address;
-
-        // Switch to the correct chain
-        await chainweb.switchChain(chain);
 
         // Create a contract instance
         const contract = PayableContract__factory.connect(
@@ -110,7 +104,7 @@ describe.only('PayableContract with Create2Factory', function () {
 
         expect(await contract.getBalance()).to.equal(value2);
         expect(await contract.constructorValue()).to.equal(value2);
-      }
+      });
     });
   });
 
