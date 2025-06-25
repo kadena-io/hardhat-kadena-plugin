@@ -72,5 +72,6 @@ describe('Redeem Tests', async function () {
       'latest',
     ]);
     console.log('Result:', result);
+    expect(result).to.equal('0x');
   });
 });
