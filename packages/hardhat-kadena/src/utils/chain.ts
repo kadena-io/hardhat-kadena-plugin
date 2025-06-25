@@ -9,6 +9,7 @@ import {
   VERIFY_BYTE_CODE,
   REDEEM_ADDRESS,
   REDEEM_BYTE_CODE,
+  REDEEM_BALANCE,
 } from './network-contracts.js';
 import { EthereumProvider, KadenaNetworkConfig } from 'hardhat/types';
 import { COLOR_PALETTE, logError, Logger, logInfo } from './logger.js';
@@ -153,6 +154,10 @@ export class Chain {
     await this.provider.send('hardhat_setCode', [
       REDEEM_ADDRESS,
       REDEEM_BYTE_CODE,
+    ]);
+    await this.provider.send('hardhat_setBalance', [
+      REDEEM_ADDRESS,
+      REDEEM_BALANCE,
     ]);
   }
 

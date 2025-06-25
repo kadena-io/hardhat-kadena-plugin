@@ -34,6 +34,7 @@ export interface ChainwebInProcessConfig
   precompiles: {
     chainwebChainId: string;
     spvVerify: string;
+    redeem: string;
   };
   networkOptions?: Omit<HardhatNetworkUserConfig, 'chainId'>;
   etherscan?: {
@@ -52,6 +53,7 @@ export interface ChainwebExternalUserConfig {
   precompiles?: {
     chainwebChainId?: string;
     spvVerify?: string;
+    redeem?: string;
   };
   chainwebChainIdOffset?: number;
   networkOptions?: Omit<HttpNetworkUserConfig, 'chainId' | 'url'>;
@@ -69,6 +71,7 @@ export interface ChainwebExternalConfig
   precompiles: {
     chainwebChainId: string;
     spvVerify: string;
+    redeem: string;
   };
   networkOptions?: Omit<HttpNetworkUserConfig, 'chainId' | 'url'>;
   etherscan?: {
