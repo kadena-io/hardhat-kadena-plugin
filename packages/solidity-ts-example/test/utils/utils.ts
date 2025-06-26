@@ -1,10 +1,10 @@
 import { DeployedContractsOnChains } from '@kadena/hardhat-chainweb';
 import { HardhatEthersHelpers } from 'hardhat/types';
 
-import { switchNetwork, chainweb, ethers } from 'hardhat';
+import { chainweb, ethers } from 'hardhat';
 import { SimpleToken } from '../../typechain-types';
 
-const { requestSpvProof, deployContractOnChains } = chainweb;
+const { requestSpvProof, deployContractOnChains, switchChain } = chainweb;
 
 // hash of CrossChainInitialized(uint32,address,uint64,bytes)
 const EVENT_SIG_HASH =
@@ -16,7 +16,7 @@ export async function authorizeContracts(
   tokenInfo: DeployedContractsOnChains,
   authorizedTokenInfos: [DeployedContractsOnChains, DeployedContractsOnChains],
 ) {
-  await switchNetwork(tokenInfo.network.name);
+  await switchChain(tokenInfo.chain);
   for (const tok of authorizedTokenInfos) {
     console.log(
       `Authorizing ${tok.chain}:${tok.address} for ${tokenInfo.chain}:${tokenInfo.address}`,
@@ -48,7 +48,14 @@ export async function initCrossChain(
   console.log(
     `Initiating cross-chain transfer from ${sourceTokenInfo.network.name} to ${targetTokenInfo.network.name}`,
   );
-  await switchNetwork(sourceTokenInfo.network.name);
+  await switchChain(sourceTokenInfo.chain);
+  console.log("now on network", network.name);
+  console.log("token0 addres in initCrossChain", await sourceToken.getAddress());
+  console.log("Code at sourceToken address in initCrossChain", await ethers.provider.getCode(await sourceToken.getAddress()));
+  console.log("sourceToken in initCrossChain", sourceToken);
+  console.log("sourceTokenInfo in initCrossChain", sourceTokenInfo);
+  console.log("sender in initCrossChain", sender);
+
   const response1 = await sourceToken
     .connect(sender)
     .transferCrossChain(receiver.address, amount, targetTokenInfo.chain);
@@ -59,6 +66,9 @@ export async function initCrossChain(
   console.log(
     `transfer-crosschain status: ${receipt1.status}, at block number ${receipt1.blockNumber} with hash ${receipt1.hash}`,
   );
+
+  console.log("response1 in initCrossChain", response1);
+  console.log("receipt1 in initCrossChain", receipt1);
 
   // Compute origin
   const logIndex = receipt1.logs.findIndex(
@@ -82,7 +92,7 @@ export async function redeemCrossChain(
   amount: bigint,
   proof: string,
 ) {
-  await switchNetwork(targetTokenInfo.network.name);
+  await switchChain(targetTokenInfo.chain);
   console.log(`Redeeming tokens on chain ${targetTokenInfo.network.name}`);
   const response2 = await targetToken.redeemCrossChain(
     receiver.address,
@@ -127,7 +137,10 @@ export const CrossChainOperation = {
   Erc20TransferFrom: 2,
 };
 
-export async function getSigners() {
+export const getSigners = async (chainId) => {
+  console.log("Inside getSigners, chainId:", chainId);
+  await chainweb.switchChain(chainId);
+
   const [deployer, alice, bob, carol] = await ethers.getSigners();
   return {
     deployer,

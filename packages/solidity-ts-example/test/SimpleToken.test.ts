@@ -3,7 +3,7 @@ import { HardhatEthersSigner, Signers } from './utils/utils';
 
 import { expect } from 'chai';
 
-import { ethers, chainweb, switchNetwork } from 'hardhat';
+import { ethers, chainweb, network } from 'hardhat';
 import { ZeroAddress } from 'ethers';
 import {
   authorizeContracts,
@@ -24,10 +24,12 @@ const {
   computeOriginHash,
   requestSpvProof,
   createTamperedProof,
+  switchChain,
+  getChainIds
 } = chainweb;
 
 describe('SimpleToken Unit Tests', async function () {
-  let signers: Signers;
+  let initialSigners: Signers;
   let token0: SimpleToken;
   let token1: SimpleToken;
   let origin: Origin;
@@ -38,15 +40,20 @@ describe('SimpleToken Unit Tests', async function () {
   let token1Info: DeployedContractsOnChains<SimpleToken>;
 
   beforeEach(async function () {
-    const chains = await chainweb.getChainIds();
-    await chainweb.switchChain(chains[0]);
+    const chains = await getChainIds();
+    initialSigners = await getSigners(chains[0]); // get initialSigners for the first chain
 
-    signers = await getSigners();
+    // switchChain()can be used to switch to a different Chainweb chain
+    // deployContractOnChains switches chains before deploying on each one
+    // Because this contract takes an address as a constructor param, we pass it in here as an address.
+    // In solidity, the address has no specific network affiliation like a signer does in Hardhat.
 
     const deployed = await deployContractOnChains<SimpleToken>({
       name: 'SimpleToken',
-      constructorArgs: [ethers.parseUnits('1000000')],
+      constructorArgs: [ethers.parseUnits('1000000'), initialSigners.deployer.address],
     });
+
+    console.log("deployed", deployed);
 
     // Store contract instances for direct calls
     token0 = deployed.deployments[0].contract;
@@ -55,7 +62,7 @@ describe('SimpleToken Unit Tests', async function () {
     // Keep deployment info accessible when needed
     token0Info = deployed.deployments[0];
     token1Info = deployed.deployments[1];
-    await switchNetwork(token0Info.network.name);
+    await switchChain(token0Info.chain);
   });
 
   context('Deployment and Initialization', async function () {
@@ -92,11 +99,11 @@ describe('SimpleToken Unit Tests', async function () {
           .withArgs(
             token1Info.chain,
             await token1.getAddress(),
-            signers.deployer.address,
+            initialSigners.deployer.address,
           );
 
         // Explicitly set cross-chain addresses for token1
-        await switchNetwork(token1Info.network.name);
+        await switchChain(token1Info.chain);
         const tx2 = await token1.setCrossChainAddress(
           token0Info.chain,
           await token0.getAddress(),
@@ -111,7 +118,7 @@ describe('SimpleToken Unit Tests', async function () {
           .withArgs(
             token0Info.chain,
             await token0.getAddress(),
-            signers.deployer.address,
+            initialSigners.deployer.address,
           );
       });
 
@@ -128,7 +135,7 @@ describe('SimpleToken Unit Tests', async function () {
 
         await expect(tx1)
           .to.emit(token0, 'CrossChainAddressSet')
-          .withArgs(token1Info.chain, ZeroAddress, signers.deployer.address);
+          .withArgs(token1Info.chain, ZeroAddress, initialSigners.deployer.address);
       });
     }); // End of Success Test Cases
 
@@ -137,11 +144,11 @@ describe('SimpleToken Unit Tests', async function () {
         // Attempt to set cross-chain addresses for token0 from a non-owner
         await expect(
           token0
-            .connect(signers.alice)
+            .connect(initialSigners.alice)
             .setCrossChainAddress(token1Info.chain, await token1.getAddress()),
         )
           .to.be.revertedWithCustomError(token0, 'OwnableUnauthorizedAccount')
-          .withArgs(signers.alice.address);
+          .withArgs(initialSigners.alice.address);
       });
     });
   }); // End of setCrossChainAddress
@@ -151,8 +158,8 @@ describe('SimpleToken Unit Tests', async function () {
       await authorizeContracts(token0, token0Info, [token0Info, token1Info]);
       await authorizeContracts(token1, token1Info, [token0Info, token1Info]);
 
-      sender = signers.deployer;
-      receiver = signers.deployer;
+      sender = initialSigners.deployer;
+      receiver = initialSigners.deployer;
       amount = ethers.parseEther('10');
 
       origin = await initCrossChain(
@@ -234,11 +241,13 @@ describe('SimpleToken Unit Tests', async function () {
     beforeEach(async function () {
       await authorizeContracts(token0, token0Info, [token0Info, token1Info]);
       await authorizeContracts(token1, token1Info, [token0Info, token1Info]);
+
+      await switchChain(token0Info.chain); // make sure we start on the first chain
     });
     context('Success Test Cases', async function () {
       it('Should burn the correct amount of tokens for the caller', async function () {
-        const sender = signers.deployer;
-        const receiver = signers.deployer;
+        const sender = initialSigners.deployer;
+        const receiver = initialSigners.deployer;
         const amount = ethers.parseEther('10');
 
         const senderBalanceBefore = await token0.balanceOf(sender.address);
@@ -254,8 +263,8 @@ describe('SimpleToken Unit Tests', async function () {
       });
 
       it('Should emit the correct events', async function () {
-        const sender = signers.deployer;
-        const receiver = signers.deployer;
+        const sender = initialSigners.deployer;
+        const receiver = initialSigners.deployer;
         const amount = ethers.parseEther('500000');
 
         // Create and encode CrossChainData
@@ -300,7 +309,7 @@ describe('SimpleToken Unit Tests', async function () {
       });
 
       it('Should revert when transferring amount 0', async function () {
-        const receiver = signers.deployer;
+        const receiver = initialSigners.deployer;
         const amount = 0n;
         await expect(
           token0.transferCrossChain(receiver, amount, token1Info.chain),
@@ -310,8 +319,8 @@ describe('SimpleToken Unit Tests', async function () {
       });
 
       it('Should revert when sender has insufficient balance', async function () {
-        const sender = signers.alice;
-        const receiver = signers.deployer;
+        const sender = initialSigners.alice;
+        const receiver = initialSigners.deployer;
         const amount = ethers.parseEther('100');
 
         await expect(
@@ -324,7 +333,7 @@ describe('SimpleToken Unit Tests', async function () {
       });
 
       it('Should revert when transferring to a nonexistent chain', async function () {
-        const receiver = signers.deployer;
+        const receiver = initialSigners.deployer;
         const amount = ethers.parseEther('100');
         await expect(token0.transferCrossChain(receiver, amount, 2n))
           .to.be.revertedWithCustomError(
@@ -334,8 +343,8 @@ describe('SimpleToken Unit Tests', async function () {
           .withArgs(2n);
       });
 
-      it('Should revernt when no cross chain address is set for target chain', async function () {
-        const receiver = signers.deployer;
+      it('Should revert when no cross chain address is set for target chain', async function () {
+        const receiver = initialSigners.deployer;
         const amount = ethers.parseEther('100');
 
         const tx1 = await token0.setCrossChainAddress(
@@ -362,8 +371,14 @@ describe('SimpleToken Unit Tests', async function () {
     beforeEach(async function () {
       await authorizeContracts(token0, token0Info, [token0Info, token1Info]);
       await authorizeContracts(token1, token1Info, [token0Info, token1Info]);
-      sender = signers.deployer;
-      receiver = signers.deployer;
+
+      // Get sender on the "from" chain
+      const fromChainSigners = await getSigners(token0Info.chain);
+      sender = fromChainSigners.deployer;
+
+      // Need to get the receiver associated with the "to" chain
+      const toChainSigners = await getSigners(token1Info.chain);
+      receiver = toChainSigners.deployer;
       amount = ethers.parseEther('100000');
 
       origin = await initCrossChain(
@@ -439,7 +454,6 @@ describe('SimpleToken Unit Tests', async function () {
 
       beforeEach(async function () {
         const mocks = await deployMocks();
-        console.log('mocks:', mocks);
         mockToken0 = mocks.deployments[0]
           .contract as unknown as WrongOperationTypeToken;
         mockToken1 = mocks.deployments[1]
@@ -469,6 +483,7 @@ describe('SimpleToken Unit Tests', async function () {
       });
 
       it('Should revert when redeeming on the wrong chain', async function () {
+        await switchChain(token0Info.chain);
         await expect(token0.redeemCrossChain(receiver, amount, proof))
           .to.be.revertedWithCustomError(token1, 'IncorrectTargetChainId')
           .withArgs(token1Info.chain, token0Info.chain);
@@ -476,11 +491,13 @@ describe('SimpleToken Unit Tests', async function () {
 
       it('Should revert when redeeming on the wrong contrct', async function () {
         // Switch to chain1, where token1 is deployed
-        await switchNetwork(token1Info.network.name);
+        await switchChain(token1Info.chain);
+
+        const signers = await getSigners(token1Info.chain);
 
         // Deploy a new token contract on chain1
         const factory = await ethers.getContractFactory('SimpleToken');
-        const token2 = await factory.deploy(ethers.parseEther('1000000'));
+        const token2 = await factory.deploy(ethers.parseEther('1000000'), signers.deployer.address);
         const deploymentTx = token2.deploymentTransaction();
         if (!deploymentTx) {
           throw new Error('Deployment transaction failed');
@@ -502,10 +519,10 @@ describe('SimpleToken Unit Tests', async function () {
 
       it('Should revert when redeeming for wrong receiver', async function () {
         await expect(
-          token1.redeemCrossChain(signers.alice.address, amount, proof),
+          token1.redeemCrossChain(initialSigners.alice.address, amount, proof),
         )
           .to.be.revertedWithCustomError(token1, 'IncorrectReceiver')
-          .withArgs(receiver, signers.alice.address);
+          .withArgs(receiver, initialSigners.alice.address);
       });
 
       it('Should revert when redeeming with proof that has been tampered with', async function () {
@@ -616,10 +633,10 @@ describe('SimpleToken Unit Tests', async function () {
         // Token0 is deployed on chain 0
         // Token1 is deployed on chain 1
         // getChainwebChainId() should return the correct chain id for each token, regardless of the current network
-        const chains = await chainweb.getChainIds();
+        const chains = await getChainIds();
         expect(await token0.getChainwebChainId()).to.equal(chains[0]);
         expect(await token1.getChainwebChainId()).to.equal(chains[1]);
-        await switchNetwork(token1Info.network.name);
+        await switchChain(token1Info.chain);
         expect(await token1.getChainwebChainId()).to.equal(chains[1]);
         expect(await token0.getChainwebChainId()).to.equal(chains[0]);
       });
@@ -643,7 +660,7 @@ describe('SimpleToken Unit Tests', async function () {
         );
 
         // Explicitly set cross-chain addresses for token1
-        await switchNetwork(token1Info.network.name);
+        await switchChain(token1Info.chain);
         const tx2 = await token1.setCrossChainAddress(
           token0Info.chain,
           await token0.getAddress(),
@@ -660,14 +677,13 @@ describe('SimpleToken Unit Tests', async function () {
   }); // End of getCrossChainAddress
 
   describe('CREATE2 Deployment Tests', function () {
-    let signers: Signers;
+    let initialSigners: Signers;
     let create2FactoryAddress: string;
 
     describe('Create2 Factory Deployment', function () {
       beforeEach(async function () {
-        const chains = await chainweb.getChainIds();
-        await chainweb.switchChain(chains[0]);
-        signers = await getSigners();
+        const chains = await getChainIds();
+        initialSigners = await getSigners(chains[0]);
       });
       context('Success Test Cases', async function () {
         it('Should deploy the CREATE2 factory on all chains with the same address', async function () {
@@ -679,7 +695,7 @@ describe('SimpleToken Unit Tests', async function () {
           expect(ethers.isAddress(factoryAddress)).to.equal(true);
 
           // Verify factory deployed on all chains
-          const allChains = await chainweb.getChainIds();
+          const allChains = await getChainIds();
           expect(deployments.length).to.equal(allChains.length);
 
           // Verify all deployments have the same address
@@ -708,7 +724,7 @@ describe('SimpleToken Unit Tests', async function () {
           expect(ethers.isAddress(versionedFactoryAddress)).to.equal(true);
 
           // Verify factory deployed on all chains
-          const allChains = await chainweb.getChainIds();
+          const allChains = await getChainIds();
           expect(deployments.length).to.equal(allChains.length);
 
           // Verify all deployments have the same address across chains
@@ -727,18 +743,18 @@ describe('SimpleToken Unit Tests', async function () {
           const [defaultFactoryAddress] =
             await chainweb.create2.deployCreate2Factory();
 
-          // Use Alice from the signers object that was set up in beforeEach
+          // Use Alice from the initialSigners object that was set up in beforeEach
           const [aliceFactoryAddress, deployments] =
             await chainweb.create2.deployCreate2Factory({
-              signer: signers.alice,
+              signer: initialSigners.alice,
             });
 
-          // Addresses should be different due to different signers
+          // Addresses should be different due to different initialSigners
           expect(aliceFactoryAddress).to.not.equal(defaultFactoryAddress);
           expect(ethers.isAddress(aliceFactoryAddress)).to.equal(true);
 
           // Verify factory deployed on all chains
-          const allChains = await chainweb.getChainIds();
+          const allChains = await getChainIds();
           expect(deployments.length).to.equal(allChains.length);
 
           // Verify all deployments have the same address across chains
@@ -757,14 +773,14 @@ describe('SimpleToken Unit Tests', async function () {
           const version = 999;
           const [customFactoryAddress, deployments] =
             await chainweb.create2.deployCreate2Factory({
-              signer: signers.bob,
+              signer: initialSigners.bob,
               version,
             });
 
           expect(ethers.isAddress(customFactoryAddress)).to.equal(true);
 
           // Verify factory deployed on all chains
-          const allChains = await chainweb.getChainIds();
+          const allChains = await getChainIds();
           expect(deployments.length).to.equal(allChains.length);
 
           // Verify all deployments have the same address across chains
@@ -784,7 +800,7 @@ describe('SimpleToken Unit Tests', async function () {
             await chainweb.create2.deployCreate2Factory({ version });
           const [signerFactoryAddress] =
             await chainweb.create2.deployCreate2Factory({
-              signer: signers.bob,
+              signer: initialSigners.bob,
             });
 
           // All addresses should be different
@@ -805,7 +821,7 @@ describe('SimpleToken Unit Tests', async function () {
           expect(secondAddress).to.equal(firstAddress);
 
           // Verify factory is still deployed on all chains
-          const allChains = await chainweb.getChainIds();
+          const allChains = await getChainIds();
           expect(secondDeployments.length).to.equal(allChains.length);
 
           for (const deployment of secondDeployments) {
@@ -818,13 +834,10 @@ describe('SimpleToken Unit Tests', async function () {
     describe('Contract deployment with CREATE2', function () {
       beforeEach(async function () {
         // Get all chains
-        const chains = await chainweb.getChainIds();
+        const chains = await getChainIds();
 
-        // Switch to first chain to get signers
-        await chainweb.switchChain(chains[0]);
-
-        // Initialize signers - this was missing!
-        signers = await getSigners();
+        // Initialize initialSigners - 
+        initialSigners = await getSigners(chains[0]);
 
         // Deploy a fresh factory for each test
         [create2FactoryAddress] = await chainweb.create2.deployCreate2Factory();
@@ -837,13 +850,13 @@ describe('SimpleToken Unit Tests', async function () {
           const deployResult =
             await chainweb.create2.deployOnChainsUsingCreate2({
               name: 'SimpleToken',
-              constructorArgs: [ethers.parseUnits('1000000')],
+              constructorArgs: [ethers.parseUnits('1000000'), initialSigners.deployer.address],
               salt,
               create2Factory: create2FactoryAddress,
             });
 
           // Check all chains have deployments
-          const allChains = await chainweb.getChainIds();
+          const allChains = await getChainIds();
           expect(deployResult.deployments.length).to.equal(allChains.length);
 
           // Get first deployment address to compare with others
@@ -874,7 +887,7 @@ describe('SimpleToken Unit Tests', async function () {
           // Get the compiled bytecode
           const factory = await ethers.getContractFactory('SimpleToken');
           const tx = await factory.getDeployTransaction(
-            ethers.parseUnits('1000000'),
+            ethers.parseUnits('1000000'), initialSigners.deployer.address
           );
           const bytecode = tx.data as string;
 
@@ -895,7 +908,7 @@ describe('SimpleToken Unit Tests', async function () {
             // Deploy on this chain
             const deployOptions = {
               name: 'SimpleToken',
-              constructorArgs: [ethers.parseUnits('1000000')],
+              constructorArgs: [ethers.parseUnits('1000000'), initialSigners.deployer.address],
               salt,
               create2Factory: create2FactoryAddress,
               bindToSender: false,
@@ -929,7 +942,7 @@ describe('SimpleToken Unit Tests', async function () {
           const deployResult =
             await chainweb.create2.deployOnChainsUsingCreate2({
               name: 'SimpleToken',
-              constructorArgs: [ethers.parseUnits('1000000')],
+              constructorArgs: [ethers.parseUnits('1000000'), initialSigners.deployer.address],
               salt,
               create2Factory: create2FactoryAddress,
             });
@@ -949,7 +962,7 @@ describe('SimpleToken Unit Tests', async function () {
             // Connect to the contract on this chain
             const token = SimpleToken__factory.connect(
               expectedAddress,
-              signers.deployer,
+              initialSigners.deployer,
             );
 
             // Verify contract functionality
@@ -979,7 +992,7 @@ describe('SimpleToken Unit Tests', async function () {
           const deployResult1 =
             await chainweb.create2.deployOnChainsUsingCreate2({
               name: 'SimpleToken',
-              constructorArgs: [ethers.parseUnits('1000000')],
+              constructorArgs: [ethers.parseUnits('1000000'), initialSigners.deployer.address],
               salt: salt1,
               create2Factory: create2FactoryAddress,
             });
@@ -990,7 +1003,7 @@ describe('SimpleToken Unit Tests', async function () {
           const deployResult2 =
             await chainweb.create2.deployOnChainsUsingCreate2({
               name: 'SimpleToken',
-              constructorArgs: [ethers.parseUnits('1000000')],
+              constructorArgs: [ethers.parseUnits('1000000'), initialSigners.deployer.address],
               salt: salt2,
               create2Factory: create2FactoryAddress,
             });
@@ -1002,7 +1015,7 @@ describe('SimpleToken Unit Tests', async function () {
           expect(ethers.isAddress(address2)).to.equal(true);
 
           // Verify both contracts are deployed and working correctly on all chains
-          const allChains = await chainweb.getChainIds();
+          const allChains = await getChainIds();
 
           for (const chain of allChains) {
             await chainweb.switchChain(chain);
@@ -1012,7 +1025,7 @@ describe('SimpleToken Unit Tests', async function () {
             expect(code1).to.not.equal('0x');
             const token1 = SimpleToken__factory.connect(
               address1,
-              signers.deployer,
+              initialSigners.deployer,
             );
             expect(await token1.symbol()).to.equal('SIM');
 
@@ -1021,21 +1034,21 @@ describe('SimpleToken Unit Tests', async function () {
             expect(code2).to.not.equal('0x');
             const token2 = SimpleToken__factory.connect(
               address2,
-              signers.deployer,
+              initialSigners.deployer,
             );
             expect(await token2.symbol()).to.equal('SIM');
           }
         });
 
         it('Should deploy contracts to the same address when using same salt but different signer', async function () {
-          const salt = 'SimpleToken_different_signers_test';
+          const salt = 'SimpleToken_different_initialSigners_test';
 
           // Deploy with deployer
           const deployerResult =
             await chainweb.create2.deployOnChainsUsingCreate2({
               name: 'SimpleToken',
-              signer: signers.deployer,
-              constructorArgs: [ethers.parseUnits('1000000')],
+              signer: initialSigners.deployer,
+              constructorArgs: [ethers.parseUnits('1000000'), initialSigners.deployer.address],
               salt,
               create2Factory: create2FactoryAddress,
             });
@@ -1045,20 +1058,20 @@ describe('SimpleToken Unit Tests', async function () {
           const aliceResult = await chainweb.create2.deployOnChainsUsingCreate2(
             {
               name: 'SimpleToken',
-              signer: signers.alice,
-              constructorArgs: [ethers.parseUnits('1000000')],
+              signer: initialSigners.alice,
+              constructorArgs: [ethers.parseUnits('1000000'), initialSigners.deployer.address],
               salt,
               create2Factory: create2FactoryAddress,
             },
           );
           const aliceAddress = aliceResult.deployments[0].address;
 
-          // Addresses should be the same despite different signers.
+          // Addresses should be the same despite different initialSigners.
           // The Create2Factory is the deployer in both cases.
           expect(deployerAddress).to.be.equal(aliceAddress);
 
           // Verify both contracts are deployed correctly on all chains
-          const allChains = await chainweb.getChainIds();
+          const allChains = await getChainIds();
 
           for (const chain of allChains) {
             await chainweb.switchChain(chain);
@@ -1093,7 +1106,7 @@ describe('SimpleToken Unit Tests', async function () {
           const deployResultV1 =
             await chainweb.create2.deployOnChainsUsingCreate2({
               name: 'SimpleToken',
-              constructorArgs: [ethers.parseUnits('1000000')],
+              constructorArgs: [ethers.parseUnits('1000000'), initialSigners.deployer.address],
               salt,
               create2Factory: factoryAddressV1,
             });
@@ -1103,7 +1116,7 @@ describe('SimpleToken Unit Tests', async function () {
           const deployResultV2 =
             await chainweb.create2.deployOnChainsUsingCreate2({
               name: 'SimpleToken',
-              constructorArgs: [ethers.parseUnits('1000000')],
+              constructorArgs: [ethers.parseUnits('1000000'), initialSigners.deployer.address],
               salt,
               create2Factory: factoryAddressV2, // Using the factory address from version 2
             });
@@ -1113,7 +1126,7 @@ describe('SimpleToken Unit Tests', async function () {
           expect(addressV1).to.not.equal(addressV2);
 
           // Verify both contracts are deployed and working correctly on all chains
-          const allChains = await chainweb.getChainIds();
+          const allChains = await getChainIds();
 
           for (const chain of allChains) {
             await chainweb.switchChain(chain);
@@ -1123,7 +1136,7 @@ describe('SimpleToken Unit Tests', async function () {
             expect(codeV1).to.not.equal('0x');
             const tokenV1 = SimpleToken__factory.connect(
               addressV1,
-              signers.deployer,
+              initialSigners.deployer,
             );
             expect(await tokenV1.symbol()).to.equal('SIM');
 
@@ -1132,7 +1145,7 @@ describe('SimpleToken Unit Tests', async function () {
             expect(codeV2).to.not.equal('0x');
             const tokenV2 = SimpleToken__factory.connect(
               addressV2,
-              signers.deployer,
+              initialSigners.deployer,
             );
             expect(await tokenV2.symbol()).to.equal('SIM');
           }
