@@ -10,6 +10,29 @@ const { requestSpvProof, deployContractOnChains, switchChain } = chainweb;
 const EVENT_SIG_HASH =
   '0x9d2528c24edd576da7816ca2bdaa28765177c54b32fb18e2ca18567fbc2a9550';
 
+export async function authorizeAllContracts(
+  deployments: Array<{
+    chain: number | string;
+    contract: SimpleToken;
+    address: string;
+  } & Partial<DeployedContractsOnChains>>
+) {
+  // For each chain, authorize all other chains as cross-chain peers
+  for (const deployment of deployments) {
+    await chainweb.switchChain(deployment.chain);
+    const { deployer: owner } = await getSigners(deployment.chain);
+    for (const target of deployments) {
+      if (target.chain !== deployment.chain) {
+        const tx = await deployment.contract.connect(owner)
+          .setCrossChainAddress(target.chain, target.address);
+        await tx.wait();
+        const setAddr = await deployment.contract.getCrossChainAddress(target.chain);
+        console.log(`Set cross-chain address for chain ${deployment.chain} -> ${target.chain}: ${setAddr}`);
+      }
+    }
+  }
+}
+
 // Authorize contracts for cross-chain transfers to and from the token
 export async function authorizeContracts(
   token: SimpleToken,
@@ -26,11 +49,10 @@ export async function authorizeContracts(
   }
 }
 
-export function deployMocks() {
-  console.log(`Found Kadena devnet networks while deploying mocks`);
+export function deployMocks(ownerAddress) {
   return deployContractOnChains({
     name: 'WrongOperationTypeToken',
-    constructorArgs: [ethers.parseUnits('1000000')],
+    constructorArgs: [ethers.parseUnits('1000000'), ownerAddress],
   });
 }
 

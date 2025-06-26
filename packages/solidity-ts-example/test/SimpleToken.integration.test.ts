@@ -1,7 +1,7 @@
 import { expect } from 'chai';
 import { ethers, switchNetwork, chainweb } from 'hardhat';
 import {
-  authorizeContracts,
+  authorizeAllContracts,
   crossChainTransfer,
   initCrossChain,
   redeemCrossChain,
@@ -14,6 +14,7 @@ import { SimpleToken } from '../typechain-types';
 const { requestSpvProof, deployContractOnChains, getChainIds } = chainweb;
 
 describe('SimpleToken Integration Tests', async function () {
+  let deployments: DeployedContractsOnChains<SimpleToken>[];
   let initialSigners: Signers;
   let token0: SimpleToken; // this should be more specific to the contract; TODO: investigate type generation from contract
   let token1: SimpleToken;
@@ -38,13 +39,13 @@ describe('SimpleToken Integration Tests', async function () {
     token0Info = deployed.deployments[0];
     token1Info = deployed.deployments[1];
 
+    deployments = deployed.deployments;
+
     // The owner/deployer transfers tokens to other accounts so that they can transfer tokens cross-chain. This is a setup step.
     await token0.transfer(initialSigners.alice.address, ethers.parseEther('1000000')); // Alice has 1M tokens on chain 0
     await token1.transfer(initialSigners.bob.address, ethers.parseEther('1000000')); // Bob has 1M tokens on chain 1
 
-    await authorizeContracts(token0, token0Info, [token0Info, token1Info]);
-    await authorizeContracts(token1, token1Info, [token0Info, token1Info]);
-
+    await authorizeAllContracts(deployments);
     await switchNetwork(token0Info.network.name);
   });
 

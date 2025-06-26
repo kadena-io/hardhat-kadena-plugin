@@ -3,10 +3,10 @@ import { HardhatEthersSigner, Signers } from './utils/utils';
 
 import { expect } from 'chai';
 
-import { ethers, chainweb, network } from 'hardhat';
+import { ethers, chainweb } from 'hardhat';
 import { ZeroAddress } from 'ethers';
 import {
-  authorizeContracts,
+  authorizeAllContracts,
   initCrossChain,
   CrossChainOperation,
   redeemCrossChain,
@@ -29,6 +29,7 @@ const {
 } = chainweb;
 
 describe('SimpleToken Unit Tests', async function () {
+  let deployments: DeployedContractsOnChains<SimpleToken>[];
   let initialSigners: Signers;
   let token0: SimpleToken;
   let token1: SimpleToken;
@@ -62,6 +63,8 @@ describe('SimpleToken Unit Tests', async function () {
     // Keep deployment info accessible when needed
     token0Info = deployed.deployments[0];
     token1Info = deployed.deployments[1];
+
+    deployments = deployed.deployments;
     await switchChain(token0Info.chain);
   });
 
@@ -155,8 +158,7 @@ describe('SimpleToken Unit Tests', async function () {
 
   describe('verifySPV', async function () {
     beforeEach(async function () {
-      await authorizeContracts(token0, token0Info, [token0Info, token1Info]);
-      await authorizeContracts(token1, token1Info, [token0Info, token1Info]);
+      await authorizeAllContracts(deployments);
 
       sender = initialSigners.deployer;
       receiver = initialSigners.deployer;
@@ -239,8 +241,7 @@ describe('SimpleToken Unit Tests', async function () {
 
   describe('transferCrossChain', async function () {
     beforeEach(async function () {
-      await authorizeContracts(token0, token0Info, [token0Info, token1Info]);
-      await authorizeContracts(token1, token1Info, [token0Info, token1Info]);
+      await authorizeAllContracts(deployments);
 
       await switchChain(token0Info.chain); // make sure we start on the first chain
     });
@@ -369,8 +370,7 @@ describe('SimpleToken Unit Tests', async function () {
     let proof: string;
 
     beforeEach(async function () {
-      await authorizeContracts(token0, token0Info, [token0Info, token1Info]);
-      await authorizeContracts(token1, token1Info, [token0Info, token1Info]);
+      await authorizeAllContracts(deployments);
 
       // Get sender on the "from" chain
       const fromChainSigners = await getSigners(token0Info.chain);
@@ -453,7 +453,7 @@ describe('SimpleToken Unit Tests', async function () {
       let mockToken1Info: DeployedContractsOnChains;
 
       beforeEach(async function () {
-        const mocks = await deployMocks();
+        const mocks = await deployMocks(initialSigners.deployer.address);
         mockToken0 = mocks.deployments[0]
           .contract as unknown as WrongOperationTypeToken;
         mockToken1 = mocks.deployments[1]
@@ -463,14 +463,7 @@ describe('SimpleToken Unit Tests', async function () {
         mockToken0Info = mocks.deployments[0];
         mockToken1Info = mocks.deployments[1];
 
-        await authorizeContracts(mockToken0, mockToken0Info, [
-          mockToken0Info,
-          mockToken1Info,
-        ]);
-        await authorizeContracts(mockToken1, mockToken1Info, [
-          mockToken0Info,
-          mockToken1Info,
-        ]);
+        await authorizeAllContracts(mocks.deployments);
       });
 
       it('Should revert on second redeem', async function () {
