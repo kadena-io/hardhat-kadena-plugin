@@ -471,7 +471,7 @@ describe('SimpleToken Unit Tests', async function () {
       let mockToken1Info;
 
       beforeEach(async function () {
-        const mocks = await deployMocks();
+        const mocks = await deployMocks(initialSigners.deployer.address);
         mockToken0 = mocks.deployments[0].contract;
         mockToken1 = mocks.deployments[1].contract;
 

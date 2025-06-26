@@ -25,10 +25,10 @@ async function authorizeAllContracts(deployments) {
 }
 
 
-function deployMocks() {
+function deployMocks(ownerAddress) {
   return deployContractOnChains({
     name: 'WrongOperationTypeToken',
-    constructorArgs: [ethers.parseUnits('1000000')],
+    constructorArgs: [ethers.parseUnits('1000000'), ownerAddress],
   });
 }
 
