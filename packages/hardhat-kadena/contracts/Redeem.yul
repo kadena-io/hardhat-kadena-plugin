@@ -59,27 +59,46 @@ object "Redeem" {
 
     // calldataload + shift seems to incur the lowest gas cost
     // (note that shr is cheaper than div)
+    // let amount := calldataload(0x0)
+    // let version := shr(calldataload(0x20), 0xf0)
+    // let targetChain := shr(calldataload(0x22), 0xea)
+    // let targetAccount := shr(calldataload(0x26), 0x60)
+    // let xChanBalance := calldataload(0x36)
+    // let xChanId := calldataload(0x56)
+    // let rootHash := calldataload(0x76)
+    // let sigV := shr(calldataload(0x96), 0xf8)
+    // let sigR := calldataload(0x97)
+    // let sigS := calldataload(0xb7)
+    // let rootTime := shr(calldataload(0xd7), 0xc0)
+
     let amount := calldataload(0x0)
-    let version := shr(calldataload(0x20), 0xf0)
-    let targetChain := shr(calldataload(0x22), 0xea)
-    let targetAccount := shr(calldataload(0x26), 0x60)
-    let xChanBalance := calldataload(0x36)
-    let xChanId := calldataload(0x56)
-    let rootHash := calldataload(0x76)
-    let sigV := shr(calldataload(0x96), 0xf8)
-    let sigR := calldataload(0x97)
-    let sigS := calldataload(0xb7)
-    let rootTime := shr(calldataload(0xd7), 0xc0)
+    let version := shr(0xf0, calldataload(0x20))
+    let targetChain := shr(0xea, calldataload(0x22))
+    let targetAccount := shr(0x60, calldataload(0x26))
+    let xChanBalance := calldataload(0x3a)
+    let xChanId := calldataload(0x5a)
+    let rootHash := calldataload(0x7a)
+    let sigV := shr(0xf8, calldataload(0x9a))
+    let sigR := calldataload(0x9b)
+    let sigS := calldataload(0xbb)
+    let rootTime := shr(0xc0, calldataload(0xdb))
+
+    /* ********************************************************************** */
+    /* Check Version */
+
+    if iszero(eq(version, 0x0)) {
+      error(0x02)
+    }
 
     /* ********************************************************************** */
     /* Check Target ChainId */
 
     let chainwebChainIdContract := 0x9b02c3e2df42533e0fd166798b5a616f59dbd2cc
     if iszero(staticcall(gas(), chainwebChainIdContract, 0, 0, chainIdPtr, 0x4)) {
-      error(0x02)
+      error(0x03)
     }
     if iszero(eq(mload(chainIdPtr), targetChain)) {
-      error(0x03)
+      error(0x04)
     }
 
     /* ********************************************************************** */
@@ -98,10 +117,10 @@ object "Redeem" {
 
     let ecrecoverContract := 0x01
     if iszero(staticcall(gas(), ecrecoverContract, msgHashPtr, 0x80, sigAddrPtr, 0x20)) {
-      error(0x04)
+      error(0x05)
     }
     if iszero(eq(mload(sigAddrPtr), REDEEM_KEY_ADDR)) {
-      error(0x05)
+      error(0x06)
     }
 
     /* ********************************************************************** */
@@ -116,14 +135,12 @@ object "Redeem" {
 
     let beaconRootsContract := 0x000F3df6D732807Ef1319fB7B8bB8522d0Beac02
     mstore(rootTimePtr, rootTime)
-
-    // FIXME: we first need to fix the tests before this works.
-    // if iszero(staticcall(gas(), beaconRootsContract, rootTimePtr, 0x20, rootPtr, 0x20)) {
-    //   error(0x06)
-    // }
-    // if iszero(eq(mload(rootPtr), rootHash)) {
-    //   error(0x07)
-    // }
+    if iszero(staticcall(gas(), beaconRootsContract, rootTimePtr, 0x20, rootPtr, 0x20)) {
+      error(0x07)
+    }
+    if iszero(eq(mload(rootPtr), rootHash)) {
+      error(0x08)
+    }
 
     /* ********************************************************************** */
     /* Check Amount */
@@ -132,7 +149,7 @@ object "Redeem" {
     let maxAmount := sub(xChanBalance, redeemedAmount)
 
     if gt(amount, maxAmount) {
-      error(0x08)
+      error(0x09)
     }
 
     /* ********************************************************************** */
@@ -143,8 +160,10 @@ object "Redeem" {
     /* ********************************************************************** */
     /* Send Funds to Target Account */
 
+    // TODO: is this safe or do we need to check first that there is no code
+    // at the target account?
     if iszero(call(gas(), targetAccount, amount, 0, 0, 0, 0)) {
-      error(0x09)
+      error(0x0a)
     }
 
     return(0, 0)
