@@ -23,6 +23,7 @@ describe('ChainwebChainId Tests', async function () {
 
 const coder = AbiCoder.defaultAbiCoder()
 
+// EIP-4788 Header Oracle address
 const beaconHeaderOracle = "0x000F3df6D732807Ef1319fB7B8bB8522d0Beac02";
 
 async function ethCall(to, input) {

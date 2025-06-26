@@ -7,24 +7,38 @@ object "Redeem" {
     /* Parameters */
 
     // parameters:
-    // 1. amount: u256
+    // 1. requested amount: u256
     // 2. proof: bytes
 
-    // proof format:
+    // Proof format:
+    //
+    // Message:
     // * version: u16
     // * target chain: u32
     // * target account: address
     // * XChan balance: u256
     // * XChan Id: u256
     // * target block hash: u256
+    // Signature:
     // * signature v: u8
     // * signature r: u256
     // * signature s: u256
+    // Auxiliary:
     // * target block hash timestamp: u64
+
+    // NOTE: callers of this contract must make no assumptions about the length
+    // of the proof. At the moment the proof size is constant, but this will
+    // change in future versions.
 
     /* ********************************************************************** */
     /* Constants */
 
+    // With this version proofs need to be signed. Future versions will not
+    // require a signature.
+
+    // THIS KEY IS ONLY FOR TESTING
+    // THIS NEEDS TO BE CHANGED FOR PUBLIC TESTNET AND MAINNET
+    // secret key: 0xef69d5fcb4e94dd638d7fe71cb4da99a679bb817ca706340b3901c1139f50a90
     let REDEEM_KEY_ADDR := 0xaD9923C37370BCbCF00ed194506D895084895696
 
     /* ********************************************************************** */
@@ -59,18 +73,6 @@ object "Redeem" {
 
     // calldataload + shift seems to incur the lowest gas cost
     // (note that shr is cheaper than div)
-    // let amount := calldataload(0x0)
-    // let version := shr(calldataload(0x20), 0xf0)
-    // let targetChain := shr(calldataload(0x22), 0xea)
-    // let targetAccount := shr(calldataload(0x26), 0x60)
-    // let xChanBalance := calldataload(0x36)
-    // let xChanId := calldataload(0x56)
-    // let rootHash := calldataload(0x76)
-    // let sigV := shr(calldataload(0x96), 0xf8)
-    // let sigR := calldataload(0x97)
-    // let sigS := calldataload(0xb7)
-    // let rootTime := shr(calldataload(0xd7), 0xc0)
-
     let amount := calldataload(0x0)
     let version := shr(0xf0, calldataload(0x20))
     let targetChain := shr(0xea, calldataload(0x22))
