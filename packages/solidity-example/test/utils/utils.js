@@ -14,16 +14,20 @@ async function authorizeAllContracts(deployments) {
     const owner = signers.deployer;
     for (const target of deployments) {
       if (target.chain !== deployment.chain) {
-        const tx = await deployment.contract.connect(owner)
+        const tx = await deployment.contract
+          .connect(owner)
           .setCrossChainAddress(target.chain, target.address);
         await tx.wait();
-        const setAddr = await deployment.contract.getCrossChainAddress(target.chain);
-        console.log(`Set cross-chain address for chain ${deployment.chain} -> ${target.chain}: ${setAddr}`);
+        const setAddr = await deployment.contract.getCrossChainAddress(
+          target.chain,
+        );
+        console.log(
+          `Set cross-chain address for chain ${deployment.chain} -> ${target.chain}: ${setAddr}`,
+        );
       }
     }
   }
 }
-
 
 function deployMocks(ownerAddress) {
   return deployContractOnChains({
@@ -70,7 +74,6 @@ async function initCrossChain(
   };
 }
 
-
 // Redeem cross-chain transfer tokens
 async function redeemCrossChain(
   targetToken,
@@ -79,7 +82,6 @@ async function redeemCrossChain(
   amount,
   proof,
 ) {
-
   await switchChain(targetTokenInfo.chain);
   console.log(`Redeeming tokens on chain ${targetTokenInfo.network.name}`);
   let response2 = await targetToken.redeemCrossChain(
@@ -104,7 +106,7 @@ async function crossChainTransfer(
   amount,
 ) {
   console.log(
-    `Transfering ${amount} tokens from ${sourceTokenInfo.chain}:${sourceTokenInfo.address}:${sender.address} to ${targetTokenInfo.chain}:${targetTokenInfo.address}:${receiver.address}`
+    `Transfering ${amount} tokens from ${sourceTokenInfo.chain}:${sourceTokenInfo.address}:${sender.address} to ${targetTokenInfo.chain}:${targetTokenInfo.address}:${receiver.address}`,
   );
   const origin = await initCrossChain(
     sourceToken,

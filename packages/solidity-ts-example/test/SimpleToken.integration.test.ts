@@ -32,7 +32,10 @@ describe('SimpleToken Integration Tests', async function () {
     // In solidity, the address has no specific network affiliation like a signer does in Hardhat.
     const deployed = await deployContractOnChains({
       name: 'SimpleToken',
-      constructorArgs: [ethers.parseUnits('1000000'), initialSigners.deployer.address],
+      constructorArgs: [
+        ethers.parseUnits('1000000'),
+        initialSigners.deployer.address,
+      ],
     });
 
     // Store contract instances for direct calls
@@ -46,8 +49,14 @@ describe('SimpleToken Integration Tests', async function () {
     deployments = deployed.deployments;
 
     // The owner/deployer transfers tokens to other accounts so that they can transfer tokens cross-chain. This is a setup step.
-    await token0.transfer(initialSigners.alice.address, ethers.parseEther('1000000')); // Alice has 1M tokens on chain 0
-    await token1.transfer(initialSigners.bob.address, ethers.parseEther('1000000')); // Bob has 1M tokens on chain 1
+    await token0.transfer(
+      initialSigners.alice.address,
+      ethers.parseEther('1000000'),
+    ); // Alice has 1M tokens on chain 0
+    await token1.transfer(
+      initialSigners.bob.address,
+      ethers.parseEther('1000000'),
+    ); // Bob has 1M tokens on chain 1
 
     await authorizeAllContracts(deployments);
     await switchNetwork(token0Info.network.name);

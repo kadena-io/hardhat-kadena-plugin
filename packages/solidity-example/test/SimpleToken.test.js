@@ -38,7 +38,10 @@ describe('SimpleToken Unit Tests', async function () {
     // In solidity, the address has no specific network affiliation like a signer does in Hardhat.
     const deployed = await deployContractOnChains({
       name: 'SimpleToken',
-      constructorArgs: [ethers.parseUnits('1000000'), initialSigners.deployer.address],
+      constructorArgs: [
+        ethers.parseUnits('1000000'),
+        initialSigners.deployer.address,
+      ],
     });
 
     // Store contract instances for direct calls
@@ -59,7 +62,7 @@ describe('SimpleToken Unit Tests', async function () {
       it('Should have the correct configuration after deployment on all chains', async function () {
         await chainweb.runOverChains(async (chainId) => {
           const chainSigners = await getSigners(chainId);
-          const deployment = deployments.find(d => d.chain === chainId);
+          const deployment = deployments.find((d) => d.chain === chainId);
 
           expect(deployment).to.not.be.undefined;
           expect(await deployment.contract.symbol()).to.equal('SIM');
@@ -72,11 +75,14 @@ describe('SimpleToken Unit Tests', async function () {
           expect(deployment.deployer).to.equal(chainSigners.deployer.address);
 
           // Verify that the contract owner is the chain-specific deployer
-          expect(await deployment.contract.owner()).to.equal(chainSigners.deployer.address);
+          expect(await deployment.contract.owner()).to.equal(
+            chainSigners.deployer.address,
+          );
 
           // Verify that the deployer has the full initial supply on this chain
-          expect(await deployment.contract.balanceOf(chainSigners.deployer.address))
-            .to.equal(ethers.parseEther('1000000'));
+          expect(
+            await deployment.contract.balanceOf(chainSigners.deployer.address),
+          ).to.equal(ethers.parseEther('1000000'));
         });
       });
     }); // End of Success Test Cases
@@ -88,7 +94,9 @@ describe('SimpleToken Unit Tests', async function () {
         // Set up cross-chain addresses for every chain to every other chain
         // runOverChains handles the chain switching internally
         await chainweb.runOverChains(async (currentChainId) => {
-          const currentDeployment = deployments.find(d => d.chain === currentChainId);
+          const currentDeployment = deployments.find(
+            (d) => d.chain === currentChainId,
+          );
           const chainSigners = await getSigners(currentChainId);
 
           // Set addresses for all other chains
@@ -96,13 +104,16 @@ describe('SimpleToken Unit Tests', async function () {
             if (targetDeployment.chain !== currentChainId) {
               const tx = await currentDeployment.contract.setCrossChainAddress(
                 targetDeployment.chain,
-                targetDeployment.address
+                targetDeployment.address,
               );
               await tx.wait();
 
               // Verify the address was set correctly
-              expect(await currentDeployment.contract.getCrossChainAddress(targetDeployment.chain))
-                .to.equal(targetDeployment.address);
+              expect(
+                await currentDeployment.contract.getCrossChainAddress(
+                  targetDeployment.chain,
+                ),
+              ).to.equal(targetDeployment.address);
 
               // Verify the event was emitted correctly
               await expect(tx)
@@ -110,7 +121,7 @@ describe('SimpleToken Unit Tests', async function () {
                 .withArgs(
                   targetDeployment.chain,
                   targetDeployment.address,
-                  chainSigners.deployer.address
+                  chainSigners.deployer.address,
                 );
             }
           }
@@ -120,13 +131,15 @@ describe('SimpleToken Unit Tests', async function () {
       it('Should verify all cross-chain addresses are accessible from all chains', async function () {
         // First set up all addresses (could be in beforeEach)
         await chainweb.runOverChains(async (currentChainId) => {
-          const currentDeployment = deployments.find(d => d.chain === currentChainId);
+          const currentDeployment = deployments.find(
+            (d) => d.chain === currentChainId,
+          );
 
           for (const targetDeployment of deployments) {
             if (targetDeployment.chain !== currentChainId) {
               const tx = await currentDeployment.contract.setCrossChainAddress(
                 targetDeployment.chain,
-                targetDeployment.address
+                targetDeployment.address,
               );
               await tx.wait();
             }
@@ -135,11 +148,14 @@ describe('SimpleToken Unit Tests', async function () {
 
         // Then verify all addresses are correctly set
         await chainweb.runOverChains(async (chainId) => {
-          const deployment = deployments.find(d => d.chain === chainId);
+          const deployment = deployments.find((d) => d.chain === chainId);
 
           for (const otherDeployment of deployments) {
             if (otherDeployment.chain !== chainId) {
-              const storedAddress = await deployment.contract.getCrossChainAddress(otherDeployment.chain);
+              const storedAddress =
+                await deployment.contract.getCrossChainAddress(
+                  otherDeployment.chain,
+                );
               expect(storedAddress).to.equal(otherDeployment.address);
             }
           }
@@ -152,21 +168,30 @@ describe('SimpleToken Unit Tests', async function () {
 
         await chainweb.runOverChains(async (currentChainId) => {
           if (currentChainId !== targetChainId) {
-            const currentDeployment = deployments.find(d => d.chain === currentChainId);
+            const currentDeployment = deployments.find(
+              (d) => d.chain === currentChainId,
+            );
             const chainSigners = await getSigners(currentChainId);
 
             const tx = await currentDeployment.contract.setCrossChainAddress(
               targetChainId,
-              ZeroAddress
+              ZeroAddress,
             );
             await tx.wait();
 
-            expect(await currentDeployment.contract.getCrossChainAddress(targetChainId))
-              .to.equal(ZeroAddress);
+            expect(
+              await currentDeployment.contract.getCrossChainAddress(
+                targetChainId,
+              ),
+            ).to.equal(ZeroAddress);
 
             await expect(tx)
               .to.emit(currentDeployment.contract, 'CrossChainAddressSet')
-              .withArgs(targetChainId, ZeroAddress, chainSigners.deployer.address);
+              .withArgs(
+                targetChainId,
+                ZeroAddress,
+                chainSigners.deployer.address,
+              );
           }
         });
       });
@@ -175,18 +200,23 @@ describe('SimpleToken Unit Tests', async function () {
     context('Error Test Cases', async function () {
       it('Should fail to set cross-chain addresses for non-owner on all chains', async function () {
         await chainweb.runOverChains(async (chainId) => {
-          const deployment = deployments.find(d => d.chain === chainId);
+          const deployment = deployments.find((d) => d.chain === chainId);
           const chainSigners = await getSigners(chainId);
-          const targetChain = deployments.find(d => d.chain !== chainId)?.chain;
+          const targetChain = deployments.find(
+            (d) => d.chain !== chainId,
+          )?.chain;
 
           if (targetChain) {
             // Try to set cross-chain address as alice (non-owner)
             await expect(
               deployment.contract
                 .connect(chainSigners.alice)
-                .setCrossChainAddress(targetChain, deployment.address)
+                .setCrossChainAddress(targetChain, deployment.address),
             )
-              .to.be.revertedWithCustomError(deployment.contract, 'OwnableUnauthorizedAccount')
+              .to.be.revertedWithCustomError(
+                deployment.contract,
+                'OwnableUnauthorizedAccount',
+              )
               .withArgs(chainSigners.alice.address);
           }
         });
@@ -213,21 +243,35 @@ describe('SimpleToken Unit Tests', async function () {
     });
 
     context('Success Test Cases', async function () {
-      it("Should verify a valid SPV proof and return correct values", async function () {
+      it('Should verify a valid SPV proof and return correct values', async function () {
         const proof = await requestSpvProof(token1Info.chain, origin);
         const [crossChainMessage, originHash] = await token1.verifySPV(proof);
 
         // Verify CrossChainMessage fields
         expect(crossChainMessage.targetChainId).to.equal(token1Info.chain);
-        expect(crossChainMessage.targetContractAddress).to.equal(await token1.getAddress());
-        expect(crossChainMessage.crossChainOperationType).to.equal(CrossChainOperation.Erc20Transfer);
+        expect(crossChainMessage.targetContractAddress).to.equal(
+          await token1.getAddress(),
+        );
+        expect(crossChainMessage.crossChainOperationType).to.equal(
+          CrossChainOperation.Erc20Transfer,
+        );
 
         // Verify origin fields
-        expect(crossChainMessage.origin.originChainId).to.equal(token0Info.chain);
-        expect(crossChainMessage.origin.originContractAddress).to.equal(await token0.getAddress());
-        expect(crossChainMessage.origin.originBlockHeight).to.equal(origin.height);
-        expect(crossChainMessage.origin.originTransactionIndex).to.equal(origin.txIdx);
-        expect(crossChainMessage.origin.originEventIndex).to.equal(origin.eventIdx);
+        expect(crossChainMessage.origin.originChainId).to.equal(
+          token0Info.chain,
+        );
+        expect(crossChainMessage.origin.originContractAddress).to.equal(
+          await token0.getAddress(),
+        );
+        expect(crossChainMessage.origin.originBlockHeight).to.equal(
+          origin.height,
+        );
+        expect(crossChainMessage.origin.originTransactionIndex).to.equal(
+          origin.txIdx,
+        );
+        expect(crossChainMessage.origin.originEventIndex).to.equal(
+          origin.eventIdx,
+        );
 
         const expectedOriginHash = computeOriginHash(origin);
         expect(originHash).to.equal(expectedOriginHash);
@@ -503,7 +547,10 @@ describe('SimpleToken Unit Tests', async function () {
 
         // Deploy a new token contract on chain1
         const factory = await ethers.getContractFactory('SimpleToken');
-        const token2 = await factory.deploy(ethers.parseEther('1000000'), initialSigners.deployer.address);
+        const token2 = await factory.deploy(
+          ethers.parseEther('1000000'),
+          initialSigners.deployer.address,
+        );
         const deploymentTx = token2.deploymentTransaction();
         await deploymentTx.wait();
 
@@ -632,9 +679,11 @@ describe('SimpleToken Unit Tests', async function () {
         // runOverChains handles the chain switching internally
         // We can use it to verify the chainweb chain id for each deployment
         await chainweb.runOverChains(async (chainId) => {
-          const deployment = deployments.find(d => d.chain === chainId);
+          const deployment = deployments.find((d) => d.chain === chainId);
           expect(deployment).to.not.be.undefined;
-          expect(await deployment.contract.getChainwebChainId()).to.equal(chainId);
+          expect(await deployment.contract.getChainwebChainId()).to.equal(
+            chainId,
+          );
         });
       });
     }); // End of Success Test Cases
@@ -647,19 +696,21 @@ describe('SimpleToken Unit Tests', async function () {
 
         await chainweb.runOverChains(async (chainId) => {
           //test the getCrossChainAddress function on each deployment
-          const deployment = deployments.find(d => d.chain === chainId);
+          const deployment = deployments.find((d) => d.chain === chainId);
           expect(deployment).to.not.be.undefined;
 
           // For every other chain, check the cross-chain address mapping
           for (const other of deployments) {
             if (other.chain !== chainId) {
               // Should be set to the other contract's address
-              expect(await deployment.contract.getCrossChainAddress(other.chain))
-                .to.equal(other.address);
+              expect(
+                await deployment.contract.getCrossChainAddress(other.chain),
+              ).to.equal(other.address);
             } else {
               // Should be ZeroAddress for self
-              expect(await deployment.contract.getCrossChainAddress(chainId))
-                .to.equal(ZeroAddress);
+              expect(
+                await deployment.contract.getCrossChainAddress(chainId),
+              ).to.equal(ZeroAddress);
             }
           }
         });

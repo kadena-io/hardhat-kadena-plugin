@@ -14,7 +14,6 @@ describe('PayableContract with Create2Factory', function () {
 
     // Deploy the Create2Factory if not already deployed
     await chainweb.create2.deployCreate2Factory();
-
   });
 
   describe('Deployment with value', function () {
@@ -22,7 +21,7 @@ describe('PayableContract with Create2Factory', function () {
       // Amount of native token to send during deployment
       const valueToSend = ethers.parseEther('1.0');
 
-      console.log("Deploying PayableContract with value...");
+      console.log('Deploying PayableContract with value...');
       // Deploy the contract using Create2Factory with value in overrides
       const deployedContracts =
         await chainweb.create2.deployOnChainsUsingCreate2({
@@ -34,7 +33,9 @@ describe('PayableContract with Create2Factory', function () {
 
       // Test the contract on each chain
       await chainweb.runOverChains(async (chainId) => {
-        const deployment = deployedContracts.deployments.find(d => d.chain === chainId);
+        const deployment = deployedContracts.deployments.find(
+          (d) => d.chain === chainId,
+        );
         const contractAddress = deployment.address;
 
         // Create a contract instance
@@ -50,7 +51,6 @@ describe('PayableContract with Create2Factory', function () {
         // Verify the constructorValue tracked internally matches
         const constructorValue = await contract.constructorValue();
         expect(constructorValue).to.equal(valueToSend);
-
       });
     });
 
@@ -79,7 +79,9 @@ describe('PayableContract with Create2Factory', function () {
 
       // Test the contract on each chain
       await chainweb.runOverChains(async (chainId) => {
-        const deployment = deployedContracts1.deployments.find(d => d.chain === chainId);
+        const deployment = deployedContracts1.deployments.find(
+          (d) => d.chain === chainId,
+        );
         const contractAddress = deployment.address;
 
         // Create a contract instance
@@ -93,7 +95,9 @@ describe('PayableContract with Create2Factory', function () {
       });
 
       await chainweb.runOverChains(async (chainId) => {
-        const deployment = deployedContracts2.deployments.find(d => d.chain === chainId);
+        const deployment = deployedContracts2.deployments.find(
+          (d) => d.chain === chainId,
+        );
         const contractAddress = deployment.address;
 
         // Create a contract instance
