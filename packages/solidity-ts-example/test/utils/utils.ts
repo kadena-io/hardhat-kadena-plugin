@@ -71,12 +71,6 @@ export async function initCrossChain(
     `Initiating cross-chain transfer from ${sourceTokenInfo.network.name} to ${targetTokenInfo.network.name}`,
   );
   await switchChain(sourceTokenInfo.chain);
-  console.log("now on network", network.name);
-  console.log("token0 addres in initCrossChain", await sourceToken.getAddress());
-  console.log("Code at sourceToken address in initCrossChain", await ethers.provider.getCode(await sourceToken.getAddress()));
-  console.log("sourceToken in initCrossChain", sourceToken);
-  console.log("sourceTokenInfo in initCrossChain", sourceTokenInfo);
-  console.log("sender in initCrossChain", sender);
 
   const response1 = await sourceToken
     .connect(sender)
@@ -88,9 +82,6 @@ export async function initCrossChain(
   console.log(
     `transfer-crosschain status: ${receipt1.status}, at block number ${receipt1.blockNumber} with hash ${receipt1.hash}`,
   );
-
-  console.log("response1 in initCrossChain", response1);
-  console.log("receipt1 in initCrossChain", receipt1);
 
   // Compute origin
   const logIndex = receipt1.logs.findIndex(
@@ -160,7 +151,6 @@ export const CrossChainOperation = {
 };
 
 export const getSigners = async (chainId) => {
-  console.log("Inside getSigners, chainId:", chainId);
   await chainweb.switchChain(chainId);
 
   const [deployer, alice, bob, carol] = await ethers.getSigners();
