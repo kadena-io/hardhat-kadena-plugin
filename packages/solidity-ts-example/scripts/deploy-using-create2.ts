@@ -10,11 +10,16 @@ async function main() {
 
   const salt = ethers.id('mySalt'); // This creates a bytes32 hash of the string
 
+  // Make sure we're on the first chainweb chain
+  const chains = await chainweb.getChainIds();
+  await chainweb.switchChain(chains[0]);
+  const [deployer] = await ethers.getSigners();
+
   // Deploy the contract using standard Create2 factory functionality
   console.log('Deploying contract using Create2...');
   const deployed = await chainweb.create2.deployOnChainsUsingCreate2({
     name: 'SimpleToken',
-    constructorArgs: [ethers.parseUnits('1000000')],
+    constructorArgs: [ethers.parseUnits('1000000'), deployer.address],
     create2Factory: factoryAddress,
     salt: salt,
   });
