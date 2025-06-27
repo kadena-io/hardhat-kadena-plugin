@@ -20,13 +20,17 @@ describe('SimpleToken Integration Tests', async function () {
   let token1: SimpleToken;
   let token0Info: DeployedContractsOnChains<SimpleToken>;
   let token1Info: DeployedContractsOnChains<SimpleToken>;
+  let chains: number[]; // Store chain IDs for later use
 
   beforeEach(async function () {
-    const chains = await getChainIds();
+    chains = await getChainIds();
     initialSigners = await getSigners(chains[0]); // get initialSigners for the first chain
 
-
-    const deployed = await deployContractOnChains<SimpleToken>({
+    // switchChain() can be used to switch to a different Chainweb chain
+    // deployContractOnChains switches chains before deploying on each one
+    // Because this contract takes an address as a constructor param, we pass it in here as an address.
+    // In solidity, the address has no specific network affiliation like a signer does in Hardhat.
+    const deployed = await deployContractOnChains({
       name: 'SimpleToken',
       constructorArgs: [ethers.parseUnits('1000000'), initialSigners.deployer.address],
     });
@@ -50,7 +54,7 @@ describe('SimpleToken Integration Tests', async function () {
   });
 
   context('Success Test Cases', async function () {
-    it('Should transfer tokens to same address from chain 0 to chain 1', async function () {
+    it('Should transfer tokens to same address from one chain to another', async function () {
       const sender = initialSigners.alice;
       const receiver = initialSigners.alice;
       const amount = ethers.parseEther('500');
@@ -72,7 +76,7 @@ describe('SimpleToken Integration Tests', async function () {
       expect(receiverBalanceBefore + amount).to.equal(receiverBalanceAfter);
     });
 
-    it('Should transfer tokens to different address from chain 0 to chain 1', async function () {
+    it('Should transfer tokens to different address from one chain to another', async function () {
       const sender = initialSigners.alice;
       const receiver = initialSigners.bob;
       const amount = ethers.parseEther('250000');
@@ -94,9 +98,11 @@ describe('SimpleToken Integration Tests', async function () {
       expect(receiverBalanceBefore + amount).to.equal(receiverBalanceAfter);
     });
 
-    it('Should transfer tokens to different address from chain 1 to chain 0', async function () {
-      // Switch to chain 1 and get signer bob on chain 1. This is a hardhat thing - a signer has a network context.
+    it('Should transfer tokens to different address from chain in position 1 to chain in position 0', async function () {
+      // Switch to chain in position 1 and get signer bob on that chain. This is a hardhat thing - a signer has a network context.
       // Not needed in other test cases because the contract is by default called by the first signer on the chain where the contract is deployed.
+      // This shows an alternate way of getting a signer on another chain as alternative to using the function in utils.js
+
       const chains = await chainweb.getChainIds();
       await chainweb.switchChain(chains[1]);
       const [, , chain1Bob] = await ethers.getSigners(); // Get Bob's signer on chain 1
@@ -211,8 +217,9 @@ describe('SimpleToken Integration Tests', async function () {
     });
 
     it('Should allow third party to redeem on behalf of receiver', async function () {
-      // Switch to chain 1 and get signer carol on chain 1. This is a hardhat thing - a signer has a network context.
+      // Switch to chain in position 1 and get signer bob on that chain. This is a hardhat thing - a signer has a network context.
       // Not needed in other test cases because the contract is by default called by the first signer on the chain where the contract is deployed.
+      // This shows an alternate way of getting a signer on another chain as alternative to using the function in utils.js
       const chains = await chainweb.getChainIds();
       await chainweb.switchChain(chains[1]);
       const [, , , chain1Carol] = await ethers.getSigners();
