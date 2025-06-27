@@ -1,14 +1,44 @@
 import { DeployedContractsOnChains } from '@kadena/hardhat-chainweb';
 import { HardhatEthersHelpers } from 'hardhat/types';
 
-import { switchNetwork, chainweb, ethers } from 'hardhat';
+import { chainweb, ethers } from 'hardhat';
 import { SimpleToken } from '../../typechain-types';
 
-const { requestSpvProof, deployContractOnChains } = chainweb;
+const { requestSpvProof, deployContractOnChains, switchChain } = chainweb;
 
 // hash of CrossChainInitialized(uint32,address,uint64,bytes)
 const EVENT_SIG_HASH =
   '0x9d2528c24edd576da7816ca2bdaa28765177c54b32fb18e2ca18567fbc2a9550';
+
+export async function authorizeAllContracts(
+  deployments: Array<
+    {
+      chain: number | string;
+      contract: SimpleToken;
+      address: string;
+    } & Partial<DeployedContractsOnChains>
+  >,
+) {
+  // For each chain, authorize all other chains as cross-chain peers
+  for (const deployment of deployments) {
+    await chainweb.switchChain(deployment.chain);
+    const { deployer: owner } = await getSigners(deployment.chain);
+    for (const target of deployments) {
+      if (target.chain !== deployment.chain) {
+        const tx = await deployment.contract
+          .connect(owner)
+          .setCrossChainAddress(target.chain, target.address);
+        await tx.wait();
+        const setAddr = await deployment.contract.getCrossChainAddress(
+          target.chain,
+        );
+        console.log(
+          `Set cross-chain address for chain ${deployment.chain} -> ${target.chain}: ${setAddr}`,
+        );
+      }
+    }
+  }
+}
 
 // Authorize contracts for cross-chain transfers to and from the token
 export async function authorizeContracts(
@@ -16,7 +46,7 @@ export async function authorizeContracts(
   tokenInfo: DeployedContractsOnChains,
   authorizedTokenInfos: [DeployedContractsOnChains, DeployedContractsOnChains],
 ) {
-  await switchNetwork(tokenInfo.network.name);
+  await switchChain(tokenInfo.chain);
   for (const tok of authorizedTokenInfos) {
     console.log(
       `Authorizing ${tok.chain}:${tok.address} for ${tokenInfo.chain}:${tokenInfo.address}`,
@@ -26,11 +56,10 @@ export async function authorizeContracts(
   }
 }
 
-export function deployMocks() {
-  console.log(`Found Kadena devnet networks while deploying mocks`);
+export function deployMocks(ownerAddress) {
   return deployContractOnChains({
     name: 'WrongOperationTypeToken',
-    constructorArgs: [ethers.parseUnits('1000000')],
+    constructorArgs: [ethers.parseUnits('1000000'), ownerAddress],
   });
 }
 
@@ -48,7 +77,8 @@ export async function initCrossChain(
   console.log(
     `Initiating cross-chain transfer from ${sourceTokenInfo.network.name} to ${targetTokenInfo.network.name}`,
   );
-  await switchNetwork(sourceTokenInfo.network.name);
+  await switchChain(sourceTokenInfo.chain);
+
   const response1 = await sourceToken
     .connect(sender)
     .transferCrossChain(receiver.address, amount, targetTokenInfo.chain);
@@ -82,7 +112,7 @@ export async function redeemCrossChain(
   amount: bigint,
   proof: string,
 ) {
-  await switchNetwork(targetTokenInfo.network.name);
+  await switchChain(targetTokenInfo.chain);
   console.log(`Redeeming tokens on chain ${targetTokenInfo.network.name}`);
   const response2 = await targetToken.redeemCrossChain(
     receiver.address,
@@ -127,7 +157,9 @@ export const CrossChainOperation = {
   Erc20TransferFrom: 2,
 };
 
-export async function getSigners() {
+export const getSigners = async (chainId) => {
+  await chainweb.switchChain(chainId);
+
   const [deployer, alice, bob, carol] = await ethers.getSigners();
   return {
     deployer,
@@ -135,7 +167,7 @@ export async function getSigners() {
     bob,
     carol,
   };
-}
+};
 
 export type HardhatEthersSigner = Awaited<
   ReturnType<HardhatEthersHelpers['getSigner']>

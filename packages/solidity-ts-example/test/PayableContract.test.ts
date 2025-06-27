@@ -2,14 +2,15 @@ import { expect } from 'chai';
 import { ethers, chainweb } from 'hardhat';
 import { HardhatEthersSigner } from '@nomicfoundation/hardhat-ethers/signers';
 import { PayableContract__factory } from '../typechain-types';
+import { getSigners } from './utils/utils';
 
 describe('PayableContract with Create2Factory', function () {
   let signers: HardhatEthersSigner[];
-  let deployer: HardhatEthersSigner;
+  let chains: number[];
 
-  before(async function () {
-    signers = await ethers.getSigners();
-    deployer = signers[0];
+  beforeEach(async function () {
+    chains = await chainweb.getChainIds();
+    signers = await getSigners(chains[0]); // get initial signers for the first chain
 
     // Deploy the Create2Factory if not already deployed
     await chainweb.create2.deployCreate2Factory();
@@ -20,27 +21,27 @@ describe('PayableContract with Create2Factory', function () {
       // Amount of native token to send during deployment
       const valueToSend = ethers.parseEther('1.0');
 
+      console.log('Deploying PayableContract with value...');
       // Deploy the contract using Create2Factory with value in overrides
       const deployedContracts =
         await chainweb.create2.deployOnChainsUsingCreate2({
           name: 'PayableContract',
-          constructorArgs: [],
+          constructorArgs: [signers.deployer.address],
           salt: ethers.id('test-deployment-with-value'),
           overrides: { value: valueToSend },
         });
 
       // Test the contract on each chain
-      for (const deployment of deployedContracts.deployments) {
-        const chain = deployment.chain;
+      await chainweb.runOverChains(async (chainId) => {
+        const deployment = deployedContracts.deployments.find(
+          (d) => d.chain === chainId,
+        );
         const contractAddress = deployment.address;
-
-        // Switch to the correct chain
-        await chainweb.switchChain(chain);
 
         // Create a contract instance
         const contract = PayableContract__factory.connect(
           contractAddress,
-          deployer,
+          signers.deployer,
         );
 
         // Verify the contract received the expected amount
@@ -50,7 +51,7 @@ describe('PayableContract with Create2Factory', function () {
         // Verify the constructorValue tracked internally matches
         const constructorValue = await contract.constructorValue();
         expect(constructorValue).to.equal(valueToSend);
-      }
+      });
     });
 
     it('Should accurately track different values on different deployments', async function () {
@@ -62,7 +63,7 @@ describe('PayableContract with Create2Factory', function () {
       const deployedContracts1 =
         await chainweb.create2.deployOnChainsUsingCreate2({
           name: 'PayableContract',
-          constructorArgs: [],
+          constructorArgs: [signers.deployer.address],
           salt: ethers.id('test-deployment-1'),
           overrides: { value: value1 },
         });
@@ -71,45 +72,43 @@ describe('PayableContract with Create2Factory', function () {
       const deployedContracts2 =
         await chainweb.create2.deployOnChainsUsingCreate2({
           name: 'PayableContract',
-          constructorArgs: [],
+          constructorArgs: [signers.deployer.address],
           salt: ethers.id('test-deployment-2'),
           overrides: { value: value2 },
         });
 
       // Test the contract on each chain
-      for (const deployment of deployedContracts1.deployments) {
-        const chain = deployment.chain;
+      await chainweb.runOverChains(async (chainId) => {
+        const deployment = deployedContracts1.deployments.find(
+          (d) => d.chain === chainId,
+        );
         const contractAddress = deployment.address;
-
-        // Switch to the correct chain
-        await chainweb.switchChain(chain);
 
         // Create a contract instance
         const contract = PayableContract__factory.connect(
           contractAddress,
-          deployer,
+          signers.deployer,
         );
 
         expect(await contract.getBalance()).to.equal(value1);
         expect(await contract.constructorValue()).to.equal(value1);
-      }
+      });
 
-      for (const deployment of deployedContracts2.deployments) {
-        const chain = deployment.chain;
+      await chainweb.runOverChains(async (chainId) => {
+        const deployment = deployedContracts2.deployments.find(
+          (d) => d.chain === chainId,
+        );
         const contractAddress = deployment.address;
-
-        // Switch to the correct chain
-        await chainweb.switchChain(chain);
 
         // Create a contract instance
         const contract = PayableContract__factory.connect(
           contractAddress,
-          deployer,
+          signers.deployer,
         );
 
         expect(await contract.getBalance()).to.equal(value2);
         expect(await contract.constructorValue()).to.equal(value2);
-      }
+      });
     });
   });
 
@@ -120,6 +119,8 @@ describe('PayableContract with Create2Factory', function () {
     let create2FactoryAddress: string;
 
     beforeEach(async function () {
+      // make sure to be on the first chain
+      await chainweb.switchChain(chains[0]);
       const [first, second] = await ethers.getSigners();
       deployer1 = first;
       deployer2 = second;

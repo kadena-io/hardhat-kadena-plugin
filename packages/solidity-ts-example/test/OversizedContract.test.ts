@@ -7,6 +7,7 @@ describe('OversizedContract Test', function () {
     // This test should be successful if the contract is deployed on the hardhat network with allowUnlimitedContractSize set to true for hardhat
     const OversizedContract =
       await hre.ethers.getContractFactory('OversizedContract');
+    // Standard ethers deployment can still be used with chainweb if deploying on a single chain
     const oversized = await OversizedContract.deploy();
     await oversized.deploymentTransaction()?.wait();
 
@@ -24,8 +25,6 @@ describe('OversizedContract Test', function () {
     const deployed = await chainweb.deployContractOnChains<OversizedContract>({
       name: 'OversizedContract',
     });
-    console.log('deployed', deployed);
-    console.log('deployed.deployments:', deployed.deployments);
 
     const contract0 = deployed.deployments[0].contract;
 

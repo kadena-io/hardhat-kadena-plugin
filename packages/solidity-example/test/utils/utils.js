@@ -1,4 +1,4 @@
-const { switchNetwork, chainweb, ethers } = require('hardhat');
+const { chainweb, ethers } = require('hardhat');
 
 const { requestSpvProof, switchChain, deployContractOnChains } = chainweb;
 
@@ -6,23 +6,33 @@ const { requestSpvProof, switchChain, deployContractOnChains } = chainweb;
 const EVENT_SIG_HASH =
   '0x9d2528c24edd576da7816ca2bdaa28765177c54b32fb18e2ca18567fbc2a9550';
 
-// Authorize contracts for cross-chain transfers to and from the token
-async function authorizeContracts(token, tokenInfo, authorizedTokenInfos) {
-  await switchNetwork(tokenInfo.network.name);
-  for (const tok of authorizedTokenInfos) {
-    console.log(
-      `Authorizing ${tok.chain}:${tok.address} for ${tokenInfo.chain}:${tokenInfo.address}`,
-    );
-    const tx = await token.setCrossChainAddress(tok.chain, tok.address);
-    await tx.wait();
+async function authorizeAllContracts(deployments) {
+  // For each chain, authorize all other chains as cross-chain peers
+  for (const deployment of deployments) {
+    await chainweb.switchChain(deployment.chain);
+    const signers = await getSigners(deployment.chain);
+    const owner = signers.deployer;
+    for (const target of deployments) {
+      if (target.chain !== deployment.chain) {
+        const tx = await deployment.contract
+          .connect(owner)
+          .setCrossChainAddress(target.chain, target.address);
+        await tx.wait();
+        const setAddr = await deployment.contract.getCrossChainAddress(
+          target.chain,
+        );
+        console.log(
+          `Set cross-chain address for chain ${deployment.chain} -> ${target.chain}: ${setAddr}`,
+        );
+      }
+    }
   }
 }
 
-function deployMocks() {
-  console.log(`Found Kadena devnet networks while deploying mocks`);
+function deployMocks(ownerAddress) {
   return deployContractOnChains({
     name: 'WrongOperationTypeToken',
-    constructorArgs: [ethers.parseUnits('1000000')],
+    constructorArgs: [ethers.parseUnits('1000000'), ownerAddress],
   });
 }
 
@@ -40,7 +50,8 @@ async function initCrossChain(
   console.log(
     `Initiating cross-chain transfer from ${sourceTokenInfo.network.name} to ${targetTokenInfo.network.name}`,
   );
-  await switchNetwork(sourceTokenInfo.network.name);
+
+  await switchChain(sourceTokenInfo.chain);
   let response1 = await sourceToken
     .connect(sender)
     .transferCrossChain(receiver.address, amount, targetTokenInfo.chain);
@@ -71,7 +82,7 @@ async function redeemCrossChain(
   amount,
   proof,
 ) {
-  await switchNetwork(targetTokenInfo.network.name);
+  await switchChain(targetTokenInfo.chain);
   console.log(`Redeeming tokens on chain ${targetTokenInfo.network.name}`);
   let response2 = await targetToken.redeemCrossChain(
     receiver.address,
@@ -95,7 +106,7 @@ async function crossChainTransfer(
   amount,
 ) {
   console.log(
-    `Transfering ${amount} tokens from ${sourceTokenInfo.chain}:${sourceTokenInfo.address}:${sender.addresss} to ${targetTokenInfo.chain}:${targetTokenInfo.address}:${receiver.address}`,
+    `Transfering ${amount} tokens from ${sourceTokenInfo.chain}:${sourceTokenInfo.address}:${sender.address} to ${targetTokenInfo.chain}:${targetTokenInfo.address}:${receiver.address}`,
   );
   const origin = await initCrossChain(
     sourceToken,
@@ -115,8 +126,9 @@ const CrossChainOperation = {
   Erc20TransferFrom: 2,
 };
 
-async function getSigners() {
-  await switchChain(0);
+async function getSigners(chainId) {
+  await chainweb.switchChain(chainId);
+
   const [deployer, alice, bob, carol] = await ethers.getSigners();
   return {
     deployer,
@@ -127,11 +139,12 @@ async function getSigners() {
 }
 
 module.exports = {
-  authorizeContracts,
+  authorizeAllContracts,
   crossChainTransfer,
   initCrossChain,
   redeemCrossChain,
   CrossChainOperation,
   getSigners,
   deployMocks,
+  requestSpvProof,
 };
