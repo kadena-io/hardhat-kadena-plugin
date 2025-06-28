@@ -45,7 +45,8 @@ object "Redeem" {
     /* Memory Layout */
 
     let chainIdPtr := 0x0 // 1 word
-    let msgPtr := 0x20 // 5 words
+    let amountPtr := 0x20 // 1 word
+    let msgPtr := 0x40 // 4 words
     let msgHashPtr := 0xc0 // 1 word
     let sigPtr := 0xe0 // 3 words
     let sigAddrPtr := 0x140 // 1 word
@@ -62,7 +63,10 @@ object "Redeem" {
 
     // check call data size
     // 0x20 + 0x2 + 0x4 + 0x14 + 0x20 + 0x20 + 0x20 + 0x1 + 0x20 + 0x20 + 0x8
-    let msgSize := 0x9a
+
+    let msgOffset := 0x20 // amountSize
+    let msgSize := 0x7a
+    let sigOffset := 0x9a // amountSize + msgSize
     let sigSize := 0x41
     let timestampSize := 0x8
     let paramsSize := 0xe3
@@ -75,7 +79,7 @@ object "Redeem" {
     // (note that shr is cheaper than div)
     let amount := calldataload(0x0)
     let version := shr(0xf0, calldataload(0x20))
-    let targetChain := shr(0xea, calldataload(0x22))
+    let targetChain := shr(0xe0, calldataload(0x22))
     let targetAccount := shr(0x60, calldataload(0x26))
     let xChanBalance := calldataload(0x3a)
     let xChanId := calldataload(0x5a)
@@ -96,7 +100,7 @@ object "Redeem" {
     /* Check Target ChainId */
 
     let chainwebChainIdContract := 0x9b02c3e2df42533e0fd166798b5a616f59dbd2cc
-    if iszero(staticcall(gas(), chainwebChainIdContract, 0, 0, chainIdPtr, 0x4)) {
+    if iszero(staticcall(gas(), chainwebChainIdContract, 0, 0, add(chainIdPtr, 0x1c), 0x4)) {
       error(0x03)
     }
     if iszero(eq(mload(chainIdPtr), targetChain)) {
@@ -106,16 +110,16 @@ object "Redeem" {
     /* ********************************************************************** */
     /* Compute Message Hash */
 
-    calldatacopy(msgPtr, 0x0, msgSize)
+    calldatacopy(msgPtr, msgOffset, msgSize)
     mstore(msgHashPtr, keccak256(msgPtr, msgSize))
 
     /* ********************************************************************** */
     /* Check Signature */
 
     // copy v value (right aligned)
-    calldatacopy(add(sigPtr, 0x1f), msgSize, 0x01)
+    calldatacopy(add(sigPtr, 0x1f), sigOffset, 0x01)
     // copy r and s value
-    calldatacopy(add(sigPtr, 0x20), add(msgSize, 0x01), 0x40)
+    calldatacopy(add(sigPtr, 0x20), add(sigOffset, 0x01), 0x40)
 
     let ecrecoverContract := 0x01
     if iszero(staticcall(gas(), ecrecoverContract, msgHashPtr, 0x80, sigAddrPtr, 0x20)) {

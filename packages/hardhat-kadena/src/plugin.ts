@@ -16,7 +16,11 @@ import { createGraph } from './utils/chainweb-graph.js';
 import { HardhatEthersProvider } from '@nomicfoundation/hardhat-ethers/internal/hardhat-ethers-provider.js';
 import Web3 from 'web3';
 import { runRPCNode } from './server/runRPCNode.js';
-import { CHAIN_ID_ADDRESS, VERIFY_ADDRESS, REDEEM_ADDRESS } from './utils/network-contracts.js';
+import {
+  CHAIN_ID_ADDRESS,
+  VERIFY_ADDRESS,
+  REDEEM_ADDRESS,
+} from './utils/network-contracts.js';
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
 import picocolors from 'picocolors';
 import { computeOriginHash, getNetworkStem } from './pure-utils.js';
@@ -182,8 +186,7 @@ extendConfig((config, userConfig) => {
               CHAIN_ID_ADDRESS,
             spvVerify:
               externalUserConfig.precompiles?.spvVerify ?? VERIFY_ADDRESS,
-            redeem:
-              externalUserConfig.precompiles?.redeem ?? REDEEM_ADDRESS,
+            redeem: externalUserConfig.precompiles?.redeem ?? REDEEM_ADDRESS,
           },
         };
 
@@ -361,7 +364,7 @@ const createInternalProvider = async (
 // const spinupChainweb = () =>
 extendEnvironment((hre) => {
   let api: Omit<ChainwebPluginApi, 'initialize'> | undefined = undefined;
-  let initDone = () => { };
+  let initDone = () => {};
   const init = new Promise<void>((resolve) => {
     initDone = resolve;
   });
