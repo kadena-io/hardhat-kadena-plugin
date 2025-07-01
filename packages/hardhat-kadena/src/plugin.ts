@@ -498,6 +498,13 @@ task(
     return runSuper(taskArgs);
   });
 
+// This allows to run the verify task with chainweb switch
+task('verify')
+  .addOptionalParam(...chainwebSwitch)
+  .setAction(async (taskArgs, hre, runSuper) => {
+    return runSuper(taskArgs);
+  });
+
 task('print-config', 'print the final configuration')
   .addOptionalParam(...chainwebSwitch)
   .setAction(async (_taskArgs, hre) => {
