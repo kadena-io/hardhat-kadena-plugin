@@ -480,11 +480,6 @@ task('test', `Run mocha tests; Supports Chainweb`)
 
     hre.chainweb.initialize();
 
-    if (!process.argv.includes('--network')) {
-      const [first] = await hre.chainweb.getChainIds();
-      await hre.chainweb.switchChain(first);
-    }
-
     return runSuper(taskArgs);
   });
 
