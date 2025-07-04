@@ -480,11 +480,6 @@ task('test', `Run mocha tests; Supports Chainweb`)
 
     hre.chainweb.initialize();
 
-    if (!process.argv.includes('--network')) {
-      const [first] = await hre.chainweb.getChainIds();
-      await hre.chainweb.switchChain(first);
-    }
-
     return runSuper(taskArgs);
   });
 
@@ -500,6 +495,13 @@ task(
       taskArgs.chainweb ?? hre.config.defaultChainweb ?? 'hardhat';
     // then we know that the chainweb should run the initialization
     process.env['HK_INIT_CHAINWEB'] = 'true';
+    return runSuper(taskArgs);
+  });
+
+// This allows to run the verify task with chainweb switch
+task('verify')
+  .addOptionalParam(...chainwebSwitch)
+  .setAction(async (taskArgs, hre, runSuper) => {
     return runSuper(taskArgs);
   });
 

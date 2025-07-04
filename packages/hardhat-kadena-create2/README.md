@@ -19,17 +19,14 @@ This plugin creates a single purpose key from the deployer key and uses that key
 For Create2Factory to maintain the same address across all chains:
 
 1. **Never use the derived secondary key for any other transactions**
-
    - The system will error if it detects the secondary key has a non-zero nonce
    - If this happens, you must use a new version number to generate a new secondary key
 
 2. **Use the same signer and version when deploying to new chains**
-
    - To deploy to additional chains later, use the same original signer wallet and version parameter
    - Changing either will result in a different Create2Factory address, which in turn would result in a different address for the contract being deployed.
 
 3. **Keep your original signer safe**
-
    - If you lose access to the original signer wallet, you can't consistently deploy to new chains
    - Consider using a hardware wallet for the original signer
 
