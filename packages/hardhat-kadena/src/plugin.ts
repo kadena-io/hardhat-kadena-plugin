@@ -163,6 +163,10 @@ extendConfig((config, userConfig) => {
             customChains: etherscanCustomChains,
             enabled: true,
           };
+          config.blockscout = {
+            customChains: etherscanCustomChains,
+            enabled: true,
+          };
         }
         config.chainweb[name] = chainwebConfig;
       } else {
@@ -206,6 +210,10 @@ extendConfig((config, userConfig) => {
         if (isDefaultChainweb && chainwebConfig.etherscan) {
           config.etherscan = {
             apiKey: etherscanApiKeys,
+            customChains: etherscanCustomChains,
+            enabled: true,
+          };
+          config.blockscout = {
             customChains: etherscanCustomChains,
             enabled: true,
           };
