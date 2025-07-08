@@ -24,8 +24,8 @@ module.exports = {
       externalHostUrl: 'http://localhost:1848/chainweb/0.0/evm-development',
       etherscan: {
         apiKey: 'abc', // Any non-empty string works for Blockscout
-        apiURLTemplate: 'https://chain-{cid}.evm.kadena.internal:8000/api/',
-        browserURLTemplate: 'https://chain-{cid}.evm.kadena.internal:8000/',
+        apiURLTemplate: 'http://chain-{cid}.evm.kadena.internal:8000/api/',
+        browserURLTemplate: 'http://chain-{cid}.evm.kadena.internal:8000/',
       },
     },
   },

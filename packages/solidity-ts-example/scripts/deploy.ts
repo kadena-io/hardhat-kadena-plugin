@@ -86,7 +86,7 @@ async function main() {
           console.log(`Attempting to verify contract on chain ${chainId}...`);
           await run('verify:verify', {
             address: contractAddress,
-            constructorArguments: [ethers.parseUnits('1000000')],
+            constructorArguments: [ethers.parseUnits('1000000'), deployer.address],
             force: true,
           });
 
