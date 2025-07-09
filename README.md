@@ -1,4 +1,4 @@
-# Hardhat Kadena Plugin Monorepo
+# Hardhat Kadena Chainweb Plugin Monorepo
 
 This repository contains the monorepo for the `hardhat-kadena` plugin, along with example projects demonstrating its usage in both JavaScript and TypeScript.
 
