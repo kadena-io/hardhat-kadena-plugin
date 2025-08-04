@@ -157,7 +157,7 @@ export const CrossChainOperation = {
   Erc20TransferFrom: 2,
 };
 
-export const getSigners = async (chainId) => {
+export const getSigners = async (chainId: number) => {
   await chainweb.switchChain(chainId);
 
   const [deployer, alice, bob, carol] = await ethers.getSigners();

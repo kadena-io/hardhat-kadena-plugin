@@ -28,13 +28,16 @@
   },
   "homepage": "https://github.com/kadena-io/hardhat-kadena-plugin/tree/main/packages/hardhat-kadena#readme",
   "dependencies": {
+    "@kadena/chainwebjs": "0.1.4",
     "@types/node": "^22.16.0",
     "async-lock": "^1.4.1",
+    "cbor2": "^2.0.1",
     "ethers": "^6.15.0",
     "minimist": "^1.2.8",
     "path-to-regexp": "^8.2.0",
     "picocolors": "^1.1.1",
-    "undici": "^5.29.0"
+    "undici": "^5.29.0",
+    "@noble/hashes": "^1.8.0"
   },
   "peerDependencies": {
     "chai": "^5.2.0",
@@ -45,6 +48,7 @@
     "@types/chai": "^5.2.2",
     "@types/minimist": "^1.2.5",
     "@types/mocha": "^10.0.10",
+    "cbor": "^10.0.9",
     "chai": "^5.2.0",
     "ethers": "^6.15.0",
     "mocha": "^11.7.1",

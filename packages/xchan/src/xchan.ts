@@ -1,5 +1,14 @@
-import { getBytes, keccak256, ethers, BigNumberish, BytesLike } from 'ethers';
-import { uint16Le, uint32Le } from './utils';
+import {
+  getBytes,
+  keccak256,
+  ethers,
+  BigNumberish,
+  BytesLike,
+  AddressLike,
+  sha256,
+} from 'ethers';
+import { encode, TaggedValue, ToCBOR, } from 'cbor2';
+import { toUint32Le, uint16Le, uint32Le } from './utils';
 import {
   MerkleHash,
   merkleNode,
@@ -14,6 +23,8 @@ import {
 export type ChainId = number;
 export type Account = BytesLike;
 export type XChanId = MerkleHash;
+export type XRedeemAddress = AddressLike;
+export type XSendAddress = AddressLike;
 
 const VERSION = 0;
 
@@ -37,22 +48,40 @@ function encodeData(chainId: ChainId, nonce: BytesLike): BytesLike {
   return ethers.concat([encodeChainId(chainId), nonceBytes]);
 }
 
+function sendAddress(xchanid: XChanId): AddressLike {
+  const raw = sha256(ethers.concat([X_CHAN_ADDRESS_TAG, xchanid]));
+  return ethers.getAddress(ethers.dataSlice(raw, 12));
+}
+
+function redeemAddress(xchanid: XChanId): AddressLike {
+  const raw = sha256(ethers.concat([X_REDEEM_ADDRESS_TAG, xchanid]));
+  return ethers.getAddress(ethers.dataSlice(raw, 12));
+}
+
 /* ************************************************************************** */
 /* XChan Policy */
 
 export class XChanPolicy {
   readonly type: number;
-  readonly value: BytesLike;
+  readonly data: BytesLike;
   constructor(type: number, value: BytesLike) {
     this.type = type;
-    this.value = value;
+    this.data = value;
   }
   encode(): BytesLike {
     return ethers.concat([
       uint32Le(this.type),
-      uint32Le(this.value.length),
-      getBytes(this.value),
+      getBytes(this.data),
     ]);
+  }
+  static decode(data: BytesLike): XChanPolicy {
+    const bytes = getBytes(data);
+    if (bytes.length < 4) {
+      throw new Error(`XChanPolicy: invalid data length ${bytes.length}`);
+    }
+    const type = toUint32Le(bytes.slice(0, 4));
+    const value = bytes.slice(4);
+    return new XChanPolicy(type, value);
   }
 }
 
@@ -69,6 +98,9 @@ export class TargetAccountPolicy extends XChanPolicy {
 /* ************************************************************************** */
 /* XChan */
 
+const X_CHAN_ADDRESS_TAG = new Uint8Array([0x0]);
+const X_REDEEM_ADDRESS_TAG = new Uint8Array([0x1]);
+
 // TODO: make the policy abstract
 //
 export class XChan {
@@ -76,7 +108,12 @@ export class XChan {
   readonly targetAccounts: Account[];
   readonly sourceChainId: ChainId;
   readonly nonce: BytesLike;
+
+  // The xChanId is the root of the Merkle tree that of the channel properities.
+  // It is considered confidential. The xChanAddress and xRedeemAddress are
+  // derived from the xChanId and are public.
   readonly xChanId: XChanId;
+
   constructor(
     targetChainId: ChainId,
     targetAccounts: Account[],
@@ -90,8 +127,12 @@ export class XChan {
     this.xChanId = this.root();
   }
 
-  get address(): string {
-    return ethers.getAddress(ethers.dataSlice(this.xChanId, 12));
+  get sendAddress(): AddressLike {
+    return sendAddress(this.xChanId);
+  }
+
+  get redeemAddress(): AddressLike {
+    return redeemAddress(this.xChanId);
   }
 
   root(): XChanId {
@@ -159,38 +200,42 @@ export class XChan {
 /* ************************************************************************** */
 /* XChan Proofs */
 
-export class XChanProof {
+export class XChanProof implements ToCBOR {
   readonly version: number;
   readonly targetChain: ChainId;
   readonly policyIndex: number;
-  readonly policy: XChanPolicy;
-  readonly roots: MerkleHash[];
+  readonly policy: BytesLike;
+  readonly nodes: MerkleHash[];
 
   private constructor(
     version: number,
     targetChain: ChainId,
     policyIndex: number,
-    policy: XChanPolicy,
-    roots: MerkleHash[],
+    policy: BytesLike,
+    nodes: MerkleHash[],
   ) {
     this.version = version;
     this.targetChain = targetChain;
     this.policyIndex = policyIndex;
     this.policy = policy;
-    this.roots = roots;
+    this.nodes = nodes;
   }
 
-  run(): XChanId {
+  run(): [XSendAddress, XRedeemAddress] {
     const leafs: [number, MerkleHash][] = [
       [0, merkleNode(TagVersion, encodeVersion(this.version))],
       [1, merkleNode(TagTrgChain, encodeChainId(this.targetChain))],
-      [this.policyIndex, merkleNode(TagPolicy, this.policy.encode())],
+      [this.policyIndex, merkleNode(TagPolicy, this.policy)],
     ];
     const root = runMerkleProof({
-      roots: this.roots,
+      roots: this.nodes,
       leafs: leafs,
     });
-    return root;
+
+    return [
+      sendAddress(root),
+      redeemAddress(root),
+    ];
   }
 
   claim(): {
@@ -201,8 +246,32 @@ export class XChanProof {
     return {
       version: this.version,
       targetChain: this.targetChain,
-      policy: this.policy,
+      policy: XChanPolicy.decode(this.policy),
     };
+  }
+
+  encode(): BytesLike {
+    return ethers.concat([
+      encodeVersion(this.version),
+      encodeChainId(this.targetChain),
+      uint32Le(this.policyIndex),
+      this.policy,
+      ...this.nodes.map((root) => getBytes(root)),
+    ]);
+  }
+
+  encodeCbor(): BytesLike {
+    return encode(this);
+  }
+
+  toCBOR(): TaggedValue | undefined {
+    return [NaN, {
+      version: this.version as number,
+      targetChain: this.targetChain as ChainId,
+      policyIndex: this.policyIndex as number,
+      policy: getBytes(this.policy) as Uint8Array,
+      nodes: this.nodes.map((node) => getBytes(node)) as Uint8Array[],
+    }];
   }
 
   static create(xChan: XChan, targetAccount: Account): XChanProof {
@@ -239,7 +308,7 @@ export class XChanProof {
       VERSION,
       xChan.targetChainId,
       3 + acctIndex, // +2 for the version and target chain, +1 for data
-      new TargetAccountPolicy(targetAccount),
+      (new TargetAccountPolicy(targetAccount)).encode(),
       proofRoots.roots,
     );
   }

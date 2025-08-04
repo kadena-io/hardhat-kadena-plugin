@@ -4,7 +4,7 @@ import { uint16Le } from './utils';
 /* ************************************************************************** */
 /* Full Binary Merkle Tree*/
 
-const TagInner = 0;
+const TagInner = 0x0000;
 
 export type MerkleHash = BytesLike;
 
@@ -28,30 +28,19 @@ function innerNode(left: MerkleHash, right: MerkleHash): MerkleHash {
 }
 
 export function merkleRoot(nodes: MerkleHash[]): MerkleHash {
-  const stack: [number, MerkleHash][] = [];
-  while (true) {
-    if (stack.length == 1 && nodes.length == 0) {
-      return (stack.pop() as [number, MerkleHash])[1];
-    }
-    if (stack.length > 1) {
-      const [h0, n0] = stack.at(-1) as [number, MerkleHash];
-      const [h1, n1] = stack.at(-2) as [number, MerkleHash];
-      if (h0 === h1) {
-        stack.pop();
-        stack.pop();
-        stack.push([h0 + 1, innerNode(n1, n0)]);
-        continue;
-      }
-    }
-    if (nodes.length > 0) {
-      stack.push([0, nodes.shift() as MerkleHash]);
-      continue;
-    }
-    if (nodes.length == 0) {
-      stack.push([0, emptyNode]);
-      continue;
+  const stack: MerkleHash[] = [];
+  const m = Math.pow(2, Math.ceil(Math.log2(nodes.length)));
+  for (let i = 0; i < m; i++) {
+    stack.push(nodes[i] || emptyNode);
+    let bits = i;
+    while (bits % 2 === 1) {
+      const right = stack.pop() as MerkleHash;
+      const left = stack.pop() as MerkleHash;
+      stack.push(innerNode(left, right));
+      bits = Math.floor(bits / 2);
     }
   }
+  return stack.pop() as MerkleHash;
 }
 
 // Create a Merkle proof for a set of leafs.

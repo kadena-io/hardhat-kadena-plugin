@@ -1,2 +1,16 @@
 import './xchan';
+import './stateproof';
+import './balanceproof';
+import './merklelog';
+import './redeemproof';
+import './elheader';
+import './clheader';
+import './graph';
 export * from './xchan';
+export * from './elheader';
+export * from './clheader';
+export * from './stateproof';
+export * from './balanceproof';
+export * from './merklelog';
+export * from './redeemproof';
+export * from './graph';
