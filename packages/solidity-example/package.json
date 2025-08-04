@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@kadena/hardhat-chainweb": "workspace:*",
+    "@kadena/xchan": "workspace:*",
     "@nomicfoundation/hardhat-ethers": "^3.0.9",
     "@nomicfoundation/hardhat-toolbox": "^6.0.0",
     "@nomicfoundation/hardhat-verify": "^2.0.14",

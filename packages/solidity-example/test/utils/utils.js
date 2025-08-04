@@ -37,7 +37,7 @@ function deployMocks(ownerAddress) {
 }
 
 /* *************************************************************************** */
-/* Initiate Cross-Chain Transfer */
+/* Initiate KIP-34 Cross-Chain Transfer */
 
 async function initCrossChain(
   sourceToken,

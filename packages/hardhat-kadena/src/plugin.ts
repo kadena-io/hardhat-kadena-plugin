@@ -16,7 +16,11 @@ import { createGraph } from './utils/chainweb-graph.js';
 import { HardhatEthersProvider } from '@nomicfoundation/hardhat-ethers/internal/hardhat-ethers-provider.js';
 import Web3 from 'web3';
 import { runRPCNode } from './server/runRPCNode.js';
-import { CHAIN_ID_ADDRESS, VERIFY_ADDRESS } from './utils/network-contracts.js';
+import {
+  CHAIN_ID_ADDRESS,
+  VERIFY_ADDRESS,
+  REDEEM_ADDRESS,
+} from './utils/network-contracts.js';
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
 import picocolors from 'picocolors';
 import { computeOriginHash, getNetworkStem } from './pure-utils.js';
@@ -129,6 +133,7 @@ extendConfig((config, userConfig) => {
           precompiles: {
             chainwebChainId: CHAIN_ID_ADDRESS,
             spvVerify: VERIFY_ADDRESS,
+            redeem: REDEEM_ADDRESS,
           },
           chainwebChainIdOffset: defaultChainwebChainIdOffset,
           ...chainwebInProcessUserConfig,
@@ -181,6 +186,7 @@ extendConfig((config, userConfig) => {
               CHAIN_ID_ADDRESS,
             spvVerify:
               externalUserConfig.precompiles?.spvVerify ?? VERIFY_ADDRESS,
+            redeem: externalUserConfig.precompiles?.redeem ?? REDEEM_ADDRESS,
           },
         };
 

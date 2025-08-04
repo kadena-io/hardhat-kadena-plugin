@@ -1,6 +1,7 @@
+import js from '@eslint/js';
 import { expect } from 'chai';
-
 import pkg from 'hardhat';
+
 const { network, chainweb } = pkg;
 
 describe('ChainwebChainId Tests', async function () {

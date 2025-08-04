@@ -5,7 +5,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "build": "pnpm --filter @kadena/hardhat-* run build",
+    "build": "pnpm --filter @kadena/hardhat-* --filter @kadena/xchan run build",
     "test": "pnpm --filter solidity-example run test",
     "test-external": "pnpm --filter solidity-example run test-external",
     "node": "pnpm --filter solidity-example run node",
