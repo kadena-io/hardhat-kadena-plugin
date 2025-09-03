@@ -1,6 +1,6 @@
 {
   "name": "@kadena/hardhat-kadena-create2",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "description": "Hardhat plugin for deploying deterministic create2Factory contract",
   "author": "Javad Khalilian <javad@kadena.io>",
   "contributors": [
@@ -45,23 +45,23 @@
     "ws": "^8.18.3"
   },
   "peerDependencies": {
-    "@nomicfoundation/hardhat-ethers": "^3.0.9",
-    "@nomicfoundation/hardhat-toolbox": "^6.0.0",
+    "@nomicfoundation/hardhat-ethers": "^3.1.0",
+    "@nomicfoundation/hardhat-toolbox": "^6.1.0",
     "chai": "^4.2.0",
     "ethers": "^6.14.4",
-    "hardhat": "^2.25.0",
+    "hardhat": "^2.26.3",
     "web3": "^4.16.0"
   },
   "devDependencies": {
-    "@nomicfoundation/hardhat-ethers": "^3.0.9",
-    "@nomicfoundation/hardhat-toolbox": "^6.0.0",
+    "@nomicfoundation/hardhat-ethers": "^3.1.0",
+    "@nomicfoundation/hardhat-toolbox": "^6.1.0",
     "@types/async-lock": "^1.4.2",
     "@types/minimist": "^1.2.5",
     "@types/mocha": "^10.0.10",
     "@types/ws": "^8.18.1",
     "chai": "^4.2.0",
     "ethers": "^6.14.4",
-    "hardhat": "^2.25.0",
+    "hardhat": "^2.26.3",
     "mocha": "^11.7.1",
     "solc": "0.8.30",
     "typescript": "^5.8.3",
