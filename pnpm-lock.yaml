@@ -184,6 +184,9 @@ importers:
       chai:
         specifier: ^4.2.0
         version: 4.5.0
+      dotenv:
+        specifier: ^17.2.2
+        version: 17.2.2
       ethers:
         specifier: ^6.14.4
         version: 6.15.0
@@ -211,6 +214,9 @@ importers:
       chai:
         specifier: ^4.2.0
         version: 4.5.0
+      dotenv:
+        specifier: ^17.2.2
+        version: 17.2.2
       ethers:
         specifier: ^6.14.4
         version: 6.15.0
@@ -1213,6 +1219,10 @@ packages:
   dir-glob@3.0.1:
     resolution: {integrity: sha512-WkrWp9GR4KXfKGYzOLmTuGVi1UWFfws377n9cc55/tb6DuqyF6pcQ5AbiHEshaDpY9v6oaSr2XCDidGmMwdzIA==}
     engines: {node: '>=8'}
+
+  dotenv@17.2.2:
+    resolution: {integrity: sha512-Sf2LSQP+bOlhKWWyhFsn0UsfdK/kCWRv1iuA2gXAwt3dyNabr6QSj00I2V10pidqz69soatm9ZwZvpQMTIOd5Q==}
+    engines: {node: '>=12'}
 
   dunder-proto@1.0.1:
     resolution: {integrity: sha512-KIN/nDJBQRcXw0MLVhZE9iQHmG68qAVIBg9CqmUYjmQIhgij9U5MFvrqkUL5FbtyyzZuOeOt0zdeRe4UY7ct+A==}
@@ -3900,6 +3910,8 @@ snapshots:
   dir-glob@3.0.1:
     dependencies:
       path-type: 4.0.0
+
+  dotenv@17.2.2: {}
 
   dunder-proto@1.0.1:
     dependencies:

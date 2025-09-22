@@ -2,12 +2,17 @@ require('@nomicfoundation/hardhat-toolbox');
 require('hardhat-switch-network');
 require('@nomicfoundation/hardhat-verify');
 require('@kadena/hardhat-chainweb');
+require('dotenv').config();
 const { readFileSync } = require('fs');
 
 const devnetAccounts = JSON.parse(
   readFileSync('./devnet-accounts.json', 'utf-8'),
 );
 
+console.log(
+  'DEPLOYER_PRIVATE_KEY in hardhat config file',
+  process.env.DEPLOYER_PRIVATE_KEY,
+);
 /** @type import('hardhat/config').HardhatUserConfig */
 module.exports = {
   solidity: '0.8.28',
@@ -15,17 +20,20 @@ module.exports = {
     hardhat: {
       chains: 2,
     },
-    sandbox: {
-      chains: 5,
+    testnet: {
       type: 'external',
-      chainIdOffset: 1789,
+      chains: 5,
+      accounts: [process.env.DEPLOYER_PRIVATE_KEY],
+      chainIdOffset: 5920,
       chainwebChainIdOffset: 20,
-      accounts: devnetAccounts.accounts.map((account) => account.privateKey),
-      externalHostUrl: 'http://localhost:1848/chainweb/0.0/evm-development',
+      externalHostUrl:
+        'https://evm-testnet.chainweb.com/chainweb/0.0/evm-testnet',
       etherscan: {
         apiKey: 'abc', // Any non-empty string works for Blockscout
-        apiURLTemplate: 'http://chain-{cid}.evm.kadena.internal:8000/api/',
-        browserURLTemplate: 'http://chain-{cid}.evm.kadena.internal:8000/',
+        apiURLTemplate:
+          'https://chain-{cid}.evm-testnet-blockscout.chainweb.com/api/',
+        browserURLTemplate:
+          'https://chain-{cid}.evm-testnet-blockscout.chainweb.com',
       },
     },
   },
