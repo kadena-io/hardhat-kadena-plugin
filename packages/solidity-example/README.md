@@ -19,24 +19,19 @@ To deploy the example to hardhat, run
 pnpm run deploy:hardhat
 ```
 
-To deploy using CREATE2, run
+# Deploy to testnet
+
+To deploy to the Kadena testnet, first copy the env example file:
 
 ```
-pnpm run deploy-create2:hardhat
-```
-
-# Deploy to the sandbox (local devnet)
-
-To deploy to the Kadena sandbox, first clone the sandbox [repo](https://github.com/kadena-io/kadena-evm-sandbox) and follow the instructions to start it up. This sandbox simulates the real Kadena Chainweb EVM blockchain. However, you can use this plugin to develop as usual within Hardhat V2. This plugin simulates the Kadena EVM blockchain.
-
-To deploy to the sandbox and verify the contract (verification does not run against hardhat), run
+cp .env.example .env
 
 ```
-pnpm run deploy sandbox
-```
 
-To deploy using CREATE2, run
+Next, replace the value of DEPLOYER_PRIVATE_KEY with the private key for an address that has KDA on the Kadena testnet. You can get testnet KDA from the Kadena EVM [faucet](https://tools.kadena.io/faucet/evm).
+
+Finally, run the deployment script with the following command:
 
 ```
-pnpm run deploy-create2 sandbox
+pnpm run deploy testnet
 ```

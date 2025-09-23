@@ -29,7 +29,7 @@ async function main() {
 
   if (successfulDeployments.length > 0) {
     console.log(
-      `Faucet successfully deployed to ${successfulDeployments.length} chains`,
+      `Contracts successfully deployed to ${successfulDeployments.length} chains`,
     );
 
     // Create a map of deployments by chain ID for easy lookup

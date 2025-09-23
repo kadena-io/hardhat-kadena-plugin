@@ -1,3 +1,5 @@
 node_modules/
 .DS_Store 
 *bak
+packages/solidity-example/.env
+packages/solidity-ts-example/.env
