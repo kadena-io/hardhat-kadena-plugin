@@ -18,6 +18,7 @@
     "typescript": "~5.8.0"
   },
   "dependencies": {
+    "@nomicfoundation/hardhat-ethers": "^4.0.0",
     "@openzeppelin/contracts": "^5.4.0",
     "minimist": "^1.2.8"
   }

@@ -1,2 +1,5 @@
 packages:
-  - 'packages/*'
+  - 'packages/hardhat-kadena'
+  - 'packages/hardhat-kadena-create2'
+  - 'packages/solidity-example'
+  - 'packages/solidity-ts-example'
