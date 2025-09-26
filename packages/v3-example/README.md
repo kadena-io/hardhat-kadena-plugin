@@ -20,7 +20,7 @@ Chainweb is a blockchain architecture designed by Kadena, which features a paral
 - ✅ SPV proof generation and verification
 - 📡 RPC server with HTTP and WebSocket support
 
-## Installation
+## Installation (NOT AVAILABLE YET)
 
 ```bash
 npm install @kadena/hardhat3-chainweb
@@ -32,7 +32,7 @@ pnpm install @kadena/hardhat3-chainweb
 
 ## Quick Start
 
-1. Import the plugin in your `hardhat.config.ts` (or `.js`):
+1. Import the plugin in your `hardhat.config.ts`:
 
 ```typescript
 import chainwebPlugin from '@kadena/hardhat3-chainweb';
@@ -127,6 +127,7 @@ Best for development and testing. Uses Hardhat's built-in network.
 
 ```typescript
 const config: HardhatUserConfig = {
+  plugins: [chainwebPlugin],
   chainweb: {
     hardhat: {
       chains: 3,
@@ -144,6 +145,7 @@ For connecting to existing Chainweb networks.
 
 ```typescript
 const config: HardhatUserConfig = {
+  plugins: [chainwebPlugin],
   chainweb: {
     // the external chainweb name can be anything except 'localhost' or `hardhat`
     testnet: {
@@ -168,6 +170,7 @@ You can set the default chainweb by adding `defaultChainweb` to the hardhat conf
 
 ```ts
 const config: HardhatUserConfig = {
+  plugins: [chainwebPlugin],
   chainweb: {
     hardhat: {
       chains: 3, // Number of chains in the Chainweb network
@@ -187,6 +190,7 @@ The chain graph defines how chains are connected. For standard configurations (2
 
 ```typescript
 const config: HardhatUserConfig = {
+  plugins: [chainwebPlugin],
   chainweb: {
     // this config uses 4 edr-simulated chains.
     custom_graph: {
@@ -218,6 +222,7 @@ If you want to override any option, you can use networkOptions the custom networ
 
 ```ts
 const config: HardhatUserConfig = {
+  plugins: [chainwebPlugin],
   chainweb: {
     hardhat: {
       chains: 2,
@@ -240,6 +245,7 @@ You also can override the config for a specific chain. You just need to add the 
 
 ```ts
 const config: HardhatUserConfig = {
+  plugins: [chainwebPlugin],
   networks:{
     // when you want only the chain 0 of chainweb, use the following config
     chainweb_hardhat0:{
@@ -369,6 +375,7 @@ You likely add external chainwebs for targeting different networks. like one for
 
 ```typescript
 const config: HardhatUserConfig = {
+  plugins: [chainwebPlugin],
   chainweb: {
     // testing external dev-net
     devnet: {
@@ -395,6 +402,7 @@ You can use several "edr-simulated" chainweb config for testing your smart contr
 
 ```typescript
 const config: HardhatUserConfig = {
+  plugins: [chainwebPlugin],
   chainweb: {
     // use 2 chains for regular development so tests run fast
     hardhat: {
@@ -423,6 +431,7 @@ Graph has direct impact on the security and performance of the chainweb is also 
 
 ```typescript
 const config: HardhatUserConfig = {
+  plugins: [chainwebPlugin],
   chainweb: {
     // this config uses 4 edr-simulated chains.
     custom_graph_chainweb: {
@@ -445,6 +454,7 @@ All edr-simulated networks inherit the default hardhat network configuration so 
 
 ```typescript
 const config: HardhatUserConfig = {
+  plugins: [chainwebPlugin],
   networks: {
     // then both hardhat and semiTestnet chainweb uses this config since both are internal
     hardhat: {
