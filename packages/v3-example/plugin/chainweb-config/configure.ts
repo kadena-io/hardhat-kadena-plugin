@@ -13,7 +13,7 @@ interface INetworkOptions {
   accounts?: EdrNetworkUserConfig['accounts'] | undefined;
   loggingEnabled?: boolean | undefined;
   forking?: EdrNetworkUserConfig['forking'];
-  networkOptions?: EdrNetworkUserConfig;
+  networkOptions?: Partial<EdrNetworkUserConfig>;
   chainwebChainIdOffset: number;
 }
 

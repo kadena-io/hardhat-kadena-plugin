@@ -10,12 +10,21 @@ import { createGraph } from './chainweb-graph.js';
 import minimist from 'minimist';
 import { getKadenaEdrNetworks, getKadenaHttpNetworks } from './configure.js';
 import { CHAIN_ID_ADDRESS, VERIFY_ADDRESS } from './network-contracts.js';
+import { HardhatConfig } from 'hardhat/types/config';
 
 export const getNetworkStem = (chainwebName: string) =>
   `chainweb_${chainwebName}`;
 
 export default async (): Promise<Partial<ConfigHooks>> => ({
   extendUserConfig: extendConfig,
+  resolveUserConfig: async (userConfig, resolveConfigurationVariable, next) => {
+    const resolvedConfig = await next(userConfig, resolveConfigurationVariable);
+    resolvedConfig.chainweb = {
+      ...userConfig.chainweb,
+    } as HardhatConfig['chainweb'];
+    resolvedConfig.defaultChainweb = userConfig.defaultChainweb!;
+    return resolvedConfig;
+  },
 });
 
 const extendConfig = async (
@@ -61,7 +70,7 @@ const extendConfig = async (
     type: 'http',
   };
 
-  const userConfigWithLocalhost = {
+  extendedUserConfig.chainweb = {
     ...extendedUserConfig.chainweb,
     hardhat: hardhatConfig,
     localhost: localhostConfig,
@@ -69,14 +78,14 @@ const extendConfig = async (
 
   if (
     !extendedUserConfig.defaultChainweb ||
-    !(extendedUserConfig.defaultChainweb in userConfigWithLocalhost)
+    !(extendedUserConfig.defaultChainweb in extendedUserConfig.chainweb)
   ) {
     throw new Error(
       `Default chainweb ${extendedUserConfig.defaultChainweb} not found in hardhat.config.js`,
     );
   }
 
-  Object.entries(userConfigWithLocalhost).forEach(
+  Object.entries(extendedUserConfig.chainweb).forEach(
     ([name, chainwebUserConfig]) => {
       if (chainwebUserConfig === undefined) return;
       if (!chainwebUserConfig.chains) {

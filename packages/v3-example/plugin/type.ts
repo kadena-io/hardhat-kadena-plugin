@@ -1,19 +1,10 @@
 import {
   EdrNetworkAccountsUserConfig,
-  EdrNetworkConfig,
   EdrNetworkUserConfig,
   HttpNetworkAccountsUserConfig,
-  HttpNetworkConfig,
   HttpNetworkUserConfig,
 } from 'hardhat/types/config';
-
-declare module 'hardhat/types/hre' {
-  interface HardhatRuntimeEnvironment {
-    chainweb: {
-      getChainIds: () => number[];
-    };
-  }
-}
+import { NetworkConnection } from 'hardhat/types/network';
 
 type OptionalOnly<T, K extends keyof T> = Partial<Pick<T, K>> & Omit<T, K>;
 
@@ -80,7 +71,7 @@ export type ChainwebUserConfig =
 
 export type ChainwebConfig = ChainwebInProcessConfig | ChainwebExternalConfig;
 
-declare module 'hardhat/config' {
+declare module 'hardhat/types/config' {
   interface HardhatUserConfig {
     chainweb: {
       hardhat?: ChainwebInProcessUserConfig;
@@ -96,5 +87,16 @@ declare module 'hardhat/config' {
       [chainwebName: string]: ChainwebConfig;
     };
     defaultChainweb: string;
+  }
+}
+
+declare module 'hardhat/types/hre' {
+  interface HardhatRuntimeEnvironment {
+    chainweb: {
+      getCwChainIds: () => number[];
+      connect: (options: {
+        cwId: number;
+      }) => Promise<NetworkConnection<'generic'>>;
+    };
   }
 }

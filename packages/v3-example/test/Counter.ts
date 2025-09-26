@@ -1,11 +1,13 @@
 import { expect } from 'chai';
-import hre, { network } from 'hardhat';
+import hre from 'hardhat';
 
-const { ethers } = await network.connect();
+const { ethers } = await hre.chainweb.connect({
+  cwId: 0,
+});
 
 describe('Counter', function () {
   it('should get chain ids', async function () {
-    console.log('Chain IDs:', hre.chainweb.getChainIds());
+    console.log('Chain IDs:', hre.chainweb.getCwChainIds());
   });
   it('Should emit the Increment event when calling the inc() function', async function () {
     const counter = await ethers.deployContract('Counter');
