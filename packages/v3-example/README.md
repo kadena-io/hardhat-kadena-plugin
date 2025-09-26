@@ -281,7 +281,7 @@ interface ChainwebPluginApi {
 
 ```TS
 import { chainweb } from "hardhat"
-const { ethers } = chainweb.connect({ cwId: 20 }) // get the connection to chain 20
+const { ethers } = await chainweb.connect({ cwId: 20 }) // get the connection to chain 20
 ```
 
 ## Precompiles
