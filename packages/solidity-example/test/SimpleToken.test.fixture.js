@@ -826,10 +826,6 @@ describe('SimpleToken Fixture Tests', async function () {
     }); // End of getCrossChainAddress
 
     describe('FIXTURE ISOLATION TEST', async function () {
-        // Clear fixture cache before isolation tests
-        before(async function () {
-            chainweb.clearFixtureCache();
-        });
         context('Simple Cross-Chain Address Test', async function () {
             it('Should have clean state - no cross-chain addresses set', async function () {
                 console.log('=== TEST 1: About to call loadFixture ===');
