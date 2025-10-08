@@ -260,6 +260,10 @@ const createExternalProvider = async (
   };
 };
 
+// Global chainweb instance (shared across all calls)
+let globalChainwebNetwork: ChainwebNetwork | undefined;
+let globalNetworkReady: Promise<void> | undefined;
+
 const createInternalProvider = async (
   hre: HardhatRuntimeEnvironment,
   chainwebName: string,
@@ -271,88 +275,87 @@ const createInternalProvider = async (
   }
   const utils = await import('./utils.js');
   const networkStem = getNetworkStem(chainwebName);
-  const chainwebNetwork = new ChainwebNetwork({
-    chainweb,
-    networks: hre.config.networks,
-    chainwebName: chainwebName,
-    overrideForking,
-  });
 
-  async function startHardhatNetwork() {
-    await chainwebNetwork.start();
-  }
+  // Create or reuse the global chainweb network
+  if (!globalChainwebNetwork) {
+    globalChainwebNetwork = new ChainwebNetwork({
+      chainweb,
+      networks: hre.config.networks,
+      chainwebName: chainwebName,
+      overrideForking,
+    });
 
-  let stopped = false;
-  async function stopHardhatNetwork() {
-    if (stopped) return;
+    async function startHardhatNetwork() {
+      await globalChainwebNetwork!.start();
+    }
 
-    await chainwebNetwork.stop();
-    stopped = true;
-    process.exit(0);
-  }
+    let stopped = false;
+    async function stopHardhatNetwork() {
+      if (stopped) return;
+      await globalChainwebNetwork!.stop();
+      stopped = true;
+      process.exit(0);
+    }
 
-  let setNetworkReady: () => void;
-  const isNetworkReadyPromise = new Promise<void>((resolve) => {
-    setNetworkReady = resolve;
-  });
+    let setNetworkReady: () => void;
+    globalNetworkReady = new Promise<void>((resolve) => {
+      setNetworkReady = resolve;
+    });
 
-  let started = false;
-  const spinupChainweb = async () => {
-    if (started) return;
-    started = true;
     process.on('exit', stopHardhatNetwork);
     process.on('SIGINT', stopHardhatNetwork);
     process.on('SIGTERM', stopHardhatNetwork);
     process.on('uncaughtException', stopHardhatNetwork);
 
-    return startHardhatNetwork()
+    startHardhatNetwork()
       .then(() => {
         setNetworkReady();
       })
       .catch(() => {
         process.exit(1);
       });
-  };
 
-  const originalSwitchNetwork = hre.switchNetwork;
-  hre.switchNetwork = async (networkNameOrIndex: string | number) => {
-    await isNetworkReadyPromise;
-    const networkName =
-      typeof networkNameOrIndex === 'number'
-        ? `${networkStem}${networkNameOrIndex}`
-        : networkNameOrIndex;
-    if (networkName.startsWith(networkStem)) {
-      const cid = parseInt(networkName.slice(networkStem.length));
-      const provider = chainwebNetwork.getProvider(cid);
-      hre.network.name = networkName;
-      hre.network.config = hre.config.networks[networkName];
-      hre.network.provider = provider;
-      // update underlying library's provider data
-      if ('ethers' in hre) {
-        hre.ethers.provider = new HardhatEthersProvider(provider, networkName);
+    const originalSwitchNetwork = hre.switchNetwork;
+    hre.switchNetwork = async (networkNameOrIndex: string | number) => {
+      await globalNetworkReady;
+      const networkName =
+        typeof networkNameOrIndex === 'number'
+          ? `${networkStem}${networkNameOrIndex}`
+          : networkNameOrIndex;
+      if (networkName.startsWith(networkStem)) {
+        const cid = parseInt(networkName.slice(networkStem.length));
+        const provider = globalChainwebNetwork!.getProvider(cid);
+        hre.network.name = networkName;
+        hre.network.config = hre.config.networks[networkName];
+        hre.network.provider = provider;
+        // update underlying library's provider data
+        if ('ethers' in hre) {
+          hre.ethers.provider = new HardhatEthersProvider(provider, networkName);
+        }
+        if ('web3' in hre) {
+          hre.web3 = new Web3(provider);
+        }
+        console.log(`Switched to ${cid}`);
+        return;
       }
-      if ('web3' in hre) {
-        hre.web3 = new Web3(provider);
-      }
-      console.log(`Switched to ${cid}`);
-      return;
-    }
-    originalSwitchNetwork(networkName);
-  };
+      originalSwitchNetwork(networkName);
+    };
+  }
 
-  spinupChainweb();
+  // FRESH fixture cache per createInternalProvider call (like NetworkHelpers instances)
+  const fixtureSnapshots: Array<{ fixture: () => Promise<unknown>; result: unknown; snapshots: string[] }> = [];
 
   return {
     deployContractOnChains: utils.deployContractOnChains,
     getProvider: async (cid: number) => {
-      await isNetworkReadyPromise;
-      const provider = chainwebNetwork.getProvider(cid);
+      await globalNetworkReady;
+      const provider = globalChainwebNetwork!.getProvider(cid);
       return provider;
     },
     requestSpvProof: (targetChain, origin) =>
-      utils.requestSpvProof(targetChain, origin, chainwebNetwork),
+      utils.requestSpvProof(targetChain, origin, globalChainwebNetwork!),
     switchChain: async (cid: number | string) => {
-      await isNetworkReadyPromise;
+      await globalNetworkReady;
       if (typeof cid === 'string') {
         await hre.switchNetwork(cid);
       } else {
@@ -362,68 +365,38 @@ const createInternalProvider = async (
     getChainIds: utils.getChainIds,
     callChainIdContract: utils.callChainIdContract,
     createTamperedProof: (targetChain, origin) =>
-      utils.createTamperedProof(targetChain, origin, chainwebNetwork),
+      utils.createTamperedProof(targetChain, origin, globalChainwebNetwork!),
     computeOriginHash,
     runOverChains: utils.runOverChains,
     // Add snapshot functionality
     takeSnapshot: async () => {
-      await isNetworkReadyPromise;
-      return chainwebNetwork.takeSnapshot();
+      await globalNetworkReady;
+      return globalChainwebNetwork!.takeSnapshot();
     },
     revertToSnapshot: async (snapshots: string[]) => {
-      await isNetworkReadyPromise;
-      return chainwebNetwork.revertToSnapshot(snapshots);
+      await globalNetworkReady;
+      return globalChainwebNetwork!.revertToSnapshot(snapshots);
     },
-    // Add chainweb-aware fixture loader
+    // Add chainweb-aware fixture loader - ALWAYS run fixtures fresh (no caching for now)
     loadFixture: async <T>(fixtureFunction: () => Promise<T>): Promise<T> => {
-      await isNetworkReadyPromise;
+      await globalNetworkReady;
       
-      // Create a unique key for this fixture
-      const fixtureKey = fixtureFunction.name || fixtureFunction.toString();
-      
-      // Check if we have a cached result for this fixture
-      if (chainwebNetwork.fixtureCache && chainwebNetwork.fixtureCache.has(fixtureKey)) {
-        const cached = chainwebNetwork.fixtureCache.get(fixtureKey)!;
-        
-        // Revert all chains to the cached snapshot state
-        console.log(`Reverting to cached fixture state: ${fixtureFunction.name || 'anonymous'}`);
-        await chainwebNetwork.revertToSnapshot(cached.snapshots);
-        
-        // Take a NEW snapshot after reverting (snapshots are consumed on revert)
-        const newSnapshots = await chainwebNetwork.takeSnapshot();
-        chainwebNetwork.fixtureCache.set(fixtureKey, {
-          result: cached.result,
-          snapshots: newSnapshots
-        });
-        
-        // Return the cached result WITHOUT running the fixture function again
-        return cached.result as T;
+      // Throw error for anonymous functions (same as official network-helpers)
+      if (fixtureFunction.name === "") {
+        throw new Error('Anonymous functions cannot be used as fixtures. Use a named function instead.');
       }
       
-      // First time running this fixture - run it fresh
-      console.log(`Running fixture for the first time: ${fixtureFunction.name || 'anonymous'}`);
+      // ALWAYS run fixture fresh - no caching until we solve snapshot/revert issues
+      console.log(`Running fixture: ${fixtureFunction.name || 'anonymous'}`);
       const result = await fixtureFunction();
       
-      // Take snapshot after fixture execution
-      console.log('Taking snapshot after fixture execution...');
-      const fixtureSnapshots = await chainwebNetwork.takeSnapshot();
-      
-      // Cache the result and snapshots
-      if (!chainwebNetwork.fixtureCache) {
-        chainwebNetwork.fixtureCache = new Map();
-      }
-      chainwebNetwork.fixtureCache.set(fixtureKey, {
-        result,
-        snapshots: fixtureSnapshots
-      });
-      
-      console.log(`Cached fixture: ${fixtureFunction.name || 'anonymous'}`);
+      console.log(`Fixture completed: ${fixtureFunction.name || 'anonymous'}`);
       return result;
     },
     // Clear fixture cache for clean slate
     clearFixtureCache: () => {
       console.log('Clearing fixture cache...');
-      chainwebNetwork.fixtureCache?.clear();
+      fixtureSnapshots.length = 0; // Clear the per-connection array
     },
   };
 };

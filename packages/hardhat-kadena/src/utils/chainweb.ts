@@ -20,7 +20,6 @@ export class ChainwebNetwork {
   private logger: Logger;
   public chains: Record<number, Chain>;
   public graph: Record<number, number[]>;
-  public fixtureCache?: Map<string, { result: unknown; snapshots: string[] }>;
 
   constructor(private config: INetworkOptions) {
     this.logger = {
