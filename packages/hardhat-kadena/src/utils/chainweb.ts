@@ -72,7 +72,9 @@ export class ChainwebNetwork {
         const snapshotId = await provider.send('evm_snapshot', []);
         snapshots[parseInt(chainId)] = snapshotId;
       } catch (error) {
-        this.logger.error(`Failed to take snapshot on chain ${chainId}: ${error}`);
+        this.logger.error(
+          `Failed to take snapshot on chain ${chainId}: ${error}`,
+        );
         throw error;
       }
     }
@@ -88,7 +90,9 @@ export class ChainwebNetwork {
           const provider = chain.provider;
           await provider.send('evm_revert', [snapshotId]);
         } catch (error) {
-          this.logger.error(`Failed to revert snapshot on chain ${chainId}: ${error}`);
+          this.logger.error(
+            `Failed to revert snapshot on chain ${chainId}: ${error}`,
+          );
           throw error;
         }
       }
