@@ -1,8 +1,6 @@
 const { expect } = require('chai');
 const { ethers, chainweb } = require('hardhat');
 const { ZeroAddress } = require('ethers');
-// Use chainweb.loadFixture instead of standard loadFixture from network-helpers
-// const { loadFixture } = require("@nomicfoundation/hardhat-toolbox/network-helpers");
 
 // Use chainweb plugin's built-in fixture loader
 const loadFixture = chainweb.loadFixture;
@@ -73,13 +71,19 @@ describe('SimpleToken Fixture Tests', async function () {
 
     // Fixture that includes cross-chain setup
     async function deployTokenWithCrossChainFixture() {
-        const baseFixture = await deployTokenFixture();
-        const { deployments } = baseFixture;
+        // Create a fixture function that includes the cross-chain setup
+        async function setupCrossChainFixture() {
+            const baseFixture = await deployTokenFixture();
+            const { deployments } = baseFixture;
 
-        // Set up cross-chain addresses
-        await authorizeAllContracts(deployments);
+            // Set up cross-chain addresses - this modifies blockchain state
+            await authorizeAllContracts(deployments);
 
-        return baseFixture;
+            return baseFixture;
+        }
+
+        // Use loadFixture to properly cache the complete setup
+        return await loadFixture(setupCrossChainFixture);
     }
 
     context('Deployment and Initialization', async function () {
@@ -392,9 +396,13 @@ describe('SimpleToken Fixture Tests', async function () {
     describe('verifySPV', async function () {
         // Fixture that includes cross-chain setup and origin initialization
         async function deployTokenWithSPVFixture() {
-            const baseFixture = await deployTokenWithCrossChainFixture();
-            const { initialSigners, token0, token0Info, token1Info } = baseFixture;
+            const baseFixture = await deployTokenFixture();
+            const { deployments, initialSigners, token0, token0Info, token1Info } = baseFixture;
 
+            // Set up cross-chain addresses
+            await authorizeAllContracts(deployments);
+
+            // Execute cross-chain transfer within this fixture
             const sender = initialSigners.deployer;
             const receiver = initialSigners.deployer;
             const amount = ethers.parseEther('10');
@@ -493,9 +501,13 @@ describe('SimpleToken Fixture Tests', async function () {
     describe('redeemCrossChain', async function () {
         // Fixture that includes cross-chain setup, origin initialization, and SPV proof
         async function deployTokenWithRedeemFixture() {
-            const baseFixture = await deployTokenWithCrossChainFixture();
-            const { initialSigners, token0, token0Info, token1Info } = baseFixture;
+            const baseFixture = await deployTokenFixture();
+            const { deployments, initialSigners, token0, token0Info, token1Info } = baseFixture;
 
+            // Set up cross-chain addresses
+            await authorizeAllContracts(deployments);
+
+            // Execute cross-chain transfer within this fixture
             const sender = initialSigners.deployer;
             const receiver = initialSigners.deployer;
             const amount = ethers.parseEther('100000');
@@ -783,6 +795,8 @@ describe('SimpleToken Fixture Tests', async function () {
         context('Success Test Cases', async function () {
             it('Should return the correct cross chain address', async function () {
                 const { deployments } = await loadFixture(deployTokenWithCrossChainFixture);
+
+
 
                 await chainweb.runOverChains(async (chainId) => {
                     //test the getCrossChainAddress function on each deployment

@@ -386,16 +386,17 @@ const createInternalProvider = async (
         const cached = chainwebNetwork.fixtureCache.get(fixtureKey)!;
         
         // Revert all chains to the cached snapshot state
-        console.log(`Reverting to cached fixture state for: ${fixtureFunction.name || 'anonymous'}`);
+        console.log(`Reverting to cached fixture state: ${fixtureFunction.name || 'anonymous'}`);
         await chainwebNetwork.revertToSnapshot(cached.snapshots);
         
-        // Take a NEW snapshot after reverting (for next revert)
+        // Take a NEW snapshot after reverting (snapshots are consumed on revert)
         const newSnapshots = await chainwebNetwork.takeSnapshot();
         chainwebNetwork.fixtureCache.set(fixtureKey, {
           result: cached.result,
           snapshots: newSnapshots
         });
         
+        // Return the cached result WITHOUT running the fixture function again
         return cached.result as T;
       }
       
