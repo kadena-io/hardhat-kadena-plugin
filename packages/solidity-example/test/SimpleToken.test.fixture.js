@@ -793,28 +793,37 @@ describe('SimpleToken Fixture Tests', async function () {
 
     describe('getCrossChainAddress', async function () {
         context('Success Test Cases', async function () {
+            // Clear fixture cache to ensure fresh deployment for this test
+            before(async function () {
+                chainweb.clearFixtureCache();
+            });
+
             it('Should return the correct cross chain address', async function () {
                 const { deployments } = await loadFixture(deployTokenWithCrossChainFixture);
-
-
 
                 await chainweb.runOverChains(async (chainId) => {
                     //test the getCrossChainAddress function on each deployment
                     const deployment = deployments.find((d) => d.chain === chainId);
                     expect(deployment).to.not.be.undefined;
 
+                    console.log(`=== DEBUG: Testing chain ${chainId} ===`);
+
                     // For every other chain, check the cross-chain address mapping
                     for (const other of deployments) {
                         if (other.chain !== chainId) {
+                            console.log(`Checking chain ${chainId} -> chain ${other.chain}`);
+                            const storedAddress = await deployment.contract.getCrossChainAddress(other.chain);
+                            console.log(`Result: ${storedAddress}, Expected: ${other.address}`);
+
                             // Should be set to the other contract's address
-                            expect(
-                                await deployment.contract.getCrossChainAddress(other.chain),
-                            ).to.equal(other.address);
+                            expect(storedAddress).to.equal(other.address);
                         } else {
+                            console.log(`Checking chain ${chainId} -> self (chain ${chainId})`);
+                            const selfAddress = await deployment.contract.getCrossChainAddress(chainId);
+                            console.log(`Self result: ${selfAddress}, Expected: ${ZeroAddress}`);
+
                             // Should be ZeroAddress for self
-                            expect(
-                                await deployment.contract.getCrossChainAddress(chainId),
-                            ).to.equal(ZeroAddress);
+                            expect(selfAddress).to.equal(ZeroAddress);
                         }
                     }
                 });
