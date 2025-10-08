@@ -20,6 +20,7 @@ export class ChainwebNetwork {
   private logger: Logger;
   public chains: Record<number, Chain>;
   public graph: Record<number, number[]>;
+  public fixtureCache?: Map<string, { result: unknown; snapshots: string[] }>;
 
   constructor(private config: INetworkOptions) {
     this.logger = {
@@ -61,6 +62,38 @@ export class ChainwebNetwork {
     this.logger.info('Stopping chain networks');
     await Promise.all(Object.values(this.chains).map((chain) => chain.stop()));
     this.logger.info('Stopped chain networks');
+  }
+
+  // Snapshot functionality for fixtures
+  async takeSnapshot(): Promise<string[]> {
+    const snapshots: string[] = [];
+    for (const [chainId, chain] of Object.entries(this.chains)) {
+      try {
+        const provider = chain.provider;
+        const snapshotId = await provider.send('evm_snapshot', []);
+        snapshots[parseInt(chainId)] = snapshotId;
+      } catch (error) {
+        this.logger.error(`Failed to take snapshot on chain ${chainId}: ${error}`);
+        throw error;
+      }
+    }
+    return snapshots;
+  }
+
+  async revertToSnapshot(snapshots: string[]): Promise<void> {
+    for (const [chainId, chain] of Object.entries(this.chains)) {
+      const chainIdNum = parseInt(chainId);
+      const snapshotId = snapshots[chainIdNum];
+      if (snapshotId) {
+        try {
+          const provider = chain.provider;
+          await provider.send('evm_revert', [snapshotId]);
+        } catch (error) {
+          this.logger.error(`Failed to revert snapshot on chain ${chainId}: ${error}`);
+          throw error;
+        }
+      }
+    }
   }
 
   // Mock getProof:

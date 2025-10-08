@@ -100,6 +100,10 @@ export interface ChainwebPluginApi {
   createTamperedProof: (targetChain: number, origin: Origin) => Promise<string>;
   computeOriginHash: (origin: Origin) => string;
   runOverChains: <T>(callback: (chainId: number) => Promise<T>) => Promise<T[]>;
+  takeSnapshot: () => Promise<string[]>;
+  revertToSnapshot: (snapshots: string[]) => Promise<void>;
+  loadFixture: <T>(fixtureFunction: () => Promise<T>) => Promise<T>;
+  clearFixtureCache: () => void;
 }
 
 declare module 'hardhat/types' {

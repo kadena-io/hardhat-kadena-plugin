@@ -244,6 +244,19 @@ const createExternalProvider = async (
       utils.createTamperedProof(targetChain, origin),
     computeOriginHash: computeOriginHash,
     runOverChains: utils.runOverChains,
+    // External providers don't support snapshots - throw error
+    takeSnapshot: async () => {
+      throw new Error('Snapshots are not supported for external chainweb providers. Use in-process chainweb for testing with fixtures.');
+    },
+    revertToSnapshot: async () => {
+      throw new Error('Snapshots are not supported for external chainweb providers. Use in-process chainweb for testing with fixtures.');
+    },
+    loadFixture: async () => {
+      throw new Error('Fixtures are not supported for external chainweb providers. Use in-process chainweb for testing with fixtures.');
+    },
+    clearFixtureCache: () => {
+      console.log('External providers do not support fixture cache');
+    },
   };
 };
 
@@ -352,6 +365,65 @@ const createInternalProvider = async (
       utils.createTamperedProof(targetChain, origin, chainwebNetwork),
     computeOriginHash,
     runOverChains: utils.runOverChains,
+    // Add snapshot functionality
+    takeSnapshot: async () => {
+      await isNetworkReadyPromise;
+      return chainwebNetwork.takeSnapshot();
+    },
+    revertToSnapshot: async (snapshots: string[]) => {
+      await isNetworkReadyPromise;
+      return chainwebNetwork.revertToSnapshot(snapshots);
+    },
+    // Add chainweb-aware fixture loader
+    loadFixture: async <T>(fixtureFunction: () => Promise<T>): Promise<T> => {
+      await isNetworkReadyPromise;
+      
+      // Create a unique key for this fixture
+      const fixtureKey = fixtureFunction.name || fixtureFunction.toString();
+      
+      // Check if we have a cached result for this fixture
+      if (chainwebNetwork.fixtureCache && chainwebNetwork.fixtureCache.has(fixtureKey)) {
+        const cached = chainwebNetwork.fixtureCache.get(fixtureKey)!;
+        
+        // Revert all chains to the cached snapshot state
+        console.log(`Reverting to cached fixture state for: ${fixtureFunction.name || 'anonymous'}`);
+        await chainwebNetwork.revertToSnapshot(cached.snapshots);
+        
+        // Take a NEW snapshot after reverting (for next revert)
+        const newSnapshots = await chainwebNetwork.takeSnapshot();
+        chainwebNetwork.fixtureCache.set(fixtureKey, {
+          result: cached.result,
+          snapshots: newSnapshots
+        });
+        
+        return cached.result as T;
+      }
+      
+      // First time running this fixture - run it fresh
+      console.log(`Running fixture for the first time: ${fixtureFunction.name || 'anonymous'}`);
+      const result = await fixtureFunction();
+      
+      // Take snapshot after fixture execution
+      console.log('Taking snapshot after fixture execution...');
+      const fixtureSnapshots = await chainwebNetwork.takeSnapshot();
+      
+      // Cache the result and snapshots
+      if (!chainwebNetwork.fixtureCache) {
+        chainwebNetwork.fixtureCache = new Map();
+      }
+      chainwebNetwork.fixtureCache.set(fixtureKey, {
+        result,
+        snapshots: fixtureSnapshots
+      });
+      
+      console.log(`Cached fixture: ${fixtureFunction.name || 'anonymous'}`);
+      return result;
+    },
+    // Clear fixture cache for clean slate
+    clearFixtureCache: () => {
+      console.log('Clearing fixture cache...');
+      chainwebNetwork.fixtureCache?.clear();
+    },
   };
 };
 
@@ -410,6 +482,10 @@ extendEnvironment((hre) => {
     createTamperedProof: safeCall(() => api!.createTamperedProof),
     computeOriginHash,
     runOverChains: safeCall(() => api!.runOverChains),
+    takeSnapshot: safeCall(() => api!.takeSnapshot),
+    revertToSnapshot: safeCall(() => api!.revertToSnapshot),
+    loadFixture: safeCall(() => api!.loadFixture),
+    clearFixtureCache: safeCall(() => api!.clearFixtureCache),
   };
   if (process.env['HK_INIT_CHAINWEB'] === 'true') {
     hre.chainweb.initialize();
