@@ -60,14 +60,6 @@ async function initCrossChain(
     `transfer-crosschain status: ${receipt1.status}, at block number ${receipt1.blockNumber} with hash ${receipt1.hash}`,
   );
 
-  // Debug the receipt and logs
-  console.log(`Receipt status: ${receipt1.status}, block: ${receipt1.blockNumber}, tx: ${receipt1.index}`);
-  console.log(`Receipt has ${receipt1.logs ? receipt1.logs.length : 'null'} logs`);
-  if (receipt1.logs && receipt1.logs.length > 0) {
-    console.log(`First log topics[0]: ${receipt1.logs[0].topics ? receipt1.logs[0].topics[0] : 'null'}`);
-    console.log(`Expected event sig: ${EVENT_SIG_HASH}`);
-  }
-
   // Compute origin
   let logIndex = receipt1.logs.findIndex(
     (log) => log.topics[0] == EVENT_SIG_HASH,
