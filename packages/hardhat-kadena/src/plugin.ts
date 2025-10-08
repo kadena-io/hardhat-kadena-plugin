@@ -246,13 +246,19 @@ const createExternalProvider = async (
     runOverChains: utils.runOverChains,
     // External providers don't support snapshots - throw error
     takeSnapshot: async () => {
-      throw new Error('Snapshots are not supported for external chainweb providers. Use in-process chainweb for testing with fixtures.');
+      throw new Error(
+        'Snapshots are not supported for external chainweb providers. Use in-process chainweb for testing with fixtures.',
+      );
     },
     revertToSnapshot: async () => {
-      throw new Error('Snapshots are not supported for external chainweb providers. Use in-process chainweb for testing with fixtures.');
+      throw new Error(
+        'Snapshots are not supported for external chainweb providers. Use in-process chainweb for testing with fixtures.',
+      );
     },
     loadFixture: async () => {
-      throw new Error('Fixtures are not supported for external chainweb providers. Use in-process chainweb for testing with fixtures.');
+      throw new Error(
+        'Fixtures are not supported for external chainweb providers. Use in-process chainweb for testing with fixtures.',
+      );
     },
     clearFixtureCache: () => {
       console.log('External providers do not support fixture cache');
@@ -330,7 +336,10 @@ const createInternalProvider = async (
         hre.network.provider = provider;
         // update underlying library's provider data
         if ('ethers' in hre) {
-          hre.ethers.provider = new HardhatEthersProvider(provider, networkName);
+          hre.ethers.provider = new HardhatEthersProvider(
+            provider,
+            networkName,
+          );
         }
         if ('web3' in hre) {
           hre.web3 = new Web3(provider);
@@ -343,7 +352,11 @@ const createInternalProvider = async (
   }
 
   // FRESH fixture cache per createInternalProvider call (like NetworkHelpers instances)
-  const fixtureSnapshots: Array<{ fixture: () => Promise<unknown>; result: unknown; snapshots: string[] }> = [];
+  const fixtureSnapshots: Array<{
+    fixture: () => Promise<unknown>;
+    result: unknown;
+    snapshots: string[];
+  }> = [];
 
   return {
     deployContractOnChains: utils.deployContractOnChains,
@@ -377,19 +390,21 @@ const createInternalProvider = async (
       await globalNetworkReady;
       return globalChainwebNetwork!.revertToSnapshot(snapshots);
     },
-    // Add chainweb-aware fixture loader - ALWAYS run fixtures fresh (no caching for now)
+    // Add chainweb-aware fixture loader - runs fixtures fresh every time to ensure test isolation
     loadFixture: async <T>(fixtureFunction: () => Promise<T>): Promise<T> => {
       await globalNetworkReady;
-      
+
       // Throw error for anonymous functions (same as official network-helpers)
-      if (fixtureFunction.name === "") {
-        throw new Error('Anonymous functions cannot be used as fixtures. Use a named function instead.');
+      if (fixtureFunction.name === '') {
+        throw new Error(
+          'Anonymous functions cannot be used as fixtures. Use a named function instead.',
+        );
       }
-      
-      // ALWAYS run fixture fresh - no caching until we solve snapshot/revert issues
+
+      // Always run fixture fresh to ensure proper test isolation
       console.log(`Running fixture: ${fixtureFunction.name || 'anonymous'}`);
       const result = await fixtureFunction();
-      
+
       console.log(`Fixture completed: ${fixtureFunction.name || 'anonymous'}`);
       return result;
     },
