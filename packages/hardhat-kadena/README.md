@@ -16,6 +16,7 @@ Chainweb is a blockchain architecture designed by Kadena, which features a paral
 - 📡 RPC server with HTTP and WebSocket support
 - 🔘 Multiple chainweb configuration support
 - 🔀 Support forks
+- 🧪 Test fixtures with multi-chain snapshot support
 
 ## Installation
 
@@ -314,6 +315,10 @@ interface ChainwebPluginApi {
   computeOriginHash: (origin: Origin) => string;
   runOverChains: <T>(callback: (chainId: number) => Promise<T>) => Promise<T[]>;
   initialize: () => void;
+  takeSnapshot: () => Promise<string[]>;
+  revertToSnapshot: (snapshots: string[]) => Promise<void>;
+  loadFixture: <T>(fixtureFunction: () => Promise<T>) => Promise<T>;
+  clearFixtureCache: () => void;
 }
 ```
 
@@ -342,6 +347,10 @@ interface Origin {
 | `createTamperedProof`    | `targetChain: number, origin: Origin`                                                                                          | `Promise<string>`                                  | Creates a tampered SPV proof for testing purposes.                                                                                                                                                                                            |
 | `computeOriginHash`      | `origin: Origin`                                                                                                               | `string`                                           | Computes the hash of a transaction origin.                                                                                                                                                                                                    |
 | `runOverChains`          | `callback: (chainId: number) => Promise<T>`                                                                                    | `Promise<T[]>`                                     | Run the callback for all chains; the function switches the context so no need to call switchChain inside the callback                                                                                                                         |
+| `takeSnapshot`           | None                                                                                                                           | `Promise<string[]>`                                | Takes a snapshot of the current state across all chains in the Chainweb network. Returns an array of snapshot IDs for use with test fixtures.                                                                                                 |
+| `revertToSnapshot`       | `snapshots: string[]`                                                                                                          | `Promise<void>`                                    | Reverts all chains in the Chainweb network to a previously taken snapshot state. Used for test isolation and fixture cleanup.                                                                                                                 |
+| `loadFixture`            | `fixtureFunction: () => Promise<T>`                                                                                            | `Promise<T>`                                       | Loads and caches a test fixture across the multi-chain environment. Provides test isolation by running the fixture function fresh each time, ensuring clean state between tests.                                                              |
+| `clearFixtureCache`      | None                                                                                                                           | `void`                                             | Clears the fixture cache to ensure fresh fixture execution. Used for cleaning up test state and ensuring proper isolation between test suites.                                                                                                |
 | `initialize`             | None                                                                                                                           | void                                               | This function is called internally when using`node`, `test`, `run` command, so you mostly dont need it, However if you need to use the plugin in other command (e.g developing another plugin on top of this ) then you can call the function |
 
 ### Example
@@ -351,6 +360,45 @@ import { chainweb } from "hardhat"
 
 await chainweb.deployContractOnChains({name: "SimpleToken",  constructorArgs: [ethers.parseUnits('1000000')] }) // deploy contract on all chains
 await chainweb.switchChain(0); // configure hardhat to use chain 0
+```
+
+### Test Fixtures Example
+
+The plugin provides fixture support for test isolation across multiple chains:
+
+```TS
+const { expect } = require('chai');
+const { ethers, chainweb } = require('hardhat');
+
+// Use chainweb plugin's built-in fixture loader
+const loadFixture = chainweb.loadFixture;
+
+describe("Multi-chain Tests", function () {
+  async function deployTokensFixture() {
+    // Deploy contracts on all chains
+    const deployments = await chainweb.deployContractOnChains({
+      name: "SimpleToken",
+      constructorArgs: [ethers.parseUnits('1000000')]
+    });
+
+    return { deployments };
+  }
+
+  it("should maintain isolation between tests", async function () {
+    const { deployments } = await loadFixture(deployTokensFixture);
+
+    // Test logic here - state will be reset for each test
+    await chainweb.switchChain(0);
+    // ... perform test operations
+  });
+
+  it("should start with fresh state", async function () {
+    const { deployments } = await loadFixture(deployTokensFixture);
+
+    // Each test gets a fresh deployment state
+    // ... perform different test operations
+  });
+});
 ```
 
 ## Precompiles
