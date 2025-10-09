@@ -244,6 +244,25 @@ const createExternalProvider = async (
       utils.createTamperedProof(targetChain, origin),
     computeOriginHash: computeOriginHash,
     runOverChains: utils.runOverChains,
+    // External providers don't support snapshots - throw error
+    takeSnapshot: async () => {
+      throw new Error(
+        'Snapshots are not supported for external chainweb providers. Use in-process chainweb for testing with fixtures.',
+      );
+    },
+    revertToSnapshot: async () => {
+      throw new Error(
+        'Snapshots are not supported for external chainweb providers. Use in-process chainweb for testing with fixtures.',
+      );
+    },
+    loadFixture: async () => {
+      throw new Error(
+        'Fixtures are not supported for external chainweb providers. Use in-process chainweb for testing with fixtures.',
+      );
+    },
+    clearFixtureCache: () => {
+      console.log('External providers do not support fixture cache');
+    },
   };
 };
 
@@ -258,6 +277,7 @@ const createInternalProvider = async (
   }
   const utils = await import('./utils.js');
   const networkStem = getNetworkStem(chainwebName);
+
   const chainwebNetwork = new ChainwebNetwork({
     chainweb,
     networks: hre.config.networks,
@@ -272,7 +292,6 @@ const createInternalProvider = async (
   let stopped = false;
   async function stopHardhatNetwork() {
     if (stopped) return;
-
     await chainwebNetwork.stop();
     stopped = true;
     process.exit(0);
@@ -329,6 +348,13 @@ const createInternalProvider = async (
 
   spinupChainweb();
 
+  // FRESH fixture cache per createInternalProvider call (like NetworkHelpers instances)
+  const fixtureSnapshots: Array<{
+    fixture: () => Promise<unknown>;
+    result: unknown;
+    snapshots: string[];
+  }> = [];
+
   return {
     deployContractOnChains: utils.deployContractOnChains,
     getProvider: async (cid: number) => {
@@ -352,6 +378,38 @@ const createInternalProvider = async (
       utils.createTamperedProof(targetChain, origin, chainwebNetwork),
     computeOriginHash,
     runOverChains: utils.runOverChains,
+    // Add snapshot functionality
+    takeSnapshot: async () => {
+      await isNetworkReadyPromise;
+      return chainwebNetwork.takeSnapshot();
+    },
+    revertToSnapshot: async (snapshots: string[]) => {
+      await isNetworkReadyPromise;
+      return chainwebNetwork.revertToSnapshot(snapshots);
+    },
+    // Add chainweb-aware fixture loader - runs fixtures fresh every time to ensure test isolation
+    loadFixture: async <T>(fixtureFunction: () => Promise<T>): Promise<T> => {
+      await isNetworkReadyPromise;
+
+      // Throw error for anonymous functions (same as official network-helpers)
+      if (fixtureFunction.name === '') {
+        throw new Error(
+          'Anonymous functions cannot be used as fixtures. Use a named function instead.',
+        );
+      }
+
+      // Always run fixture fresh to ensure proper test isolation
+      console.log(`Running fixture: ${fixtureFunction.name || 'anonymous'}`);
+      const result = await fixtureFunction();
+
+      console.log(`Fixture completed: ${fixtureFunction.name || 'anonymous'}`);
+      return result;
+    },
+    // Clear fixture cache for clean slate
+    clearFixtureCache: () => {
+      console.log('Clearing fixture cache...');
+      fixtureSnapshots.length = 0; // Clear the per-connection array
+    },
   };
 };
 
@@ -410,6 +468,10 @@ extendEnvironment((hre) => {
     createTamperedProof: safeCall(() => api!.createTamperedProof),
     computeOriginHash,
     runOverChains: safeCall(() => api!.runOverChains),
+    takeSnapshot: safeCall(() => api!.takeSnapshot),
+    revertToSnapshot: safeCall(() => api!.revertToSnapshot),
+    loadFixture: safeCall(() => api!.loadFixture),
+    clearFixtureCache: safeCall(() => api!.clearFixtureCache),
   };
   if (process.env['HK_INIT_CHAINWEB'] === 'true') {
     hre.chainweb.initialize();
