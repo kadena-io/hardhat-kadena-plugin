@@ -1,5 +1,5 @@
 const { expect } = require('chai');
-const { ethers, chainweb } = require('hardhat');
+const { ethers, chainweb, network } = require('hardhat');
 const { ZeroAddress } = require('ethers');
 const {
   authorizeAllContracts,
@@ -44,6 +44,12 @@ describe('SimpleToken Unit Tests', async function () {
       ],
     });
 
+    console.log('deployed in beforeEach:', deployed);
+    console.log(
+      'deployed.network in beforeEach:',
+      deployed.deployments[0].network,
+    );
+
     // Store contract instances for direct calls
     token0 = deployed.deployments[0].contract;
     token1 = deployed.deployments[1].contract;
@@ -61,6 +67,7 @@ describe('SimpleToken Unit Tests', async function () {
     context('Success Test Cases', async function () {
       it('Should have the correct configuration after deployment on all chains', async function () {
         await chainweb.runOverChains(async (chainId) => {
+          console.log('chainId in runOverChains:', chainId);
           const chainSigners = await getSigners(chainId);
           const deployment = deployments.find((d) => d.chain === chainId);
 
@@ -83,6 +90,9 @@ describe('SimpleToken Unit Tests', async function () {
           expect(
             await deployment.contract.balanceOf(chainSigners.deployer.address),
           ).to.equal(ethers.parseEther('1000000'));
+
+          // Verify that the network chain Id is correct (not chainweb chain Id)
+          expect(deployment.network.chainId).to.equal(network.config.chainId);
         });
       });
     }); // End of Success Test Cases
