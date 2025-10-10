@@ -44,12 +44,6 @@ describe('SimpleToken Unit Tests', async function () {
       ],
     });
 
-    console.log('deployed in beforeEach:', deployed);
-    console.log(
-      'deployed.network in beforeEach:',
-      deployed.deployments[0].network,
-    );
-
     // Store contract instances for direct calls
     token0 = deployed.deployments[0].contract;
     token1 = deployed.deployments[1].contract;
@@ -68,7 +62,9 @@ describe('SimpleToken Unit Tests', async function () {
       it('Should have the correct configuration after deployment on all chains', async function () {
         await chainweb.runOverChains(async (chainwebChainId) => {
           const chainSigners = await getSigners(chainwebChainId);
-          const deployment = deployments.find((d) => d.chain === chainwebChainId);
+          const deployment = deployments.find(
+            (d) => d.chain === chainwebChainId,
+          );
 
           expect(deployment).to.not.be.undefined;
           expect(await deployment.contract.symbol()).to.equal('SIM');
@@ -91,7 +87,12 @@ describe('SimpleToken Unit Tests', async function () {
           ).to.equal(ethers.parseEther('1000000'));
 
           // Verify that the network chain Id is correct (not chainweb chain Id)
-          expect(deployment.network.chainwebChainId).to.equal(network.config.ChainId);
+          expect(deployment.network.chainId).to.equal(network.config.chainId);
+
+          // Verify that the network name is correct
+          const expectedNetworkName = `chainweb_hardhat${chainwebChainId}`;
+          expect(deployment.network.name).to.equal(expectedNetworkName);
+          expect(network.name).to.equal(expectedNetworkName);
         });
       });
     }); // End of Success Test Cases
@@ -157,7 +158,9 @@ describe('SimpleToken Unit Tests', async function () {
 
         // Then verify all addresses are correctly set
         await chainweb.runOverChains(async (chainwebChainId) => {
-          const deployment = deployments.find((d) => d.chain === chainwebChainId);
+          const deployment = deployments.find(
+            (d) => d.chain === chainwebChainId,
+          );
 
           for (const otherDeployment of deployments) {
             if (otherDeployment.chain !== chainwebChainId) {
@@ -209,7 +212,9 @@ describe('SimpleToken Unit Tests', async function () {
     context('Error Test Cases', async function () {
       it('Should fail to set cross-chain addresses for non-owner on all chains', async function () {
         await chainweb.runOverChains(async (chainwebChainId) => {
-          const deployment = deployments.find((d) => d.chain === chainwebChainId);
+          const deployment = deployments.find(
+            (d) => d.chain === chainwebChainId,
+          );
           const chainSigners = await getSigners(chainwebChainId);
           const targetChain = deployments.find(
             (d) => d.chain !== chainwebChainId,
@@ -688,7 +693,9 @@ describe('SimpleToken Unit Tests', async function () {
         // runOverChains handles the chain switching internally
         // We can use it to verify the chainweb chain id for each deployment
         await chainweb.runOverChains(async (chainwebChainId) => {
-          const deployment = deployments.find((d) => d.chain === chainwebChainId);
+          const deployment = deployments.find(
+            (d) => d.chain === chainwebChainId,
+          );
           expect(deployment).to.not.be.undefined;
           expect(await deployment.contract.getChainwebChainId()).to.equal(
             chainwebChainId,
@@ -705,7 +712,9 @@ describe('SimpleToken Unit Tests', async function () {
 
         await chainweb.runOverChains(async (chainwebChainId) => {
           //test the getCrossChainAddress function on each deployment
-          const deployment = deployments.find((d) => d.chain === chainwebChainId);
+          const deployment = deployments.find(
+            (d) => d.chain === chainwebChainId,
+          );
           expect(deployment).to.not.be.undefined;
 
           // For every other chain, check the cross-chain address mapping
