@@ -118,7 +118,7 @@ export const deployContractOnChains: DeployContractOnChains = async ({
         chain: cwId,
         deployer: deployerAddress,
         network: {
-          chainId: cwId,
+          chainId: hre.config.networks[`${networkStem}${cwId}`].chainId,
           name: `${networkStem}${cwId}`,
         },
       };

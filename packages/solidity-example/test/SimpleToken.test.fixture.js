@@ -93,9 +93,11 @@ describe('SimpleToken Fixture Tests', async function () {
       it('Should have the correct configuration after deployment on all chains', async function () {
         const { deployments } = await loadFixture(deployTokenFixture);
 
-        await chainweb.runOverChains(async (chainId) => {
-          const chainSigners = await getSigners(chainId);
-          const deployment = deployments.find((d) => d.chain === chainId);
+        await chainweb.runOverChains(async (chainwebChainId) => {
+          const chainSigners = await getSigners(chainwebChainId);
+          const deployment = deployments.find(
+            (d) => d.chain === chainwebChainId,
+          );
 
           expect(deployment).to.not.be.undefined;
           expect(await deployment.contract.symbol()).to.equal('SIM');
@@ -116,6 +118,14 @@ describe('SimpleToken Fixture Tests', async function () {
           expect(
             await deployment.contract.balanceOf(chainSigners.deployer.address),
           ).to.equal(ethers.parseEther('1000000'));
+
+          // Verify that the network chain Id is correct (not chainweb chain Id)
+          expect(deployment.network.chainId).to.equal(network.config.chainId);
+
+          // Verify that the network name is correct
+          const expectedNetworkName = `chainweb_hardhat${chainwebChainId}`;
+          expect(deployment.network.name).to.equal(expectedNetworkName);
+          expect(network.name).to.equal(expectedNetworkName);
         });
       });
     }); // End of Success Test Cases
@@ -128,15 +138,15 @@ describe('SimpleToken Fixture Tests', async function () {
 
         // Set up cross-chain addresses for every chain to every other chain
         // runOverChains handles the chain switching internally
-        await chainweb.runOverChains(async (currentChainId) => {
+        await chainweb.runOverChains(async (currentChainwebChainId) => {
           const currentDeployment = deployments.find(
-            (d) => d.chain === currentChainId,
+            (d) => d.chain === currentChainwebChainId,
           );
-          const chainSigners = await getSigners(currentChainId);
+          const chainSigners = await getSigners(currentChainwebChainId);
 
           // Set addresses for all other chains
           for (const targetDeployment of deployments) {
-            if (targetDeployment.chain !== currentChainId) {
+            if (targetDeployment.chain !== currentChainwebChainId) {
               const tx = await currentDeployment.contract.setCrossChainAddress(
                 targetDeployment.chain,
                 targetDeployment.address,
@@ -167,13 +177,13 @@ describe('SimpleToken Fixture Tests', async function () {
         const { deployments } = await loadFixture(deployTokenFixture);
 
         // First set up all addresses
-        await chainweb.runOverChains(async (currentChainId) => {
+        await chainweb.runOverChains(async (currentChainwebChainId) => {
           const currentDeployment = deployments.find(
-            (d) => d.chain === currentChainId,
+            (d) => d.chain === currentChainwebChainId,
           );
 
           for (const targetDeployment of deployments) {
-            if (targetDeployment.chain !== currentChainId) {
+            if (targetDeployment.chain !== currentChainwebChainId) {
               const tx = await currentDeployment.contract.setCrossChainAddress(
                 targetDeployment.chain,
                 targetDeployment.address,
@@ -184,11 +194,13 @@ describe('SimpleToken Fixture Tests', async function () {
         });
 
         // Then verify all addresses are correctly set
-        await chainweb.runOverChains(async (chainId) => {
-          const deployment = deployments.find((d) => d.chain === chainId);
+        await chainweb.runOverChains(async (chainwebChainId) => {
+          const deployment = deployments.find(
+            (d) => d.chain === chainwebChainId,
+          );
 
           for (const otherDeployment of deployments) {
-            if (otherDeployment.chain !== chainId) {
+            if (otherDeployment.chain !== chainwebChainId) {
               const storedAddress =
                 await deployment.contract.getCrossChainAddress(
                   otherDeployment.chain,
@@ -205,12 +217,12 @@ describe('SimpleToken Fixture Tests', async function () {
         // Pick one target chain to set to zero across all source chains
         const targetChainId = deployments[1].chain;
 
-        await chainweb.runOverChains(async (currentChainId) => {
-          if (currentChainId !== targetChainId) {
+        await chainweb.runOverChains(async (currentChainwebChainId) => {
+          if (currentChainwebChainId !== targetChainId) {
             const currentDeployment = deployments.find(
-              (d) => d.chain === currentChainId,
+              (d) => d.chain === currentChainwebChainId,
             );
-            const chainSigners = await getSigners(currentChainId);
+            const chainSigners = await getSigners(currentChainwebChainId);
 
             const tx = await currentDeployment.contract.setCrossChainAddress(
               targetChainId,
@@ -240,11 +252,13 @@ describe('SimpleToken Fixture Tests', async function () {
       it('Should fail to set cross-chain addresses for non-owner on all chains', async function () {
         const { deployments } = await loadFixture(deployTokenFixture);
 
-        await chainweb.runOverChains(async (chainId) => {
-          const deployment = deployments.find((d) => d.chain === chainId);
-          const chainSigners = await getSigners(chainId);
+        await chainweb.runOverChains(async (chainwebChainId) => {
+          const deployment = deployments.find(
+            (d) => d.chain === chainwebChainId,
+          );
+          const chainSigners = await getSigners(chainwebChainId);
           const targetChain = deployments.find(
-            (d) => d.chain !== chainId,
+            (d) => d.chain !== chainwebChainId,
           )?.chain;
 
           if (targetChain) {
@@ -828,11 +842,13 @@ describe('SimpleToken Fixture Tests', async function () {
 
         // runOverChains handles the chain switching internally
         // We can use it to verify the chainweb chain id for each deployment
-        await chainweb.runOverChains(async (chainId) => {
-          const deployment = deployments.find((d) => d.chain === chainId);
+        await chainweb.runOverChains(async (chainwebChainId) => {
+          const deployment = deployments.find(
+            (d) => d.chain === chainwebChainId,
+          );
           expect(deployment).to.not.be.undefined;
           expect(await deployment.contract.getChainwebChainId()).to.equal(
-            chainId,
+            chainwebChainId,
           );
         });
       });
@@ -846,17 +862,21 @@ describe('SimpleToken Fixture Tests', async function () {
           deployTokenWithCrossChainFixture,
         );
 
-        await chainweb.runOverChains(async (chainId) => {
+        await chainweb.runOverChains(async (chainwebChainId) => {
           //test the getCrossChainAddress function on each deployment
-          const deployment = deployments.find((d) => d.chain === chainId);
+          const deployment = deployments.find(
+            (d) => d.chain === chainwebChainId,
+          );
           expect(deployment).to.not.be.undefined;
 
-          console.log(`=== DEBUG: Testing chain ${chainId} ===`);
+          console.log(`=== DEBUG: Testing chain ${chainwebChainId} ===`);
 
           // For every other chain, check the cross-chain address mapping
           for (const other of deployments) {
-            if (other.chain !== chainId) {
-              console.log(`Checking chain ${chainId} -> chain ${other.chain}`);
+            if (other.chain !== chainwebChainId) {
+              console.log(
+                `Checking chain ${chainwebChainId} -> chain ${other.chain}`,
+              );
               const storedAddress =
                 await deployment.contract.getCrossChainAddress(other.chain);
               console.log(
@@ -867,13 +887,13 @@ describe('SimpleToken Fixture Tests', async function () {
               expect(storedAddress).to.equal(other.address);
             } else {
               console.log(
-                `Checking chain ${chainId} -> self (chain ${chainId})`,
+                `Checking chain ${chainwebChainId} -> self (chain ${chainwebChainId})`,
               );
               // Contract may not handle self-references properly, skip this check
               console.log(
                 'Skipping self-reference check (contract design limitation)',
               );
-              // const selfAddress = await deployment.contract.getCrossChainAddress(chainId);
+              // const selfAddress = await deployment.contract.getCrossChainAddress(chainwebChainId);
               // expect(selfAddress).to.equal(ZeroAddress);
             }
           }
@@ -894,18 +914,20 @@ describe('SimpleToken Fixture Tests', async function () {
 
         console.log('=== TEST 1: Checking clean state ===');
 
-        await chainweb.runOverChains(async (chainId) => {
-          const deployment = deployments.find((d) => d.chain === chainId);
+        await chainweb.runOverChains(async (chainwebChainId) => {
+          const deployment = deployments.find(
+            (d) => d.chain === chainwebChainId,
+          );
 
           // Check other chains - should all be zero address (clean state)
           for (const otherDeployment of deployments) {
-            if (otherDeployment.chain !== chainId) {
+            if (otherDeployment.chain !== chainwebChainId) {
               const storedAddress =
                 await deployment.contract.getCrossChainAddress(
                   otherDeployment.chain,
                 );
               console.log(
-                `Chain ${chainId} -> Chain ${otherDeployment.chain}: ${storedAddress}`,
+                `Chain ${chainwebChainId} -> Chain ${otherDeployment.chain}: ${storedAddress}`,
               );
 
               // Should be ZeroAddress in clean state
@@ -926,15 +948,15 @@ describe('SimpleToken Fixture Tests', async function () {
         console.log('=== TEST 2: Modifying state ===');
 
         // Set cross-chain addresses (modify state)
-        await chainweb.runOverChains(async (currentChainId) => {
+        await chainweb.runOverChains(async (currentChainwebChainId) => {
           const currentDeployment = deployments.find(
-            (d) => d.chain === currentChainId,
+            (d) => d.chain === currentChainwebChainId,
           );
 
           for (const targetDeployment of deployments) {
-            if (targetDeployment.chain !== currentChainId) {
+            if (targetDeployment.chain !== currentChainwebChainId) {
               console.log(
-                `Setting Chain ${currentChainId} -> Chain ${targetDeployment.chain}: ${targetDeployment.address}`,
+                `Setting Chain ${currentChainwebChainId} -> Chain ${targetDeployment.chain}: ${targetDeployment.address}`,
               );
 
               const tx = await currentDeployment.contract.setCrossChainAddress(
@@ -968,17 +990,19 @@ describe('SimpleToken Fixture Tests', async function () {
 
         // This test should see the same clean state as the first test
         // If fixture isolation is working properly
-        await chainweb.runOverChains(async (chainId) => {
-          const deployment = deployments.find((d) => d.chain === chainId);
+        await chainweb.runOverChains(async (chainwebChainId) => {
+          const deployment = deployments.find(
+            (d) => d.chain === chainwebChainId,
+          );
 
           for (const otherDeployment of deployments) {
-            if (otherDeployment.chain !== chainId) {
+            if (otherDeployment.chain !== chainwebChainId) {
               const storedAddress =
                 await deployment.contract.getCrossChainAddress(
                   otherDeployment.chain,
                 );
               console.log(
-                `Chain ${chainId} -> Chain ${otherDeployment.chain}: ${storedAddress} (should be ZeroAddress)`,
+                `Chain ${chainwebChainId} -> Chain ${otherDeployment.chain}: ${storedAddress} (should be ZeroAddress)`,
               );
 
               // CRITICAL: This should be ZeroAddress if fixture isolation is working
@@ -989,11 +1013,11 @@ describe('SimpleToken Fixture Tests', async function () {
                   `❌ FIXTURE ISOLATION FAILED! Previous test state persisted.`,
                 );
                 console.error(
-                  `   Chain ${chainId} -> Chain ${otherDeployment.chain} should be ${ZeroAddress} but got ${storedAddress}`,
+                  `   Chain ${chainwebChainId} -> Chain ${otherDeployment.chain} should be ${ZeroAddress} but got ${storedAddress}`,
                 );
               } else {
                 console.log(
-                  `✅ Chain ${chainId} -> Chain ${otherDeployment.chain} is clean (ZeroAddress)`,
+                  `✅ Chain ${chainwebChainId} -> Chain ${otherDeployment.chain} is clean (ZeroAddress)`,
                 );
               }
 
