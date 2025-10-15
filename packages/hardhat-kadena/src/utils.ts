@@ -1,6 +1,11 @@
-import { ContractMethodArgs, Overrides, Signer } from 'ethers';
+import { BytesLike, ContractMethodArgs, Overrides, Signer } from 'ethers';
 import './type.js';
-import { CHAIN_ID_ABI } from './utils/network-contracts.js';
+import {
+  callCreate2Factory,
+  CHAIN_ID_ABI,
+  CREATE2_FACTORY_ADDRESS,
+  sendCreate2Factory,
+} from './utils/network-contracts.js';
 import { FactoryOptions } from 'hardhat/types';
 import { BaseContract } from 'ethers';
 import { ContractTransactionResponse } from 'ethers';
@@ -47,12 +52,36 @@ export async function runOverChains<T>(
   return result;
 }
 
+export async function create2Address(
+  name: string,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  constructorArgs: any[] = [],
+  salt: BytesLike,
+): Promise<string> {
+  if (salt.length > 32) {
+    throw new Error('Salt must be at most 32 bytes');
+  } else if (typeof salt == 'string' && !salt.startsWith('0x')) {
+    salt = hre.ethers.encodeBytes32String(salt);
+  }
+  const factory = await hre.ethers.getContractFactory(name);
+  const encodedConstructorArgs =
+    factory.interface.encodeDeploy(constructorArgs);
+  return hre.ethers.getCreate2Address(
+    CREATE2_FACTORY_ADDRESS,
+    salt,
+    hre.ethers.keccak256(
+      hre.ethers.concat([factory.bytecode, encodedConstructorArgs]),
+    ),
+  );
+}
+
 export const deployContractOnChains: DeployContractOnChains = async ({
   name,
   signer,
   factoryOptions,
   constructorArgs = [],
   overrides,
+  salt,
 }) => {
   const deployments = await runOverChains(async (cwId) => {
     try {
@@ -100,14 +129,56 @@ export const deployContractOnChains: DeployContractOnChains = async ({
         signer: contractDeployer,
         ...factoryOptions,
       });
-      const contract = await factory.deploy(
-        ...(overrides ? [...constructorArgs, overrides] : constructorArgs),
-      );
-      const deploymentTx = contract.deploymentTransaction();
-      if (!deploymentTx) {
-        throw new Error('Deployment transaction failed');
+
+      let contract;
+
+      // Use CREATE2 factory for deployment if salt is provided.
+      if (salt !== undefined) {
+        // Validate and format salt
+        if (salt.length > 32) {
+          throw new Error('Salt must be at most 32 bytes');
+        } else if (typeof salt == 'string' && !salt.startsWith('0x')) {
+          salt = hre.ethers.encodeBytes32String(salt);
+        }
+
+        // encode constructor arguments
+        const encodedConstructorArgs = factory.interface.encodeDeploy(
+          overrides ? [...constructorArgs, overrides] : constructorArgs,
+        );
+
+        // get contract address
+        const tokenAddress = callCreate2Factory(
+          hre.ethers.provider,
+          salt,
+          factory.bytecode,
+          encodedConstructorArgs,
+        );
+
+        // send deployment transaction
+        const deploymentTx = await sendCreate2Factory(
+          contractDeployer,
+          salt,
+          factory.bytecode,
+          encodedConstructorArgs,
+        );
+        if (!deploymentTx) {
+          throw new Error('Deployment transaction failed');
+        }
+        await deploymentTx.wait();
+        contract = factory.attach(await tokenAddress);
+      } else {
+        // initializat contract
+        contract = await factory.deploy(
+          ...(overrides ? [...constructorArgs, overrides] : constructorArgs),
+        );
+        // deploy contract
+        const deploymentTx = contract.deploymentTransaction();
+        if (!deploymentTx) {
+          throw new Error('Deployment transaction failed');
+        }
+        await deploymentTx.wait();
       }
-      await deploymentTx.wait();
+
       const tokenAddress = await contract.getAddress();
 
       // Store deployment info in both formats
@@ -217,6 +288,7 @@ export type DeployContractProperties<A extends unknown[] = unknown[]> = {
   factoryOptions?: FactoryOptions;
   constructorArgs?: ContractMethodArgs<A>;
   overrides?: Overrides;
+  salt?: BytesLike;
 };
 
 export type DeployContractOnChains = <

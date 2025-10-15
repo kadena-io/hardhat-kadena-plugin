@@ -5,6 +5,8 @@ import AsyncLock from 'async-lock';
 import {
   CHAIN_ID_ADDRESS,
   CHAIN_ID_BYTE_CODE,
+  CREATE2_FACTORY_ADDRESS,
+  CREATE2_FACTORY_CODE,
   VERIFY_ADDRESS,
   VERIFY_BYTE_CODE,
 } from './network-contracts.js';
@@ -147,6 +149,13 @@ export class Chain {
     ]);
   }
 
+  async initializeCreate2Factory() {
+    await this.provider.send('hardhat_setCode', [
+      CREATE2_FACTORY_ADDRESS,
+      CREATE2_FACTORY_CODE,
+    ]);
+  }
+
   async enableAutomine() {
     if (!this.autominer) {
       this.autominer = setInterval(() => this.runPending(), 100);
@@ -177,6 +186,7 @@ export class Chain {
     // initialize system contracts
     await this.initializeCidContract();
     await this.initializeVerificationPrecompile();
+    await this.initializeCreate2Factory();
 
     // setup automining
     await this.provider.send('evm_setAutomine', [false]);
