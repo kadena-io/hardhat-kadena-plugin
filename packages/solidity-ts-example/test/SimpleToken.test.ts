@@ -965,7 +965,7 @@ describe('SimpleToken Unit Tests', async function () {
           );
         });
 
-        it('Should return correct network details from CREATE2 deployment function', async function () {
+        it('Should return correct details from CREATE2 deployment function', async function () {
           const salt = 'SimpleToken_v1'; // Deterministic salt
 
           // Deploy on all chains
@@ -987,18 +987,22 @@ describe('SimpleToken Unit Tests', async function () {
             const deployment = deployments.find(
               (d) => d.chain === chainwebChainId,
             );
+
             // Switch to the correct chain
             await chainweb.switchChain(chainwebChainId);
 
             // Verify that the network chain Id is correct (not chainweb chain Id)
-            expect(hre.config.networks[deployment.network.name].chainId).to.equal(
-              network.config.chainId,
-            );
+            expect(
+              hre.config.networks[deployment.network.name].chainId,
+            ).to.equal(network.config.chainId);
 
             // Verify that the network name is correct
             const expectedNetworkName = `chainweb_hardhat${chainwebChainId}`;
             expect(deployment.network.name).to.equal(expectedNetworkName);
             expect(network.name).to.equal(expectedNetworkName);
+
+            // Should indicate if contract was already deployed.
+            expect(deployment.contractAlreadyDeployed).to.equal(false);
           });
         });
 
@@ -1295,6 +1299,58 @@ describe('SimpleToken Unit Tests', async function () {
             );
             expect(await tokenV2.symbol()).to.equal('SIM');
           }
+        });
+
+        it.only('Should indicate if contract was already deployed', async function () {
+          const salt = 'SimpleToken_v1'; // Deterministic salt
+
+          // First deployment
+          await chainweb.create2.deployOnChainsUsingCreate2({
+            name: 'SimpleToken',
+            constructorArgs: [
+              ethers.parseUnits('1000000'),
+              initialSigners.deployer.address,
+            ],
+            salt,
+            create2Factory: create2FactoryAddress,
+          });
+
+          // Second deployment with same parameters
+          const deployResult =
+            await chainweb.create2.deployOnChainsUsingCreate2({
+              name: 'SimpleToken',
+              constructorArgs: [
+                ethers.parseUnits('1000000'),
+                initialSigners.deployer.address,
+              ],
+              salt,
+              create2Factory: create2FactoryAddress,
+            });
+
+          deployments = deployResult.deployments;
+
+          // Using runOverChains to verify each deployment properly
+          await chainweb.runOverChains(async (chainwebChainId) => {
+            const deployment = deployments.find(
+              (d) => d.chain === chainwebChainId,
+            );
+
+            // Switch to the correct chain
+            await chainweb.switchChain(chainwebChainId);
+
+            // Verify that the network chain Id is correct (not chainweb chain Id)
+            expect(
+              hre.config.networks[deployment.network.name].chainId,
+            ).to.equal(network.config.chainId);
+
+            // Verify that the network name is correct
+            const expectedNetworkName = `chainweb_hardhat${chainwebChainId}`;
+            expect(deployment.network.name).to.equal(expectedNetworkName);
+            expect(network.name).to.equal(expectedNetworkName);
+
+            // Should indicate if contract was already deployed.
+            expect(deployment.contractAlreadyDeployed).to.equal(true);
+          });
         });
       }); // End of Success Test Cases
     }); // End of Contract deployment with CREATE2

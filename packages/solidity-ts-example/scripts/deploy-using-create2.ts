@@ -23,18 +23,28 @@ async function main() {
     create2Factory: factoryAddress,
     salt: salt,
   });
-  console.log('Contracts deployed');
+  console.log('Contract deployed');
+
   deployed.deployments.forEach(async (deployment) => {
-    console.log(`${deployment.address} on ${deployment.chain}`);
+    if (deployment.contractAlreadyDeployed) {
+      console.log(
+        `Contract was already deployed on chain ${deployment.chain}, skipped deployment.`,
+      );
+    } else {
+      console.log(
+        `Contract deployed at address ${deployment.address} on chain ${deployment.chain}`,
+      );
+    }
   });
 
-  console.log('Contracts deployed');
   // Filter out failed deployments
-  const successfulDeployments = deployed.deployments.filter((d) => d !== null);
+  const successfulDeployments = deployed.deployments.filter(
+    (d) => d !== null && d.contractAlreadyDeployed !== true,
+  );
 
   if (successfulDeployments.length > 0) {
     console.log(
-      `Faucet successfully deployed to ${successfulDeployments.length} chains`,
+      `Contract successfully deployed to ${successfulDeployments.length} chains`,
     );
 
     // Create a map of deployments by chain ID for easy lookup

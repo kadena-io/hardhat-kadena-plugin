@@ -102,7 +102,7 @@ async function deployContract({
     console.log(
       `Contract already deployed at ${predictedAddress}. Skipping deployment.`,
     );
-    return { address: predictedAddress };
+    return { address: predictedAddress, alreadyDeployed: true };
   }
 
   // Deploy using CREATE2,
@@ -117,7 +117,7 @@ async function deployContract({
       `CREATE2 failed:  No contract at predicted address ${predictedAddress}`,
     );
   }
-  return { address: predictedAddress };
+  return { address: predictedAddress, alreadyDeployed: false };
 }
 
 /**
@@ -198,7 +198,7 @@ export const deployOnChainsUsingCreate2: DeployOnChainsUsingCreate2 = async ({
       const contractBytecode = transaction.data;
 
       // Deploy the contract using CREATE2
-      const { address: contractAddress } =
+      const { address: contractAddress, alreadyDeployed } =
         await deployContract({
           contractBytecode,
           signer: contractDeployer,
@@ -210,7 +210,7 @@ export const deployOnChainsUsingCreate2: DeployOnChainsUsingCreate2 = async ({
       const contract = factory.attach(contractAddress);
 
       // Store deployment info in both formats
-      // Note: 'chain' and 'network.chainId' represent the Chainweb chain ID (0, 1, etc.)
+      // Note: 'chain' represent the Chainweb chain ID (0, 1, etc.) and 'network.chainId' represent the EVM chain ID (626000, 626001, etc.)
       // not the EVM chainId. The EVM chainId can be accessed via hre.network.config.chainId
       return {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -222,6 +222,7 @@ export const deployOnChainsUsingCreate2: DeployOnChainsUsingCreate2 = async ({
           chainId: hre.config.networks[`${networkStem}${cwId}`].chainId,
           name: `${networkStem}${cwId}`,
         },
+        contractAlreadyDeployed: alreadyDeployed,
       };
     } catch (error) {
       console.error(
