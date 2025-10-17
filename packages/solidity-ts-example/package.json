@@ -9,7 +9,7 @@
     "deploy:hardhat": "hardhat compile && npx hardhat run scripts/deploy.ts",
     "deploy-create2:hardhat": "hardhat compile && npx hardhat run scripts/deploy-using-create2.ts",
     "deploy": "hardhat compile && npx hardhat run scripts/deploy.ts --chainweb",
-    "deploy-create2": "hardhat compile && npx hardhat run scripts/deploy.ts --chainweb"
+    "deploy-create2": "hardhat compile && npx hardhat run scripts/deploy-using-create2.ts --chainweb"
   },
   "dependencies": {
     "@kadena/hardhat-chainweb": "workspace:*",

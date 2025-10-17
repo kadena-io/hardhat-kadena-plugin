@@ -14,7 +14,10 @@ export type DeployOnChainsUsingCreate2 = <
     create2Factory?: string;
   },
 ) => Promise<{
-  deployments: DeployedContractsOnChains<T>[];
+  deployments: (DeployedContractsOnChains<T> & {
+    /** true if the contract was already deployed (we skipped CREATE2), false if we deployed now */
+    contractAlreadyDeployed?: boolean;
+  })[];
 }>;
 
 export interface Create2Helpers {
