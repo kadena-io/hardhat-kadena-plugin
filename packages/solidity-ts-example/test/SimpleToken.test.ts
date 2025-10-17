@@ -4,6 +4,7 @@ import { HardhatEthersSigner, Signers } from './utils/utils';
 import { expect } from 'chai';
 
 import { ethers, chainweb } from 'hardhat';
+import hre from 'hardhat';
 import { ZeroAddress } from 'ethers';
 import {
   authorizeAllContracts,
@@ -66,6 +67,8 @@ describe('SimpleToken Unit Tests', async function () {
     token1Info = deployed.deployments[1];
 
     deployments = deployed.deployments;
+
+    /// Start each test on the first chain
     await switchChain(token0Info.chain);
   });
 
@@ -916,6 +919,9 @@ describe('SimpleToken Unit Tests', async function () {
 
         // Deploy a fresh factory for each test
         [create2FactoryAddress] = await chainweb.create2.deployCreate2Factory();
+
+        // Start each test on the first chain
+        await switchChain(chains[0]);
       });
 
       describe('Success Test Cases', async function () {
@@ -957,6 +963,43 @@ describe('SimpleToken Unit Tests', async function () {
               );
             }),
           );
+        });
+
+        it('Should return correct network details from CREATE2 deployment function', async function () {
+          const salt = 'SimpleToken_v1'; // Deterministic salt
+
+          // Deploy on all chains
+          const deployResult =
+            await chainweb.create2.deployOnChainsUsingCreate2({
+              name: 'SimpleToken',
+              constructorArgs: [
+                ethers.parseUnits('1000000'),
+                initialSigners.deployer.address,
+              ],
+              salt,
+              create2Factory: create2FactoryAddress,
+            });
+
+          deployments = deployResult.deployments;
+
+          // Using runOverChains to verify each deployment properly
+          await chainweb.runOverChains(async (chainwebChainId) => {
+            const deployment = deployments.find(
+              (d) => d.chain === chainwebChainId,
+            );
+            // Switch to the correct chain
+            await chainweb.switchChain(chainwebChainId);
+
+            // Verify that the network chain Id is correct (not chainweb chain Id)
+            expect(hre.config.networks[deployment.network.name].chainId).to.equal(
+              network.config.chainId,
+            );
+
+            // Verify that the network name is correct
+            const expectedNetworkName = `chainweb_hardhat${chainwebChainId}`;
+            expect(deployment.network.name).to.equal(expectedNetworkName);
+            expect(network.name).to.equal(expectedNetworkName);
+          });
         });
 
         it('Should support ethers address prediction', async function () {

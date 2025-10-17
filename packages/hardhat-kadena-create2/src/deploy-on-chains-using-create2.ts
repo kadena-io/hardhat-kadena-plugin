@@ -102,7 +102,7 @@ async function deployContract({
     console.log(
       `Contract already deployed at ${predictedAddress}. Skipping deployment.`,
     );
-    return predictedAddress;
+    return { address: predictedAddress };
   }
 
   // Deploy using CREATE2,
@@ -117,7 +117,7 @@ async function deployContract({
       `CREATE2 failed:  No contract at predicted address ${predictedAddress}`,
     );
   }
-  return predictedAddress;
+  return { address: predictedAddress };
 }
 
 /**
@@ -197,14 +197,15 @@ export const deployOnChainsUsingCreate2: DeployOnChainsUsingCreate2 = async ({
       // Prepare the bytecode of the contract to deploy
       const contractBytecode = transaction.data;
 
-      // Choose create2 deployment function based on bindToSender flag
-      const contractAddress = await deployContract({
-        contractBytecode,
-        signer: contractDeployer,
-        overrides,
-        salt,
-        create2Factory,
-      });
+      // Deploy the contract using CREATE2
+      const { address: contractAddress } =
+        await deployContract({
+          contractBytecode,
+          signer: contractDeployer,
+          overrides,
+          salt,
+          create2Factory,
+        });
 
       const contract = factory.attach(contractAddress);
 
@@ -218,7 +219,7 @@ export const deployOnChainsUsingCreate2: DeployOnChainsUsingCreate2 = async ({
         chain: cwId,
         deployer: deployerAddress,
         network: {
-          chainId: cwId,
+          chainId: hre.config.networks[`${networkStem}${cwId}`].chainId,
           name: `${networkStem}${cwId}`,
         },
       };
