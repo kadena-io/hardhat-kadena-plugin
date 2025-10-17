@@ -44,6 +44,11 @@ describe('Create2Factory Tests', async function () {
       salt: salt,
     });
     deployments = deployed.deployments;
+    await chainweb.runOverChains(async (chainId: number) => {
+      const deployment = deployments.find((d) => d.chain === chainId);
+      const code = await ethers.provider.getCode(deployment!.address);
+      expect(code).to.not.equal('0x');
+    });
   });
 
   it('Should have deployed to the expected address', async function () {
