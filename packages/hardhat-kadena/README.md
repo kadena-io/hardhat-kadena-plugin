@@ -470,6 +470,22 @@ address: `0x4e59b44847b379578588920ca78fbf26c0b4956c`
 It can be used by providing a `salt` value to the `deployContractOnChains`
 function.
 
+You can use another create2 factory by using precompile option in the config
+
+```typescript
+module.exports = {
+  solidity: '0.8.20',
+  chainweb: {
+    myChainweb: {
+      ...
+      precompiles:{
+        create2Factory: "the-create2-factory-contract"
+      }
+    },
+  },
+};
+```
+
 ### Overloading `hardhat-switch-network`
 
 This plugin overrides `switchNetwork` from `hardhat-switch-network` to load the correct Chainweb provider while also supporting switching by chain index. For example, `switchNetwork(1)` switches to chain 1 of Chainweb.

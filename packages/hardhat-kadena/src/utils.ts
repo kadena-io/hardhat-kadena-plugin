@@ -3,7 +3,6 @@ import './type.js';
 import {
   callCreate2Factory,
   CHAIN_ID_ABI,
-  CREATE2_FACTORY_ADDRESS,
   sendCreate2Factory,
 } from './utils/network-contracts.js';
 import { FactoryOptions } from 'hardhat/types';
@@ -63,16 +62,27 @@ export async function create2Address(
   } else if (typeof salt == 'string' && !salt.startsWith('0x')) {
     salt = hre.ethers.encodeBytes32String(salt);
   }
+  const chainweb = hre.config.chainweb[hre.config.defaultChainweb];
   const factory = await hre.ethers.getContractFactory(name);
   const encodedConstructorArgs =
     factory.interface.encodeDeploy(constructorArgs);
   return hre.ethers.getCreate2Address(
-    CREATE2_FACTORY_ADDRESS,
+    chainweb.precompiles.create2Factory,
     salt,
     hre.ethers.keccak256(
       hre.ethers.concat([factory.bytecode, encodedConstructorArgs]),
     ),
   );
+}
+
+/**
+ * Checks if a contract is deployed at the specified address.
+ *
+ * @param address - The address to check for contract deployment
+ * @returns A promise that resolves to true if a contract exists at the address, false otherwise
+ */
+function isContractDeployed(address: string): Promise<boolean> {
+  return hre.ethers.provider.getCode(address).then((code) => code !== '0x');
 }
 
 export const deployContractOnChains: DeployContractOnChains = async ({
@@ -86,6 +96,12 @@ export const deployContractOnChains: DeployContractOnChains = async ({
   const deployments = await runOverChains(async (cwId) => {
     try {
       const signers = await hre.ethers.getSigners();
+      const chainweb = hre.config.chainweb[hre.config.defaultChainweb];
+      if (!chainweb) {
+        throw new Error(
+          `Chainweb configuration not found for ${hre.config.defaultChainweb}`,
+        );
+      }
 
       // Determine the appropriate signer for this chain
       let contractDeployer;
@@ -146,12 +162,37 @@ export const deployContractOnChains: DeployContractOnChains = async ({
           overrides ? [...constructorArgs, overrides] : constructorArgs,
         );
 
+        const predictedAddress = await create2Address(
+          name,
+          constructorArgs,
+          salt,
+        );
+
+        const isDeployed = await isContractDeployed(predictedAddress);
+
+        // Check if contract is already deployed at the predicted address
+        if (isDeployed) {
+          console.log(`Contract is already deployed at ${predictedAddress}`);
+          return {
+            contract: factory.attach(predictedAddress),
+            address: predictedAddress,
+            chain: cwId,
+            deployer: deployerAddress,
+            network: {
+              chainId: hre.config.networks[`${networkStem}${cwId}`].chainId,
+              name: `${networkStem}${cwId}`,
+            },
+            contractAlreadyDeployed: true,
+          };
+        }
+
         // get contract address
         const tokenAddress = callCreate2Factory(
           hre.ethers.provider,
           salt,
           factory.bytecode,
           encodedConstructorArgs,
+          chainweb.precompiles.create2Factory,
         );
 
         // send deployment transaction
@@ -192,6 +233,7 @@ export const deployContractOnChains: DeployContractOnChains = async ({
           chainId: hre.config.networks[`${networkStem}${cwId}`].chainId,
           name: `${networkStem}${cwId}`,
         },
+        ...(salt !== undefined ? { contractAlreadyDeployed: false } : {}),
       };
     } catch (error) {
       console.error(`Failed to deploy to network ${cwId}:`, error);
@@ -288,14 +330,31 @@ export type DeployContractProperties<A extends unknown[] = unknown[]> = {
   factoryOptions?: FactoryOptions;
   constructorArgs?: ContractMethodArgs<A>;
   overrides?: Overrides;
-  salt?: BytesLike;
 };
 
-export type DeployContractOnChains = <
-  T extends BaseContract = BaseContract,
-  A extends unknown[] = unknown[],
->(
-  args: DeployContractProperties<A>,
-) => Promise<{
-  deployments: DeployedContractsOnChains<T>[];
-}>;
+export interface DeployContractOnChains {
+  /**
+   * Standard deployment across chains.
+   *
+   * @param args - Deployment properties
+   * @returns Deployed contract information across chains
+   */
+  <T extends BaseContract = BaseContract, A extends unknown[] = unknown[]>(
+    args: DeployContractProperties<A> & { salt?: undefined },
+  ): Promise<{
+    deployments: DeployedContractsOnChains<T>[];
+  }>;
+  /**
+   * Deterministic deployment using CREATE2 factory precompile.
+   *
+   * @param args - Deployment properties including salt for CREATE2
+   * @returns Deployed contract information across chains
+   */
+  <T extends BaseContract = BaseContract, A extends unknown[] = unknown[]>(
+    args: DeployContractProperties<A> & { salt: BytesLike },
+  ): Promise<{
+    deployments: Array<
+      DeployedContractsOnChains<T> & { contractAlreadyDeployed: boolean }
+    >;
+  }>;
+}

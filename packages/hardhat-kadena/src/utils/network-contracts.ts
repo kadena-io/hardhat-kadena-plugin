@@ -25,9 +25,10 @@ export async function callCreate2Factory(
   salt: BytesLike,
   bytecode: BytesLike,
   constructorArgs: BytesLike,
+  create2FactoryAddress: string,
 ): Promise<AddressLike> {
   const address = await provider.call({
-    to: CREATE2_FACTORY_ADDRESS,
+    to: create2FactoryAddress,
     data: ethers.concat([salt, bytecode, constructorArgs]),
   });
   return ethers.getAddress(address);
