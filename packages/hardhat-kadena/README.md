@@ -256,7 +256,7 @@ module.exports = {
 };
 ```
 
-#### Override the config a specific chain of the chainweb
+#### Override the config of a specific chain of the chainweb
 
 You also can override the config for a specific chain. You just need to add the config in networks section.
 
@@ -300,6 +300,7 @@ interface ChainwebPluginApi {
     factoryOptions?: FactoryOptions;
     constructorArgs?: ContractMethodArgs;
     overrides?: Overrides;
+    salt?: BytesLike | string;
   }) => Promise<{
     deployments: {
       // ContractFactory from ethers
@@ -336,22 +337,22 @@ interface Origin {
 }
 ```
 
-| Function                 | Parameters                                                                                                                     | Return Type                                        | Description                                                                                                                                                                                                                                   |
-| ------------------------ | ------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `getProvider`            | `cid: number`                                                                                                                  | `HardhatEthersProvider`                            | Retrieves the provider for a specified chain.                                                                                                                                                                                                 |
-| `requestSpvProof`        | `targetChain: number, origin: Origin`                                                                                          | `Promise<string>`                                  | Requests an SPV proof for a cross-chain transaction.                                                                                                                                                                                          |
-| `switchChain`            | `cid: number`                                                                                                                  | `Promise<void>`                                    | Switches the active chain.                                                                                                                                                                                                                    |
-| `getChainIds`            | None                                                                                                                           | `number[]`                                         | Returns an array of available chain IDs.                                                                                                                                                                                                      |
-| `callChainIdContract`    | None                                                                                                                           | `Promise<number>`                                  | Calls a contract to get the chain ID.                                                                                                                                                                                                         |
-| `deployContractOnChains` | `{name: string;signer?: Signer;factoryOptions?: FactoryOptions; constructorArgs?: ContractMethodArgs ;overrides?: Overrides;}` | check`deployContractOnChains`of`ChainwebPluginApi` | Deploys a contract on multiple chains.                                                                                                                                                                                                        |
-| `createTamperedProof`    | `targetChain: number, origin: Origin`                                                                                          | `Promise<string>`                                  | Creates a tampered SPV proof for testing purposes.                                                                                                                                                                                            |
-| `computeOriginHash`      | `origin: Origin`                                                                                                               | `string`                                           | Computes the hash of a transaction origin.                                                                                                                                                                                                    |
-| `runOverChains`          | `callback: (chainId: number) => Promise<T>`                                                                                    | `Promise<T[]>`                                     | Run the callback for all chains; the function switches the context so no need to call switchChain inside the callback                                                                                                                         |
-| `takeSnapshot`           | None                                                                                                                           | `Promise<string[]>`                                | Takes a snapshot of the current state across all chains in the Chainweb network. Returns an array of snapshot IDs for use with test fixtures.                                                                                                 |
-| `revertToSnapshot`       | `snapshots: string[]`                                                                                                          | `Promise<void>`                                    | Reverts all chains in the Chainweb network to a previously taken snapshot state. Used for test isolation and fixture cleanup.                                                                                                                 |
-| `loadFixture`            | `fixtureFunction: () => Promise<T>`                                                                                            | `Promise<T>`                                       | Loads and caches a test fixture across the multi-chain environment. Provides test isolation by running the fixture function fresh each time, ensuring clean state between tests.                                                              |
-| `clearFixtureCache`      | None                                                                                                                           | `void`                                             | Clears the fixture cache to ensure fresh fixture execution. Used for cleaning up test state and ensuring proper isolation between test suites.                                                                                                |
-| `initialize`             | None                                                                                                                           | void                                               | This function is called internally when using`node`, `test`, `run` command, so you mostly dont need it, However if you need to use the plugin in other command (e.g developing another plugin on top of this ) then you can call the function |
+| Function                 | Parameters                                                                                                                                                | Return Type                                        | Description                                                                                                                                                                                                                                   |
+| ------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `getProvider`            | `cid: number`                                                                                                                                             | `HardhatEthersProvider`                            | Retrieves the provider for a specified chain.                                                                                                                                                                                                 |
+| `requestSpvProof`        | `targetChain: number, origin: Origin`                                                                                                                     | `Promise<string>`                                  | Requests an SPV proof for a cross-chain transaction.                                                                                                                                                                                          |
+| `switchChain`            | `cid: number`                                                                                                                                             | `Promise<void>`                                    | Switches the active chain.                                                                                                                                                                                                                    |
+| `getChainIds`            | None                                                                                                                                                      | `number[]`                                         | Returns an array of available chain IDs.                                                                                                                                                                                                      |
+| `callChainIdContract`    | None                                                                                                                                                      | `Promise<number>`                                  | Calls a contract to get the chain ID.                                                                                                                                                                                                         |
+| `deployContractOnChains` | `{name: string; signer?: Signer; factoryOptions?: FactoryOptions; constructorArgs?: ContractMethodArgs; overrides?: Overrides; salt?: BytesLike\|string}` | check`deployContractOnChains`of`ChainwebPluginApi` | Deploys a contract on multiple chains; if a salt value is provided the contract is deployed via CREATE2.                                                                                                                                      |
+| `createTamperedProof`    | `targetChain: number, origin: Origin`                                                                                                                     | `Promise<string>`                                  | Creates a tampered SPV proof for testing purposes.                                                                                                                                                                                            |
+| `computeOriginHash`      | `origin: Origin`                                                                                                                                          | `string`                                           | Computes the hash of a transaction origin.                                                                                                                                                                                                    |
+| `runOverChains`          | `callback: (chainId: number) => Promise<T>`                                                                                                               | `Promise<T[]>`                                     | Run the callback for all chains; the function switches the context so no need to call switchChain inside the callback                                                                                                                         |
+| `takeSnapshot`           | None                                                                                                                                                      | `Promise<string[]>`                                | Takes a snapshot of the current state across all chains in the Chainweb network. Returns an array of snapshot IDs for use with test fixtures.                                                                                                 |
+| `revertToSnapshot`       | `snapshots: string[]`                                                                                                                                     | `Promise<void>`                                    | Reverts all chains in the Chainweb network to a previously taken snapshot state. Used for test isolation and fixture cleanup.                                                                                                                 |
+| `loadFixture`            | `fixtureFunction: () => Promise<T>`                                                                                                                       | `Promise<T>`                                       | Loads and caches a test fixture across the multi-chain environment. Provides test isolation by running the fixture function fresh each time, ensuring clean state between tests.                                                              |
+| `clearFixtureCache`      | None                                                                                                                                                      | `void`                                             | Clears the fixture cache to ensure fresh fixture execution. Used for cleaning up test state and ensuring proper isolation between test suites.                                                                                                |
+| `initialize`             | None                                                                                                                                                      | void                                               | This function is called internally when using`node`, `test`, `run` command, so you mostly dont need it, However if you need to use the plugin in other command (e.g developing another plugin on top of this ) then you can call the function |
 
 ### Example
 
@@ -401,13 +402,13 @@ describe("Multi-chain Tests", function () {
 });
 ```
 
-## Precompiles
+## Precompiles and System Contracts
 
-The in-process chainweb comes with two `precompiles` that the addresses are accessible via `hre.config.chainweb[config_name].precompiles`.
+The in-process chainweb comes with three predefined contracts or `precompiles`. The addresses are accessible via `hre.config.chainweb[config_name].precompiles`.
 
 ### CHAIN_ID_PRECOMPILE
 
-the precompile that returns the chain index.
+the system contract that returns the chain index;
 
 address: `address(uint160(uint256(keccak256('/Chainweb/Chain/Id/'))))`
 
@@ -456,6 +457,18 @@ function verifySPV(
 };
 
 ```
+
+### CREATE2_FACTORY_PRECOMPILE
+
+the system contract that deploys contracts via CREATE2. This system contracts
+make a [widely used
+deterministic-deployment-proxy](https://github.com/Arachnid/deterministic-deployment-proxy)
+available in chainweb EVM networks.
+
+address: `0x4e59b44847b379578588920ca78fbf26c0b4956c`
+
+It can be used by providing a `salt` value to the `deployContractOnChains`
+function.
 
 ### Overloading `hardhat-switch-network`
 
